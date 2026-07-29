@@ -66,13 +66,15 @@ const Auth = {
     document.getElementById('deleteAccountBtn').addEventListener('click',  () => this.deleteAccount());
     document.getElementById('logoutBtn').addEventListener('click',         () => this.logout());
 
-    document.querySelectorAll('.profile-tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.profile-panel').forEach(p => p.style.display = 'none');
-        tab.classList.add('active');
-        document.getElementById('ptab-' + tab.dataset.ptab).style.display = 'block';
-      });
+    // Profile tab delegation - works even when modal is hidden
+    document.addEventListener('click', e => {
+      const tab = e.target.closest('.profile-tab');
+      if (!tab || !tab.dataset.ptab) return;
+      document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.profile-panel').forEach(p => p.style.display = 'none');
+      tab.classList.add('active');
+      const panel = document.getElementById('ptab-' + tab.dataset.ptab);
+      if (panel) panel.style.display = 'block';
     });
   },
 

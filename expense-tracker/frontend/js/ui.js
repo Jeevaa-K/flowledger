@@ -171,7 +171,10 @@ const UI = {
     const el = document.getElementById('topDays');
     if (!el) return;
     const dayMap = {};
-    txns.filter(t => t.type==='expense').forEach(t => { dayMap[t.date] = (dayMap[t.date]||0) + t.amount; });
+    txns.filter(t => t.type==='expense').forEach(t => {
+      const dateStr = t.date ? (typeof t.date === 'string' ? t.date.slice(0,10) : new Date(t.date).toISOString().slice(0,10)) : '';
+      if (dateStr) dayMap[dateStr] = (dayMap[dateStr]||0) + parseFloat(t.amount);
+    });
     const sorted = Object.entries(dayMap).sort((a,b) => b[1]-a[1]).slice(0,7);
     const max = sorted[0]?.[1] || 1;
     el.innerHTML = sorted.map(([date,total]) => `
