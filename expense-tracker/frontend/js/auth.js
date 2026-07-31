@@ -12,6 +12,16 @@ const Auth = {
     }
 
     this.bindEvents();
+    this.bindConnectivity();
+  },
+
+  bindConnectivity() {
+    window.addEventListener('offline', () => {
+      if (typeof UI !== 'undefined') UI.toast("⚠ You're offline — changes won't save until you're back online", 'error', 5000);
+    });
+    window.addEventListener('online', () => {
+      if (typeof UI !== 'undefined') UI.toast('✓ Back online', 'success');
+    });
   },
 
   bindEvents() {

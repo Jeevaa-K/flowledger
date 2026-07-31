@@ -15,7 +15,13 @@ const API = {
   async request(method, path, body) {
     const opts = { method, headers: this.headers() };
     if (body) opts.body = JSON.stringify(body);
-    const r = await fetch(BASE + path, opts);
+    let r;
+    try {
+      r = await fetch(BASE + path, opts);
+    } catch {
+      // fetch() throws (not a rejected HTTP status) when there's no network at all
+      throw new Error("You're offline — check your connection and try again.");
+    }
     if (r.status === 401) {
       localStorage.removeItem('fl_token');
       localStorage.removeItem('fl_user');

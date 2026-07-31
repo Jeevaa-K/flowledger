@@ -50,12 +50,15 @@ const Recurring = {
     if (!description || !amount || !next_date) { UI.toast('⚠ Fill in all fields', 'error'); return; }
     if (amount <= 0) { UI.toast('⚠ Amount must be greater than 0', 'error'); return; }
 
+    const btn = document.getElementById('saveRecurringBtn');
+    if (btn) { btn.disabled = true; btn.dataset.origText = btn.textContent; btn.textContent = 'Saving...'; }
     try {
       await API.post('/recurring', { description, amount, type, category, frequency, next_date });
       UI.toast('✓ Recurring transaction added', 'success');
       document.getElementById('recurringModal')?.classList.remove('open');
       this.load();
-    } catch(e) { UI.toast('Error: ' + e.message, 'error'); }
+    } catch(e) { UI.toast(e.message.match(/^\d+:/) ? 'Error: ' + e.message : e.message, 'error'); }
+    finally { if (btn) { btn.disabled = false; btn.textContent = btn.dataset.origText || 'Save Recurring'; } }
   },
 
   async toggle(id, currentActive) {

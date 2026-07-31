@@ -204,7 +204,7 @@ const App = {
       this.updateNavCount();
       if (State.page === 'transactions') await this.loadTransactions();
       else await this.loadDashboard();
-    } catch(e) { UI.toast('Error: ' + e.message, 'error'); }
+    } catch(e) { UI.toast(e.message.match(/^\d+:/) ? 'Error: ' + e.message : e.message, 'error'); }
     finally { if (btn) { btn.disabled = false; btn.textContent = btn.dataset.origText || 'Save'; } }
   },
 
@@ -240,12 +240,15 @@ const App = {
     const category      = catEl.value;
     const monthly_limit = parseFloat(limEl.value);
     if (!monthly_limit || monthly_limit <= 0) { UI.toast('⚠ Enter a valid limit', 'error'); return; }
+    const btn = document.getElementById('saveBudgetBtn');
+    if (btn) { btn.disabled = true; btn.dataset.origText = btn.textContent; btn.textContent = 'Saving...'; }
     try {
       await API.post('/budgets', { category, monthly_limit });
       UI.toast('✓ Budget saved', 'success');
       UI.closeBudgetModal();
       await this.loadBudgets();
     } catch { UI.toast('Error saving budget', 'error'); }
+    finally { if (btn) { btn.disabled = false; btn.textContent = btn.dataset.origText || 'Save Budget'; } }
   },
 
   async deleteBudget(id) {
