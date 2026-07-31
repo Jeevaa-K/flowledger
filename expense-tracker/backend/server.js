@@ -2,6 +2,8 @@ require('dotenv').config();
 
 const express     = require('express');
 const cors        = require('cors');
+const helmet      = require('helmet');
+const rateLimit   = require('express-rate-limit');
 const path        = require('path');
 const { Pool }    = require('pg');
 const bcrypt      = require('bcryptjs');
@@ -13,16 +15,69 @@ const PDFDocument = require('pdfkit');
 
 const app        = express();
 const PORT       = process.env.PORT || 3001;
-const JWT_SECRET = process.env.JWT_SECRET || 'flowledger_secret_change_in_production';
+const JWT_SECRET = process.env.JWT_SECRET;
 
-app.use(cors());
-app.use(express.json());
+// ── Fail fast if critical secrets are missing ───────────────────
+// A hardcoded fallback secret would let anyone forge login tokens,
+// so refuse to start rather than run insecurely.
+if (!JWT_SECRET) {
+  console.error('❌ FATAL: JWT_SECRET environment variable is not set. Refusing to start.');
+  process.exit(1);
+}
+if (JWT_SECRET.length < 32) {
+  console.error('❌ FATAL: JWT_SECRET is too short (min 32 characters). Refusing to start.');
+  process.exit(1);
+}
 
-app.use((req, res, next) => {
-  res.setHeader('Content-Security-Policy',
-    "default-src * blob: data:; script-src * blob: data: 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline'; font-src * data:; connect-src *;");
-  next();
+// ── Security headers ─────────────────────────────────────────────
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc:  ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
+      styleSrc:   ["'self'", "'unsafe-inline'"],
+      fontSrc:    ["'self'", "data:"],
+      imgSrc:     ["'self'", "data:", "blob:"],
+      connectSrc: ["'self'"]
+    }
+  },
+  crossOriginEmbedderPolicy: false
+}));
+
+// ── CORS ──────────────────────────────────────────────────────────
+// Only allow the deployed frontend + local dev by default. Set
+// ALLOWED_ORIGINS (comma-separated) on Render to be explicit.
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
+  .split(',').map(s => s.trim()).filter(Boolean);
+app.use(cors({
+  origin(origin, callback) {
+    // Same-origin requests (no Origin header, e.g. curl, mobile apps) are allowed.
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.length === 0) return callback(null, true); // not configured yet — permissive until set
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true
+}));
+
+app.use(express.json({ limit: '100kb' })); // caps request body size against abuse
+
+// ── Rate limiting ─────────────────────────────────────────────────
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20,                   // 20 attempts per IP per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many attempts. Please try again in a few minutes.' }
 });
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Please slow down.' }
+});
+app.use('/api/', apiLimiter);
 
 // ── PostgreSQL ────────────────────────────────────────────────
 const pool = new Pool({
@@ -112,11 +167,24 @@ const auth = (req, res, next) => {
   catch { res.status(401).json({ error: 'Invalid or expired token' }); }
 };
 
+// Sends a generic message to the client while logging full detail server-side,
+// so database schema / internals never leak in API responses.
+function safeError(res, err, context, status = 500) {
+  console.error(`${context} error:`, err);
+  res.status(status).json({ error: 'Something went wrong. Please try again.' });
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 // ── Auth Routes ───────────────────────────────────────────────
-app.post('/api/auth/register', async (req, res) => {
+app.post('/api/auth/register', authLimiter, async (req, res) => {
   const { name, email, password } = req.body;
   if (!name || !email || !password) return res.status(400).json({ error: 'All fields required' });
-  if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  if (name.length > 100)     return res.status(400).json({ error: 'Name is too long' });
+  if (email.length > 255)    return res.status(400).json({ error: 'Email is too long' });
+  if (!EMAIL_RE.test(email)) return res.status(400).json({ error: 'Please enter a valid email address' });
+  if (password.length < 6)   return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  if (password.length > 200) return res.status(400).json({ error: 'Password is too long' });
   try {
     const exists = await db.get('SELECT id FROM users WHERE email=$1', [email.toLowerCase()]);
     if (exists) return res.status(409).json({ error: 'Email already registered' });
@@ -124,10 +192,10 @@ app.post('/api/auth/register', async (req, res) => {
     const user = await db.get('INSERT INTO users (name,email,password) VALUES ($1,$2,$3) RETURNING id,name,email', [name, email.toLowerCase(), hash]);
     const token = jwt.sign({ id:user.id, name:user.name, email:user.email }, JWT_SECRET, { expiresIn: '7d' });
     res.status(201).json({ token, user });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  } catch(e) { safeError(res, e, 'Register'); }
 });
 
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', authLimiter, async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
   try {
@@ -137,42 +205,44 @@ app.post('/api/auth/login', async (req, res) => {
     if (!match) return res.status(401).json({ error: 'Invalid email or password' });
     const token = jwt.sign({ id:user.id, name:user.name, email:user.email }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ token, user: { id:user.id, name:user.name, email:user.email, currency:user.currency, theme:user.theme } });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  } catch(e) { safeError(res, e, 'Login'); }
 });
 
 app.get('/api/auth/me', auth, async (req, res) => {
   try {
     const user = await db.get('SELECT id,name,email,currency,theme,created_at FROM users WHERE id=$1', [req.user.id]);
     res.json(user);
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  } catch(e) { safeError(res, e, 'Get profile'); }
 });
 
 app.put('/api/auth/profile', auth, async (req, res) => {
   const { name, currency, theme } = req.body;
+  if (name && name.length > 100) return res.status(400).json({ error: 'Name is too long' });
   try {
     await db.run('UPDATE users SET name=$1,currency=$2,theme=$3 WHERE id=$4', [name, currency||'₹', theme||'light', req.user.id]);
     res.json({ success: true });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  } catch(e) { safeError(res, e, 'Update profile'); }
 });
 
 app.put('/api/auth/password', auth, async (req, res) => {
   const { currentPassword, newPassword } = req.body;
   if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Both passwords required' });
   if (newPassword.length < 6) return res.status(400).json({ error: 'Min 6 characters' });
+  if (newPassword.length > 200) return res.status(400).json({ error: 'Password is too long' });
   try {
     const user = await db.get('SELECT * FROM users WHERE id=$1', [req.user.id]);
     const match = await bcrypt.compare(currentPassword, user.password);
     if (!match) return res.status(401).json({ error: 'Current password incorrect' });
     await db.run('UPDATE users SET password=$1 WHERE id=$2', [await bcrypt.hash(newPassword, 10), req.user.id]);
     res.json({ success: true });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  } catch(e) { safeError(res, e, 'Change password'); }
 });
 
 app.delete('/api/auth/account', auth, async (req, res) => {
   try {
     await db.run('DELETE FROM users WHERE id=$1', [req.user.id]);
     res.json({ success: true });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  } catch(e) { safeError(res, e, 'Delete account'); }
 });
 
 // ── Transactions ──────────────────────────────────────────────
@@ -187,9 +257,9 @@ app.get('/api/transactions', auth, async (req, res) => {
     if (from)     { q += ` AND date>=$${i++}`;    p.push(from); }
     if (to)       { q += ` AND date<=$${i++}`;    p.push(to); }
     q += ` ORDER BY date DESC, created_at DESC LIMIT $${i}`;
-    p.push(parseInt(limit));
+    p.push(Math.min(parseInt(limit) || 200, 1000)); // cap to prevent huge unbounded queries
     res.json(await db.all(q, p));
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  } catch(e) { safeError(res, e, 'List transactions'); }
 });
 
 app.post('/api/transactions', auth, async (req, res) => {
@@ -197,48 +267,61 @@ app.post('/api/transactions', auth, async (req, res) => {
     const { description, amount, type, category, date } = req.body;
     if (!description || !amount || !type || !category || !date)
       return res.status(400).json({ error: 'All fields required' });
+    if (description.length > 500) return res.status(400).json({ error: 'Description is too long' });
+    if (!['income','expense'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
+    const amt = parseFloat(amount);
+    if (!Number.isFinite(amt) || amt <= 0) return res.status(400).json({ error: 'Invalid amount' });
     const row = await db.get(
       'INSERT INTO transactions (user_id,description,amount,type,category,date) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
-      [req.user.id, description, parseFloat(amount), type, category, date]
+      [req.user.id, description, amt, type, category, date]
     );
     res.status(201).json(row);
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  } catch(e) { safeError(res, e, 'Create transaction'); }
 });
 
 app.put('/api/transactions/:id', auth, async (req, res) => {
   try {
     const { description, amount, type, category, date } = req.body;
+    if (type && !['income','expense'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
+    const amt = amount !== undefined ? parseFloat(amount) : undefined;
+    if (amt !== undefined && (!Number.isFinite(amt) || amt <= 0)) return res.status(400).json({ error: 'Invalid amount' });
     const row = await db.get(
       'UPDATE transactions SET description=$1,amount=$2,type=$3,category=$4,date=$5 WHERE id=$6 AND user_id=$7 RETURNING *',
-      [description, parseFloat(amount), type, category, date, req.params.id, req.user.id]
+      [description, amt, type, category, date, req.params.id, req.user.id]
     );
+    if (!row) return res.status(404).json({ error: 'Transaction not found' }); // wasn't yours or doesn't exist
     res.json(row);
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  } catch(e) { safeError(res, e, 'Update transaction'); }
 });
 
 app.delete('/api/transactions/:id', auth, async (req, res) => {
   try {
-    await db.run('DELETE FROM transactions WHERE id=$1 AND user_id=$2', [req.params.id, req.user.id]);
+    const result = await db.run('DELETE FROM transactions WHERE id=$1 AND user_id=$2', [req.params.id, req.user.id]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Transaction not found' });
     res.json({ success: true });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  } catch(e) { safeError(res, e, 'Delete transaction'); }
 });
 
 app.post('/api/transactions/import', auth, async (req, res) => {
   const { transactions } = req.body;
   if (!Array.isArray(transactions) || !transactions.length)
     return res.status(400).json({ error: 'No transactions provided' });
+  if (transactions.length > 5000) return res.status(400).json({ error: 'Too many rows in one import (max 5000)' });
   try {
     let imported = 0;
     for (const t of transactions) {
       if (!t.description || !t.amount || !t.type || !t.category || !t.date) continue;
+      if (!['income','expense'].includes(t.type)) continue;
+      const amt = parseFloat(t.amount);
+      if (!Number.isFinite(amt) || amt <= 0) continue;
       await db.run(
         'INSERT INTO transactions (user_id,description,amount,type,category,date) VALUES ($1,$2,$3,$4,$5,$6)',
-        [req.user.id, t.description, parseFloat(t.amount), t.type, t.category, t.date]
+        [req.user.id, String(t.description).slice(0,500), amt, t.type, t.category, t.date]
       );
       imported++;
     }
     res.json({ success: true, imported });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  } catch(e) { safeError(res, e, 'Import transactions'); }
 });
 
 // ── Summary ───────────────────────────────────────────────────
@@ -275,7 +358,7 @@ app.get('/api/summary', auth, async (req, res) => {
     const forecastExpense = last3.length ? Math.round(last3.reduce((s,r)=>s+parseFloat(r.expense),0)/last3.length) : 0;
     const savingsRate = inc > 0 ? (((inc-exp)/inc)*100).toFixed(1) : 0;
     res.json({ income:inc, expense:exp, balance:inc-exp, savingsRate, byCategory, monthlyTrend, forecastExpense });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  } catch(e) { safeError(res, e, 'Summary'); }
 });
 
 // ── Budgets ───────────────────────────────────────────────────
@@ -292,31 +375,35 @@ app.get('/api/budgets', auth, async (req, res) => {
       return { ...b, spent, percent: Math.min(Math.round((spent/b.monthly_limit)*100), 100) };
     }));
     res.json(result);
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  } catch(e) { safeError(res, e, 'List budgets'); }
 });
 
 app.post('/api/budgets', auth, async (req, res) => {
   try {
     const { category, monthly_limit } = req.body;
+    if (!category) return res.status(400).json({ error: 'Category required' });
+    const limit = parseFloat(monthly_limit);
+    if (!Number.isFinite(limit) || limit <= 0) return res.status(400).json({ error: 'Invalid limit' });
     await db.run(
       'INSERT INTO budgets (user_id,category,monthly_limit) VALUES ($1,$2,$3) ON CONFLICT (user_id,category) DO UPDATE SET monthly_limit=$3',
-      [req.user.id, category, parseFloat(monthly_limit)]
+      [req.user.id, category, limit]
     );
     res.status(201).json({ success: true });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  } catch(e) { safeError(res, e, 'Save budget'); }
 });
 
 app.delete('/api/budgets/:id', auth, async (req, res) => {
   try {
-    await db.run('DELETE FROM budgets WHERE id=$1 AND user_id=$2', [req.params.id, req.user.id]);
+    const result = await db.run('DELETE FROM budgets WHERE id=$1 AND user_id=$2', [req.params.id, req.user.id]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Budget not found' });
     res.json({ success: true });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  } catch(e) { safeError(res, e, 'Delete budget'); }
 });
 
 // ── Recurring ─────────────────────────────────────────────────
 app.get('/api/recurring', auth, async (req, res) => {
   try { res.json(await db.all('SELECT * FROM recurring WHERE user_id=$1 ORDER BY next_date ASC', [req.user.id])); }
-  catch(e) { res.status(500).json({ error: e.message }); }
+  catch(e) { safeError(res, e, 'List recurring'); }
 });
 
 app.post('/api/recurring', auth, async (req, res) => {
@@ -324,30 +411,37 @@ app.post('/api/recurring', auth, async (req, res) => {
     const { description, amount, type, category, frequency, next_date } = req.body;
     if (!description || !amount || !type || !category || !frequency || !next_date)
       return res.status(400).json({ error: 'All fields required' });
+    if (!['income','expense'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
+    const amt = parseFloat(amount);
+    if (!Number.isFinite(amt) || amt <= 0) return res.status(400).json({ error: 'Invalid amount' });
     const row = await db.get(
       'INSERT INTO recurring (user_id,description,amount,type,category,frequency,next_date) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *',
-      [req.user.id, description, parseFloat(amount), type, category, frequency, next_date]
+      [req.user.id, description, amt, type, category, frequency, next_date]
     );
     res.status(201).json(row);
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  } catch(e) { safeError(res, e, 'Create recurring'); }
 });
 
 app.put('/api/recurring/:id', auth, async (req, res) => {
   try {
     const { description, amount, type, category, frequency, next_date, active } = req.body;
+    const amt = amount !== undefined ? parseFloat(amount) : undefined;
+    if (amt !== undefined && (!Number.isFinite(amt) || amt <= 0)) return res.status(400).json({ error: 'Invalid amount' });
     const row = await db.get(
       'UPDATE recurring SET description=$1,amount=$2,type=$3,category=$4,frequency=$5,next_date=$6,active=$7 WHERE id=$8 AND user_id=$9 RETURNING *',
-      [description, parseFloat(amount), type, category, frequency, next_date, active?1:0, req.params.id, req.user.id]
+      [description, amt, type, category, frequency, next_date, active?1:0, req.params.id, req.user.id]
     );
+    if (!row) return res.status(404).json({ error: 'Recurring transaction not found' });
     res.json(row);
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  } catch(e) { safeError(res, e, 'Update recurring'); }
 });
 
 app.delete('/api/recurring/:id', auth, async (req, res) => {
   try {
-    await db.run('DELETE FROM recurring WHERE id=$1 AND user_id=$2', [req.params.id, req.user.id]);
+    const result = await db.run('DELETE FROM recurring WHERE id=$1 AND user_id=$2', [req.params.id, req.user.id]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Recurring transaction not found' });
     res.json({ success: true });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  } catch(e) { safeError(res, e, 'Delete recurring'); }
 });
 
 // ── Cron: Recurring ───────────────────────────────────────────
@@ -375,6 +469,7 @@ cron.schedule('0 0 * * *', async () => {
 app.post('/api/ai/chat', auth, async (req, res) => {
   const { message } = req.body;
   if (!message) return res.status(400).json({ error: 'Message required' });
+  if (message.length > 1000) return res.status(400).json({ error: 'Message is too long (max 1000 characters)' });
   if (!groq)    return res.status(503).json({ error: 'AI not configured' });
   try {
     const m = new Date().toISOString().slice(0,7);
@@ -421,18 +516,27 @@ STRICT RULES:
 
     await db.run('INSERT INTO ai_chats (user_id,role,content) VALUES ($1,$2,$3)', [req.user.id, 'assistant', reply]);
     res.json({ reply });
-  } catch(e) { console.error('AI error:', e.message); res.status(500).json({ error:'AI unavailable', details:e.message }); }
+  } catch(e) { console.error('AI error:', e.message); res.status(500).json({ error:'AI unavailable right now. Please try again shortly.' }); }
 });
 
 app.get('/api/ai/history', auth, async (req, res) => {
   try { res.json(await db.all('SELECT role,content,created_at FROM ai_chats WHERE user_id=$1 ORDER BY created_at ASC LIMIT 30', [req.user.id])); }
-  catch(e) { res.status(500).json({ error:e.message }); }
+  catch(e) { safeError(res, e, 'AI history'); }
 });
 
 app.delete('/api/ai/history', auth, async (req, res) => {
   try { await db.run('DELETE FROM ai_chats WHERE user_id=$1', [req.user.id]); res.json({ success:true }); }
-  catch(e) { res.status(500).json({ error:e.message }); }
+  catch(e) { safeError(res, e, 'Clear AI history'); }
 });
+
+// Escapes a CSV field: quotes it, doubles internal quotes, and neutralizes
+// leading =/+/-/@ so a description like "=cmd|..." can't execute as a
+// formula when the file is opened in Excel/Sheets (CSV injection).
+function csvField(val) {
+  let s = String(val ?? '');
+  if (/^[=+\-@]/.test(s)) s = "'" + s;
+  return `"${s.replace(/"/g, '""')}"`;
+}
 
 // ── CSV Export ────────────────────────────────────────────────
 app.get('/api/export/csv', async (req, res) => {
@@ -445,11 +549,11 @@ app.get('/api/export/csv', async (req, res) => {
   try {
     const rows = await db.all('SELECT * FROM transactions WHERE user_id=$1 ORDER BY date DESC', [user.id]);
     const csv  = 'ID,Description,Amount,Type,Category,Date\n' +
-      rows.map(r=>`${r.id},"${r.description}",${r.amount},${r.type},${r.category},${r.date}`).join('\n');
+      rows.map(r => [r.id, csvField(r.description), r.amount, csvField(r.type), csvField(r.category), r.date].join(',')).join('\n');
     res.setHeader('Content-Type','text/csv');
     res.setHeader('Content-Disposition','attachment; filename="expenses.csv"');
     res.send(csv);
-  } catch(e) { res.status(500).json({ error:e.message }); }
+  } catch(e) { safeError(res, e, 'CSV export'); }
 });
 
 // ── PDF Report ────────────────────────────────────────────────
@@ -529,7 +633,7 @@ app.get('/api/export/pdf', async (req, res) => {
     doc.end();
   } catch(e) {
     console.error('PDF error:', e.message);
-    if (!res.headersSent) res.status(500).json({ error: e.message });
+    if (!res.headersSent) res.status(500).json({ error: 'Could not generate report. Please try again.' });
   }
 });
 
