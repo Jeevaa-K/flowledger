@@ -39,22 +39,23 @@ const App = {
     document.querySelectorAll('.nav-item[data-page]').forEach(btn => {
       btn.addEventListener('click', () => {
         this.navigate(btn.dataset.page);
-        document.getElementById('sidebar').classList.remove('open');
-        document.getElementById('sidebarOverlay').classList.remove('show');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        if (sidebar) sidebar.classList.remove('open');
+        if (overlay) overlay.classList.remove('show');
       });
     });
-    document.getElementById('prevMonth').addEventListener('click', () => {
+    this.on('prevMonth', 'click', () => {
       State.month--; if (State.month < 1) { State.month = 12; State.year--; }
       this.loadDashboard();
     });
-    document.getElementById('nextMonth').addEventListener('click', () => {
+    this.on('nextMonth', 'click', () => {
       State.month++; if (State.month > 12) { State.month = 1; State.year++; }
       this.loadDashboard();
     });
-    document.getElementById('quickAdd').addEventListener('click', () => UI.openAddModal());
-
-    document.getElementById('exportBtn').addEventListener('click', () => API.exportCSV());
-    document.getElementById('getTipBtn').addEventListener('click', () => this.getQuickTip());
+    this.on('quickAdd',   'click', () => UI.openAddModal());
+    this.on('exportBtn',  'click', () => API.exportCSV());
+    this.on('getTipBtn',  'click', () => this.getQuickTip());
   },
 
   async navigate(page) {
@@ -87,14 +88,17 @@ const App = {
       State.summary = summary;
       State.transactions = txns;
 
-      document.getElementById('kpiBalance').textContent  = fmt(summary.balance);
-      document.getElementById('kpiBalance').style.color  = summary.balance >= 0 ? '#10b981' : '#ef4444';
-      document.getElementById('kpiIncome').textContent   = fmt(summary.income);
-      document.getElementById('kpiExpense').textContent  = fmt(summary.expense);
-      document.getElementById('kpiSavings').textContent  = summary.savingsRate + '%';
+      const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+
+      setText('kpiBalance', fmt(summary.balance));
+      const balEl = document.getElementById('kpiBalance');
+      if (balEl) balEl.style.color = summary.balance >= 0 ? '#10b981' : '#ef4444';
+      setText('kpiIncome',  fmt(summary.income));
+      setText('kpiExpense', fmt(summary.expense));
+      setText('kpiSavings', summary.savingsRate + '%');
 
       const sr = parseFloat(summary.savingsRate);
-      document.getElementById('savingsStatus').textContent = sr >= 30 ? 'Excellent! 🎉' : sr >= 15 ? 'Good job! 👍' : sr > 0 ? 'Keep improving' : 'No savings yet';
+      setText('savingsStatus', sr >= 30 ? 'Excellent! 🎉' : sr >= 15 ? 'Good job! 👍' : sr > 0 ? 'Keep improving' : 'No savings yet');
 
       const badge = document.getElementById('balanceBadge');
       if (badge) { badge.textContent = summary.savingsRate + '% saved'; badge.className = sr >= 0 ? 'kpi-badge' : 'kpi-badge neg'; }
@@ -120,8 +124,8 @@ const App = {
 
       const inTxns = txns.filter(t => t.type === 'income').length;
       const exTxns = txns.filter(t => t.type === 'expense').length;
-      document.getElementById('incomeCount').textContent  = `${inTxns} transaction${inTxns !== 1 ? 's' : ''}`;
-      document.getElementById('expenseCount').textContent = `${exTxns} transaction${exTxns !== 1 ? 's' : ''}`;
+      setText('incomeCount',  `${inTxns} transaction${inTxns !== 1 ? 's' : ''}`);
+      setText('expenseCount', `${exTxns} transaction${exTxns !== 1 ? 's' : ''}`);
 
     } catch(e) {
       console.error('Dashboard error:', e);
@@ -172,12 +176,22 @@ const App = {
   },
 
   async saveTxn() {
-    const desc     = document.getElementById('txnDesc').value.trim();
-    const amount   = parseFloat(document.getElementById('txnAmount').value);
-    const date     = document.getElementById('txnDate').value;
-    const category = document.getElementById('txnCategory').value;
+    const descEl = document.getElementById('txnDesc');
+    const amtEl  = document.getElementById('txnAmount');
+    const dateEl = document.getElementById('txnDate');
+    const catEl  = document.getElementById('txnCategory');
+    if (!descEl || !amtEl || !dateEl || !catEl) { UI.toast('⚠ Something went wrong loading the form', 'error'); return; }
+
+    const desc     = descEl.value.trim();
+    const amount   = parseFloat(amtEl.value);
+    const date     = dateEl.value;
+    const category = catEl.value;
     const type     = UI.currentType;
     if (!desc || !amount || !date || !category) { UI.toast('⚠ Fill in all fields', 'error'); return; }
+    if (amount <= 0) { UI.toast('⚠ Amount must be greater than 0', 'error'); return; }
+
+    const btn = document.getElementById('saveTxnBtn');
+    if (btn) { btn.disabled = true; btn.dataset.origText = btn.textContent; btn.textContent = 'Saving...'; }
     try {
       if (UI.editId) {
         await API.put(`/transactions/${UI.editId}`, { description:desc, amount, type, category, date });
@@ -191,6 +205,7 @@ const App = {
       if (State.page === 'transactions') await this.loadTransactions();
       else await this.loadDashboard();
     } catch(e) { UI.toast('Error: ' + e.message, 'error'); }
+    finally { if (btn) { btn.disabled = false; btn.textContent = btn.dataset.origText || 'Save'; } }
   },
 
   async editTxn(id) {
@@ -219,8 +234,11 @@ const App = {
   },
 
   async saveBudget() {
-    const category      = document.getElementById('budgetCategory').value;
-    const monthly_limit = parseFloat(document.getElementById('budgetLimit').value);
+    const catEl = document.getElementById('budgetCategory');
+    const limEl = document.getElementById('budgetLimit');
+    if (!catEl || !limEl) { UI.toast('⚠ Something went wrong loading the form', 'error'); return; }
+    const category      = catEl.value;
+    const monthly_limit = parseFloat(limEl.value);
     if (!monthly_limit || monthly_limit <= 0) { UI.toast('⚠ Enter a valid limit', 'error'); return; }
     try {
       await API.post('/budgets', { category, monthly_limit });
@@ -302,11 +320,18 @@ const App = {
   loadGoals() { UI.renderGoals(State.goals); },
 
   saveGoal() {
-    const name   = document.getElementById('goalName').value.trim();
-    const target = parseFloat(document.getElementById('goalTarget').value);
-    const saved  = parseFloat(document.getElementById('goalSaved').value) || 0;
-    const date   = document.getElementById('goalDate').value;
-    const editId = document.getElementById('goalEditId').value;
+    const nameEl   = document.getElementById('goalName');
+    const targetEl = document.getElementById('goalTarget');
+    const savedEl  = document.getElementById('goalSaved');
+    const dateEl   = document.getElementById('goalDate');
+    const editIdEl = document.getElementById('goalEditId');
+    if (!nameEl || !targetEl || !savedEl || !dateEl || !editIdEl) { UI.toast('⚠ Something went wrong loading the form', 'error'); return; }
+
+    const name   = nameEl.value.trim();
+    const target = parseFloat(targetEl.value);
+    const saved  = parseFloat(savedEl.value) || 0;
+    const date   = dateEl.value;
+    const editId = editIdEl.value;
     if (!name || !target) { UI.toast('⚠ Fill in goal name and target', 'error'); return; }
     if (editId) {
       const idx = State.goals.findIndex(g => g.id === parseInt(editId));
@@ -352,6 +377,7 @@ const App = {
       const history = await API.get('/ai/history');
       if (!history.length) return;
       const container = document.getElementById('chatMessages');
+      if (!container) return;
       container.innerHTML = '';
       history.forEach(m => this.appendMsg(m.role, m.content));
       container.scrollTop = container.scrollHeight;
@@ -360,6 +386,7 @@ const App = {
 
   appendMsg(role, content) {
     const c = document.getElementById('chatMessages');
+    if (!c) return;
     const d = document.createElement('div');
     d.className = `chat-msg ${role}`;
     d.innerHTML = `
@@ -374,6 +401,7 @@ const App = {
 
   appendTyping() {
     const c = document.getElementById('chatMessages');
+    if (!c) return;
     const d = document.createElement('div');
     d.className = 'chat-msg assistant'; d.id = 'typingIndicator';
     d.innerHTML = `<div class="msg-avatar">N</div><div class="msg-content"><div class="msg-bubble"><div class="msg-typing"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div></div>`;
@@ -385,7 +413,8 @@ const App = {
     if (!msg.trim()) return;
     const input = document.getElementById('chatInput');
     const btn   = document.getElementById('chatSend');
-    input.value = ''; btn.disabled = true;
+    if (input) input.value = '';
+    if (btn) btn.disabled = true;
     this.appendMsg('user', msg);
     this.appendTyping();
     try {
@@ -395,7 +424,7 @@ const App = {
     } catch(e) {
       document.getElementById('typingIndicator')?.remove();
       this.appendMsg('assistant', '⚠ Error: ' + e.message);
-    } finally { btn.disabled = false; }
+    } finally { if (btn) btn.disabled = false; }
   },
 
   // ── Search ─────────────────────────────────────────────────
@@ -456,12 +485,13 @@ const App = {
 
     // Recurring modal
     this.on('openRecurringModal',  'click', () => {
-      document.getElementById('recNextDate').value = new Date().toISOString().slice(0,10);
-      document.getElementById('recurringModal').classList.add('open');
+      const nd = document.getElementById('recNextDate');
+      if (nd) nd.value = new Date().toISOString().slice(0,10);
+      document.getElementById('recurringModal')?.classList.add('open');
     });
-    this.on('closeRecurringModal', 'click', () => document.getElementById('recurringModal').classList.remove('open'));
+    this.on('closeRecurringModal', 'click', () => document.getElementById('recurringModal')?.classList.remove('open'));
     this.on('saveRecurringBtn',    'click', () => Recurring.save());
-    this.on('recurringModal',      'click', e => { if(e.target.id==='recurringModal') document.getElementById('recurringModal').classList.remove('open'); });
+    this.on('recurringModal',      'click', e => { if(e.target.id==='recurringModal') document.getElementById('recurringModal')?.classList.remove('open'); });
 
     // Import
     this.on('importBtn', 'click', () => Importer.importAll());
@@ -513,12 +543,18 @@ const App = {
   },
 
   bindFilters() {
-    const go = () => this.loadTransactions({
-      type:     document.getElementById('filterType').value,
-      category: document.getElementById('filterCategory').value,
-      from:     document.getElementById('filterFrom').value,
-      to:       document.getElementById('filterTo').value
-    });
+    const go = () => {
+      const typeEl = document.getElementById('filterType');
+      const catEl  = document.getElementById('filterCategory');
+      const fromEl = document.getElementById('filterFrom');
+      const toEl   = document.getElementById('filterTo');
+      this.loadTransactions({
+        type:     typeEl ? typeEl.value : '',
+        category: catEl  ? catEl.value  : '',
+        from:     fromEl ? fromEl.value : '',
+        to:       toEl   ? toEl.value   : ''
+      });
+    };
     ['filterType','filterCategory','filterFrom','filterTo'].forEach(id =>
       document.getElementById(id)?.addEventListener('change', go));
     this.on('clearFilters', 'click', () => {
@@ -552,8 +588,8 @@ const App = {
     const hb = document.getElementById('hamburger');
     const sb = document.getElementById('sidebar');
     const ov = document.getElementById('sidebarOverlay');
-    hb?.addEventListener('click', () => { sb.classList.toggle('open'); ov.classList.toggle('show'); });
-    ov?.addEventListener('click', () => { sb.classList.remove('open'); ov.classList.remove('show'); });
+    hb?.addEventListener('click', () => { sb?.classList.toggle('open'); ov?.classList.toggle('show'); });
+    ov?.addEventListener('click', () => { sb?.classList.remove('open'); ov?.classList.remove('show'); });
   }
 };
 

@@ -188,20 +188,25 @@ const Auth = {
     try {
       // Use stored user data instead of API call to avoid JSON parse issues
       const stored = JSON.parse(localStorage.getItem('fl_user') || '{}');
-      document.getElementById('profileName').value     = stored.name  || '';
-      document.getElementById('profileEmail').value    = stored.email || '';
-      document.getElementById('profileCurrency').value = stored.currency || '₹';
+      const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+      set('profileName',     stored.name  || '');
+      set('profileEmail',    stored.email || '');
+      set('profileCurrency', stored.currency || '₹');
       document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.profile-panel').forEach(p => p.style.display = 'none');
-      document.querySelector('.profile-tab').classList.add('active');
-      document.getElementById('ptab-info').style.display = 'block';
-      document.getElementById('profileModal').classList.add('open');
+      document.querySelector('.profile-tab')?.classList.add('active');
+      const infoPanel = document.getElementById('ptab-info');
+      if (infoPanel) infoPanel.style.display = 'block';
+      document.getElementById('profileModal')?.classList.add('open');
     } catch(e) { console.error('openProfile error:', e); }
   },
 
   async saveProfile() {
-    const name     = document.getElementById('profileName').value.trim();
-    const currency = document.getElementById('profileCurrency').value;
+    const nameEl = document.getElementById('profileName');
+    const currEl = document.getElementById('profileCurrency');
+    if (!nameEl || !currEl) { alert('Something went wrong loading the form'); return; }
+    const name     = nameEl.value.trim();
+    const currency = currEl.value;
     if (!name) { alert('Name cannot be empty'); return; }
     try {
       await API.put('/auth/profile', { name, currency });
@@ -209,22 +214,26 @@ const Auth = {
       user.name = name; user.currency = currency;
       localStorage.setItem('fl_user', JSON.stringify(user));
       this.onLoggedIn(user);
-      document.getElementById('profileModal').classList.remove('open');
+      document.getElementById('profileModal')?.classList.remove('open');
       UI.toast('✓ Profile updated', 'success');
     } catch(e) { alert(e.message.replace(/^\d+:\s*/,'')); }
   },
 
   async changePassword() {
-    const current = document.getElementById('currentPwd').value;
-    const newPwd  = document.getElementById('newPwd').value;
-    const confirm = document.getElementById('confirmPwd').value;
+    const curEl = document.getElementById('currentPwd');
+    const newEl = document.getElementById('newPwd');
+    const confEl = document.getElementById('confirmPwd');
+    if (!curEl || !newEl || !confEl) { alert('Something went wrong loading the form'); return; }
+    const current = curEl.value;
+    const newPwd  = newEl.value;
+    const confirm = confEl.value;
     if (!current || !newPwd) { alert('Please fill in all fields'); return; }
     if (newPwd !== confirm)  { alert('Passwords do not match'); return; }
     if (newPwd.length < 6)   { alert('Password must be at least 6 characters'); return; }
     try {
       await API.put('/auth/password', { currentPassword:current, newPassword:newPwd });
-      ['currentPwd','newPwd','confirmPwd'].forEach(id => document.getElementById(id).value = '');
-      document.getElementById('profileModal').classList.remove('open');
+      ['currentPwd','newPwd','confirmPwd'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      document.getElementById('profileModal')?.classList.remove('open');
       UI.toast('✓ Password changed', 'success');
     } catch(e) { alert(e.message.replace(/^\d+:\s*/,'')); }
   },

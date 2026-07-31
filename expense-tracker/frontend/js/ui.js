@@ -6,8 +6,10 @@ const UI = {
 
   setType(type) {
     this.currentType = type;
-    document.getElementById('typeIncome').className  = 'type-btn' + (type==='income'  ? ' active-income'  : '');
-    document.getElementById('typeExpense').className = 'type-btn' + (type==='expense' ? ' active-expense' : '');
+    const inc = document.getElementById('typeIncome');
+    const exp = document.getElementById('typeExpense');
+    if (inc) inc.className = 'type-btn' + (type==='income'  ? ' active-income'  : '');
+    if (exp) exp.className = 'type-btn' + (type==='expense' ? ' active-expense' : '');
     this.buildCatPicker(type, null);
   },
 
@@ -16,9 +18,10 @@ const UI = {
     const current = selected || (type==='income' ? 'Salary' : 'Food');
     const picker = document.getElementById('catPicker');
     const select = document.getElementById('txnCategory');
+    if (!select) return;
     select.innerHTML = cats.map(c=>`<option value="${c}">${c}</option>`).join('');
     select.value = current;
-    picker.innerHTML = cats.map(c=>`
+    if (picker) picker.innerHTML = cats.map(c=>`
       <button type="button" class="cat-chip${c===current?' active':''}" data-action="select-cat" data-cat="${c}">
         ${CAT_EMOJIS[c]||'•'} ${c}
       </button>`).join('');
@@ -26,42 +29,48 @@ const UI = {
 
   openAddModal(txn=null) {
     this.editId = txn ? txn.id : null;
-    document.getElementById('modalTitle').textContent  = txn ? 'Edit Transaction' : 'Add Transaction';
-    document.getElementById('txnDesc').value           = txn ? txn.description : '';
-    document.getElementById('txnAmount').value         = txn ? txn.amount : '';
-    document.getElementById('txnDate').value           = txn ? txn.date : new Date().toISOString().slice(0,10);
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+    const title = document.getElementById('modalTitle');
+    if (title) title.textContent = txn ? 'Edit Transaction' : 'Add Transaction';
+    set('txnDesc',   txn ? txn.description : '');
+    set('txnAmount', txn ? txn.amount : '');
+    set('txnDate',   txn ? txn.date : new Date().toISOString().slice(0,10));
     this.setType(txn ? txn.type : 'income');
     this.buildCatPicker(txn ? txn.type : 'income', txn ? txn.category : null);
-    document.getElementById('addModal').classList.add('open');
-    setTimeout(() => document.getElementById('txnDesc').focus(), 100);
+    document.getElementById('addModal')?.classList.add('open');
+    setTimeout(() => document.getElementById('txnDesc')?.focus(), 100);
   },
 
   closeAddModal() {
-    document.getElementById('addModal').classList.remove('open');
+    document.getElementById('addModal')?.classList.remove('open');
     this.editId = null;
   },
 
   openBudgetModal() {
-    document.getElementById('budgetLimit').value = '';
-    document.getElementById('budgetModal').classList.add('open');
-    setTimeout(() => document.getElementById('budgetLimit').focus(), 100);
+    const lim = document.getElementById('budgetLimit');
+    if (lim) lim.value = '';
+    document.getElementById('budgetModal')?.classList.add('open');
+    setTimeout(() => document.getElementById('budgetLimit')?.focus(), 100);
   },
-  closeBudgetModal() { document.getElementById('budgetModal').classList.remove('open'); },
+  closeBudgetModal() { document.getElementById('budgetModal')?.classList.remove('open'); },
 
   openGoalModal(goal=null) {
-    document.getElementById('goalModalTitle').textContent = goal ? 'Edit Goal' : 'Add Financial Goal';
-    document.getElementById('goalName').value   = goal ? goal.name   : '';
-    document.getElementById('goalTarget').value = goal ? goal.target : '';
-    document.getElementById('goalSaved').value  = goal ? goal.saved  : '0';
-    document.getElementById('goalDate').value   = goal ? goal.date   : '';
-    document.getElementById('goalEditId').value = goal ? goal.id     : '';
-    document.getElementById('goalModal').classList.add('open');
-    setTimeout(() => document.getElementById('goalName').focus(), 100);
+    const title = document.getElementById('goalModalTitle');
+    if (title) title.textContent = goal ? 'Edit Goal' : 'Add Financial Goal';
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+    set('goalName',   goal ? goal.name   : '');
+    set('goalTarget', goal ? goal.target : '');
+    set('goalSaved',  goal ? goal.saved  : '0');
+    set('goalDate',   goal ? goal.date   : '');
+    set('goalEditId', goal ? goal.id     : '');
+    document.getElementById('goalModal')?.classList.add('open');
+    setTimeout(() => document.getElementById('goalName')?.focus(), 100);
   },
-  closeGoalModal() { document.getElementById('goalModal').classList.remove('open'); },
+  closeGoalModal() { document.getElementById('goalModal')?.classList.remove('open'); },
 
   toast(msg, type='success', duration=2800) {
     const el = document.getElementById('toast');
+    if (!el) { console.warn('Toast:', msg); return; }
     el.textContent = msg;
     el.className = `toast show ${type}`;
     setTimeout(() => el.classList.remove('show'), duration);
@@ -69,12 +78,17 @@ const UI = {
 
   updateSidebar(income, expense, balance) {
     const balEl = document.getElementById('sidebarBalance');
-    balEl.textContent = fmt(balance);
-    balEl.style.color = balance >= 0 ? 'white' : '#fca5a5';
-    document.getElementById('sidebarInc').textContent = '↑ ' + fmt(income);
-    document.getElementById('sidebarExp').textContent = '↓ ' + fmt(expense);
+    if (balEl) {
+      balEl.textContent = fmt(balance);
+      balEl.style.color = balance >= 0 ? 'white' : '#fca5a5';
+    }
+    const incEl = document.getElementById('sidebarInc');
+    const expEl = document.getElementById('sidebarExp');
+    if (incEl) incEl.textContent = '↑ ' + fmt(income);
+    if (expEl) expEl.textContent = '↓ ' + fmt(expense);
     const pct = income > 0 ? Math.min((income - expense) / income * 100, 100) : 0;
-    document.getElementById('sidebarBarFill').style.width = Math.max(pct, 0) + '%';
+    const fillEl = document.getElementById('sidebarBarFill');
+    if (fillEl) fillEl.style.width = Math.max(pct, 0) + '%';
   },
 
   renderTxnList(txns, containerId, limit=null, tableMode=false) {

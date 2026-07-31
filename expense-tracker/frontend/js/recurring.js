@@ -30,19 +30,30 @@ const Recurring = {
   },
 
   async save() {
-    const description = document.getElementById('recDesc').value.trim();
-    const amount      = parseFloat(document.getElementById('recAmount').value);
-    const type        = document.getElementById('recType').value;
-    const category    = document.getElementById('recCategory').value;
-    const frequency   = document.getElementById('recFrequency').value;
-    const next_date   = document.getElementById('recNextDate').value;
+    const descEl = document.getElementById('recDesc');
+    const amtEl  = document.getElementById('recAmount');
+    const typeEl = document.getElementById('recType');
+    const catEl  = document.getElementById('recCategory');
+    const freqEl = document.getElementById('recFrequency');
+    const dateEl = document.getElementById('recNextDate');
+    if (!descEl || !amtEl || !typeEl || !catEl || !freqEl || !dateEl) {
+      UI.toast('⚠ Something went wrong loading the form', 'error'); return;
+    }
+
+    const description = descEl.value.trim();
+    const amount      = parseFloat(amtEl.value);
+    const type        = typeEl.value;
+    const category    = catEl.value;
+    const frequency   = freqEl.value;
+    const next_date   = dateEl.value;
 
     if (!description || !amount || !next_date) { UI.toast('⚠ Fill in all fields', 'error'); return; }
+    if (amount <= 0) { UI.toast('⚠ Amount must be greater than 0', 'error'); return; }
 
     try {
       await API.post('/recurring', { description, amount, type, category, frequency, next_date });
       UI.toast('✓ Recurring transaction added', 'success');
-      document.getElementById('recurringModal').classList.remove('open');
+      document.getElementById('recurringModal')?.classList.remove('open');
       this.load();
     } catch(e) { UI.toast('Error: ' + e.message, 'error'); }
   },
