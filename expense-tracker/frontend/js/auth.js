@@ -15,11 +15,16 @@ const Auth = {
   },
 
   bindEvents() {
-    document.getElementById('loginBtn').addEventListener('click',    () => this.login());
-    document.getElementById('registerBtn').addEventListener('click', () => this.register());
-    document.getElementById('loginEmail').addEventListener('keydown',    e => { if (e.key==='Enter') this.login(); });
-    document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key==='Enter') this.login(); });
-    document.getElementById('regConfirm').addEventListener('keydown',    e => { if (e.key==='Enter') this.register(); });
+    const on = (id, event, handler) => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener(event, handler);
+    };
+
+    on('loginBtn',    'click',   () => this.login());
+    on('registerBtn', 'click',   () => this.register());
+    on('loginEmail',    'keydown', e => { if (e.key==='Enter') this.login(); });
+    on('loginPassword', 'keydown', e => { if (e.key==='Enter') this.login(); });
+    on('regConfirm',    'keydown', e => { if (e.key==='Enter') this.register(); });
     // Sidebar gear icon → profile
     document.addEventListener('click', e => {
       const gear = e.target.closest('#openProfileModal');
@@ -43,28 +48,25 @@ const Auth = {
     });
 
     // Dropdown items
-    const avProfile = document.getElementById('avProfile');
-    const avTheme   = document.getElementById('avTheme');
-    const avLogout  = document.getElementById('avLogout');
-    if (avProfile) avProfile.addEventListener('click', () => {
+    on('avProfile', 'click', () => {
       document.getElementById('avatarDropdown').classList.remove('show');
       this.openProfile();
     });
-    if (avTheme) avTheme.addEventListener('click', () => {
+    on('avTheme', 'click', () => {
       document.getElementById('avatarDropdown').classList.remove('show');
       if (typeof Theme !== 'undefined') Theme.toggle();
       const btn = document.getElementById('avTheme');
       if (btn) btn.textContent = (localStorage.getItem('fl_theme')==='dark' ? '☀️' : '🌙') + ' Toggle Dark Mode';
     });
-    if (avLogout) avLogout.addEventListener('click', () => {
+    on('avLogout', 'click', () => {
       document.getElementById('avatarDropdown').classList.remove('show');
       this.logout();
     });
-    document.getElementById('closeProfileModal').addEventListener('click', () => document.getElementById('profileModal').classList.remove('open'));
-    document.getElementById('saveProfileBtn').addEventListener('click',    () => this.saveProfile());
-    document.getElementById('changePasswordBtn').addEventListener('click', () => this.changePassword());
-    document.getElementById('deleteAccountBtn').addEventListener('click',  () => this.deleteAccount());
-    document.getElementById('logoutBtn').addEventListener('click',         () => this.logout());
+    on('closeProfileModal',   'click', () => document.getElementById('profileModal').classList.remove('open'));
+    on('saveProfileBtn',      'click', () => this.saveProfile());
+    on('changePasswordBtn',   'click', () => this.changePassword());
+    on('deleteAccountBtn',    'click', () => this.deleteAccount());
+    on('logoutBtn',           'click', () => this.logout());
 
     // Profile tab delegation - works even when modal is hidden
     document.addEventListener('click', e => {
