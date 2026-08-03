@@ -33,12 +33,13 @@ if (JWT_SECRET.length < 32) {
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc:  ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
-      styleSrc:   ["'self'", "'unsafe-inline'"],
-      fontSrc:    ["'self'", "data:"],
-      imgSrc:     ["'self'", "data:", "blob:"],
-      connectSrc: ["'self'"]
+      defaultSrc:   ["'self'"],
+      scriptSrc:    ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
+      scriptSrcAttr:["'self'", "'unsafe-inline'"],
+      styleSrc:     ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc:      ["'self'", "data:", "https://fonts.gstatic.com"],
+      imgSrc:       ["'self'", "data:", "blob:"],
+      connectSrc:   ["'self'"]
     }
   },
   crossOriginEmbedderPolicy: false
