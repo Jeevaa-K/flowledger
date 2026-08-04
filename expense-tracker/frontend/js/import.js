@@ -150,16 +150,16 @@ const Importer = {
       <div class="import-summary">✅ Found <strong>${rows.length}</strong> transactions ready to import</div>
       <div style="max-height:280px;overflow-y:auto;margin-top:10px">
         ${rows.slice(0, 15).map(r => `
-          <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #f3f4f6">
+          <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #EFE8D8">
             <div style="flex:1;min-width:0">
               <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.description}</div>
-              <div style="font-size:11px;color:#9ca3af">${r.category} · ${r.date} · ${r.type}</div>
+              <div style="font-size:11px;color:#A79C8C">${r.category} · ${r.date} · ${r.type}</div>
             </div>
-            <div style="font-size:13px;font-family:monospace;font-weight:600;color:${r.type==='income'?'#10b981':'#ef4444'};flex-shrink:0">
+            <div style="font-size:13px;font-family:monospace;font-weight:600;color:${r.type==='income'?'#3E6154':'#A6402F'};flex-shrink:0">
               ${r.type==='income'?'+':'-'}₹${r.amount.toLocaleString('en-IN')}
             </div>
           </div>`).join('')}
-        ${rows.length > 15 ? `<div style="text-align:center;padding:10px;color:#9ca3af;font-size:12px">...and ${rows.length-15} more</div>` : ''}
+        ${rows.length > 15 ? `<div style="text-align:center;padding:10px;color:#A79C8C;font-size:12px">...and ${rows.length-15} more</div>` : ''}
       </div>`;
 
     if (btn) btn.disabled = false;

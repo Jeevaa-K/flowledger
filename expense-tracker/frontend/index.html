@@ -6,10 +6,10 @@
   <title>FlowLedger — Smart Expense Tracker</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
   <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#6366f1" />
+  <meta name="theme-color" content="#BF5730" />
   <meta name="mobile-web-app-capable" content="yes" />
   <script src="js/theme.js"></script>
   <script src="js/chart.min.js"></script>
@@ -135,8 +135,7 @@
             </div>
           </div>
           <div class="av-divider"></div>
-          <button class="av-item" id="avProfile">👤 My Profile</button>
-          <button class="av-item" id="avTheme">🌙 Toggle Dark Mode</button>
+          <button class="av-item" id="avProfile">My Profile</button>
           <div class="av-divider"></div>
           <button class="av-item av-logout" id="avLogout">🚪 Logout</button>
         </div>
@@ -155,9 +154,9 @@
         </div>
         <div class="header-actions">
           <div class="month-nav">
-            <button class="month-btn" id="prevMonth">‹</button>
+            <button class="month-btn" id="prevMonth" aria-label="Previous month">‹</button>
             <span class="month-label" id="monthLabel">June</span>
-            <button class="month-btn" id="nextMonth">›</button>
+            <button class="month-btn" id="nextMonth" aria-label="Next month">›</button>
           </div>
           <button class="btn-primary" id="quickAdd">+ Quick Add</button>
         </div>
@@ -166,26 +165,26 @@
       <div class="kpi-grid">
         <div class="kpi-card kpi-balance">
           <div class="kpi-top">
-            <div class="kpi-icon kpi-icon-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+            <div class="kpi-icon kpi-icon-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
             <div class="kpi-badge" id="balanceBadge">0%</div>
           </div>
           <div class="kpi-value" id="kpiBalance">₹0</div>
           <div class="kpi-label">Net Balance</div>
         </div>
         <div class="kpi-card kpi-income">
-          <div class="kpi-top"><div class="kpi-icon kpi-icon-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div></div>
+          <div class="kpi-top"><div class="kpi-icon kpi-icon-positive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div></div>
           <div class="kpi-value green" id="kpiIncome">₹0</div>
           <div class="kpi-label">Total Income</div>
           <div class="kpi-sub" id="incomeCount">0 transactions</div>
         </div>
         <div class="kpi-card kpi-expense">
-          <div class="kpi-top"><div class="kpi-icon kpi-icon-red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg></div></div>
+          <div class="kpi-top"><div class="kpi-icon kpi-icon-negative"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg></div></div>
           <div class="kpi-value red" id="kpiExpense">₹0</div>
           <div class="kpi-label">Total Expenses</div>
           <div class="kpi-sub" id="expenseCount">0 transactions</div>
         </div>
         <div class="kpi-card kpi-savings">
-          <div class="kpi-top"><div class="kpi-icon kpi-icon-purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0016.5 3c-1.76 0-3.332.83-4.5 2.05C10.832 3.83 9.26 3 7.5 3A5.5 5.5 0 002 8.5c0 2.3 1.5 4.05 3 5.5l7 7 7-7z"/></svg></div></div>
+          <div class="kpi-top"><div class="kpi-icon kpi-icon-highlight"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0016.5 3c-1.76 0-3.332.83-4.5 2.05C10.832 3.83 9.26 3 7.5 3A5.5 5.5 0 002 8.5c0 2.3 1.5 4.05 3 5.5l7 7 7-7z"/></svg></div></div>
           <div class="kpi-value purple" id="kpiSavings">0%</div>
           <div class="kpi-label">Savings Rate</div>
           <div class="kpi-sub" id="savingsStatus">Keep it up!</div>
@@ -254,12 +253,12 @@
         <button class="btn-primary" id="openAddModal">+ Add New</button>
       </div>
       <div class="filter-bar">
-        <select class="filter-select" id="filterType"><option value="">All Types</option><option value="income">Income</option><option value="expense">Expense</option></select>
-        <select class="filter-select" id="filterCategory"><option value="">All Categories</option><option>Food</option><option>Transport</option><option>Shopping</option><option>Entertainment</option><option>Health</option><option>Bills</option><option>Salary</option><option>Freelance</option><option>Investment</option><option>Other</option></select>
+        <select class="filter-select" id="filterType" aria-label="Filter by type"><option value="">All Types</option><option value="income">Income</option><option value="expense">Expense</option></select>
+        <select class="filter-select" id="filterCategory" aria-label="Filter by category"><option value="">All Categories</option><option>Food</option><option>Transport</option><option>Shopping</option><option>Entertainment</option><option>Health</option><option>Bills</option><option>Salary</option><option>Freelance</option><option>Investment</option><option>Other</option></select>
         <div class="date-range">
-          <input class="filter-input" type="date" id="filterFrom" />
+          <input class="filter-input" type="date" id="filterFrom" aria-label="From date" />
           <span class="date-sep">→</span>
-          <input class="filter-input" type="date" id="filterTo" />
+          <input class="filter-input" type="date" id="filterTo" aria-label="To date" />
         </div>
         <button class="btn-ghost" id="clearFilters">✕ Clear</button>
       </div>
@@ -343,12 +342,12 @@
             <div class="as-row"><span>Saved</span><span class="purple" id="aiStatSav">₹0</span></div>
           </div>
           <div class="sug-title">Quick Prompts</div>
-          <button class="sug-btn" data-prompt="How am I doing financially this month?">📊 Monthly summary</button>
-          <button class="sug-btn" data-prompt="Where am I spending the most money?">🔍 Top spending</button>
-          <button class="sug-btn" data-prompt="Give me 3 tips to save more money">💡 Saving tips</button>
-          <button class="sug-btn" data-prompt="Am I on track with my budget?">🎯 Budget check</button>
-          <button class="sug-btn" data-prompt="Predict my expenses for next month">🔮 Forecast</button>
-          <button class="sug-btn" data-prompt="What percentage of income am I saving?">💰 Savings rate</button>
+          <button class="sug-btn" data-prompt="How am I doing financially this month?"> Monthly summary</button>
+          <button class="sug-btn" data-prompt="Where am I spending the most money?"> Top spending</button>
+          <button class="sug-btn" data-prompt="Give me 3 tips to save more money"> Saving tips</button>
+          <button class="sug-btn" data-prompt="Am I on track with my budget?"> Budget check</button>
+          <button class="sug-btn" data-prompt="Predict my expenses for next month"> Forecast</button>
+          <button class="sug-btn" data-prompt="What percentage of income am I saving?"> Savings rate</button>
         </div>
       </div>
     </section>
@@ -380,7 +379,7 @@
           <div class="dropzone-sub">Supports: date, description, amount, type, category columns</div>
           <input type="file" id="csvFileInput" accept=".csv" style="display:none" />
         </div>
-        <div style="margin-top:14px;padding:12px;background:#f9fafb;border-radius:8px;font-size:12px;color:#6b7280">
+        <div style="margin-top:14px;padding:12px;background:#F5F0E6;border-radius:8px;font-size:12px;color:#7C7266">
           <strong>Expected CSV format:</strong><br/>
           <code>date,description,amount,type,category</code><br/>
           <code>2026-06-01,Salary,50000,income,Salary</code><br/>
@@ -428,7 +427,7 @@
         </div>
         <div class="card">
           <div class="card-header"><div class="card-title">What's included</div></div>
-          <div style="display:flex;flex-direction:column;gap:10px;font-size:14px;color:#374151">
+          <div style="display:flex;flex-direction:column;gap:10px;font-size:14px;color:#4A4238">
             <div>✅ Income & expense summary</div>
             <div>✅ Savings rate</div>
             <div>✅ Category breakdown</div>
@@ -481,7 +480,7 @@
 <div class="modal-overlay" id="budgetModal">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-icon">🎯</div>
+      <div class="modal-icon"></div>
       <h2 class="modal-title">Set Monthly Budget</h2>
       <button class="modal-close" id="closeBudgetModal">×</button>
     </div>
@@ -503,7 +502,7 @@
 <div class="modal-overlay" id="goalModal">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-icon">🏆</div>
+      <div class="modal-icon"></div>
       <h2 class="modal-title" id="goalModalTitle">Add Financial Goal</h2>
       <button class="modal-close" id="closeGoalModal">×</button>
     </div>
@@ -535,7 +534,7 @@
 <div class="modal-overlay" id="recurringModal">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-icon">🔄</div>
+      <div class="modal-icon"></div>
       <h2 class="modal-title">Add Recurring Transaction</h2>
       <button class="modal-close" id="closeRecurringModal">×</button>
     </div>
@@ -634,7 +633,7 @@
         <input type="email" id="regEmail" placeholder="you@example.com" />
       </div>
       <div class="auth-form-group">
-        <label>Password <span style="color:#9ca3af;font-size:11px">(min 6 chars)</span></label>
+        <label>Password <span style="color:#A79C8C;font-size:11px">(min 6 chars)</span></label>
         <div style="position:relative">
           <input type="password" id="regPassword" placeholder="••••••••" />
           <button class="eye-btn" onclick="Auth.togglePwd('regPassword')">👁</button>
@@ -706,9 +705,9 @@
     </div>
     <!-- Danger Tab -->
     <div class="profile-panel" id="ptab-danger" style="display:none">
-      <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:16px;margin-bottom:16px">
-        <div style="font-weight:700;color:#991b1b;margin-bottom:6px">⚠ Delete Account</div>
-        <div style="font-size:13px;color:#6b7280">This will permanently delete your account and all data. This cannot be undone.</div>
+      <div style="background:#F3E0DA;border:1px solid #D6A090;border-radius:10px;padding:16px;margin-bottom:16px">
+        <div style="font-weight:700;color:#7A2E20;margin-bottom:6px">⚠ Delete Account</div>
+        <div style="font-size:13px;color:#7C7266">This will permanently delete your account and all data. This cannot be undone.</div>
       </div>
       <button class="btn-danger full" id="deleteAccountBtn">Delete My Account</button>
     </div>

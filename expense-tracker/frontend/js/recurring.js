@@ -16,7 +16,7 @@ const Recurring = {
     const freqLabel = { daily:'Daily', weekly:'Weekly', monthly:'Monthly', yearly:'Yearly' };
     el.innerHTML = items.map(r => `
       <div class="recurring-item ${r.active ? '' : 'inactive'}">
-        <div class="rec-dot" style="background:${CAT_COLORS[r.category]||'#94a3b8'}"></div>
+        <div class="rec-dot" style="background:${CAT_COLORS[r.category]||'#A79C8C'}"></div>
         <div class="rec-info">
           <div class="rec-name">${r.description}</div>
           <div class="rec-meta">${freqLabel[r.frequency]||r.frequency} · Next: ${r.next_date} · ${r.category}</div>

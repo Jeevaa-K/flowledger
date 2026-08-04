@@ -4,8 +4,8 @@
   "description": "Smart Expense Tracker with AI Assistant",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f0f2f5",
-  "theme_color": "#6366f1",
+  "background_color": "#FAF6EF",
+  "theme_color": "#BF5730",
   "orientation": "portrait-primary",
   "icons": [
     {

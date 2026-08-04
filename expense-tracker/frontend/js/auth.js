@@ -62,12 +62,6 @@ const Auth = {
       document.getElementById('avatarDropdown').classList.remove('show');
       this.openProfile();
     });
-    on('avTheme', 'click', () => {
-      document.getElementById('avatarDropdown').classList.remove('show');
-      if (typeof Theme !== 'undefined') Theme.toggle();
-      const btn = document.getElementById('avTheme');
-      if (btn) btn.textContent = (localStorage.getItem('fl_theme')==='dark' ? '☀️' : '🌙') + ' Toggle Dark Mode';
-    });
     on('avLogout', 'click', () => {
       document.getElementById('avatarDropdown').classList.remove('show');
       this.logout();

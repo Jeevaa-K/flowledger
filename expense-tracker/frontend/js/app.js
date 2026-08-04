@@ -80,6 +80,10 @@ const App = {
     const cl = document.getElementById('currentMonthLabel');
     if (ml) ml.textContent = months[State.month - 1];
     if (cl) cl.textContent = `${months[State.month - 1]} ${State.year}`;
+
+    const kpiIds = ['kpiBalance','kpiIncome','kpiExpense','kpiSavings'];
+    kpiIds.forEach(id => document.getElementById(id)?.classList.add('is-loading'));
+
     try {
       const [summary, txns] = await Promise.all([
         API.get(`/summary?month=${State.month}&year=${State.year}`),
@@ -92,10 +96,11 @@ const App = {
 
       setText('kpiBalance', fmt(summary.balance));
       const balEl = document.getElementById('kpiBalance');
-      if (balEl) balEl.style.color = summary.balance >= 0 ? '#10b981' : '#ef4444';
+      if (balEl) balEl.classList.toggle('negative', summary.balance < 0);
       setText('kpiIncome',  fmt(summary.income));
       setText('kpiExpense', fmt(summary.expense));
       setText('kpiSavings', summary.savingsRate + '%');
+      kpiIds.forEach(id => document.getElementById(id)?.classList.remove('is-loading'));
 
       const sr = parseFloat(summary.savingsRate);
       setText('savingsStatus', sr >= 30 ? 'Excellent! 🎉' : sr >= 15 ? 'Good job! 👍' : sr > 0 ? 'Keep improving' : 'No savings yet');
@@ -129,6 +134,7 @@ const App = {
 
     } catch(e) {
       console.error('Dashboard error:', e);
+      kpiIds.forEach(id => document.getElementById(id)?.classList.remove('is-loading'));
       UI.toast('⚠ Could not load data. Is the server running?', 'error');
     }
   },
@@ -163,6 +169,8 @@ const App = {
 
   // ── Transactions ───────────────────────────────────────────
   async loadTransactions(filters={}) {
+    const list = document.getElementById('allTxns');
+    list?.classList.add('is-fetching');
     try {
       const qs = new URLSearchParams();
       if (filters.type)     qs.set('type',     filters.type);
@@ -173,6 +181,7 @@ const App = {
       State.transactions = txns;
       UI.renderTxnList(txns, 'allTxns', null, true);
     } catch { UI.toast('Error loading transactions', 'error'); }
+    finally { list?.classList.remove('is-fetching'); }
   },
 
   async saveTxn() {
@@ -451,9 +460,9 @@ const App = {
             <div style="width:8px;height:8px;border-radius:50%;background:${Charts.getCatColor(t.category)};flex-shrink:0"></div>
             <div style="flex:1;min-width:0">
               <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.description}</div>
-              <div style="font-size:11px;color:#9ca3af">${t.category} · ${t.date}</div>
+              <div style="font-size:11px;color:#A79C8C">${t.category} · ${t.date}</div>
             </div>
-            <div style="font-size:13px;font-family:'JetBrains Mono',monospace;color:${t.type==='income'?'#10b981':'#ef4444'}">${t.type==='income'?'+':'-'}${fmt(t.amount)}</div>
+            <div style="font-size:13px;font-family:'JetBrains Mono',monospace;color:${t.type==='income'?'#3E6154':'#A6402F'}">${t.type==='income'?'+':'-'}${fmt(t.amount)}</div>
           </div>`).join('');
         wrap.appendChild(resultsEl);
       } catch {}
