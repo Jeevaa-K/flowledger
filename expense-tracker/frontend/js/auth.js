@@ -35,7 +35,10 @@ const Auth = {
     on('loginEmail',    'keydown', e => { if (e.key==='Enter') this.login(); });
     on('loginPassword', 'keydown', e => { if (e.key==='Enter') this.login(); });
     on('regConfirm',    'keydown', e => { if (e.key==='Enter') this.register(); });
-    // Sidebar gear icon → profile
+
+    // Sidebar gear icon → profile, avatar dropdown, auth tabs, password
+    // visibility toggles, and the demo-login button all share one
+    // delegated handler via data-action attributes.
     document.addEventListener('click', e => {
       const gear = e.target.closest('#openProfileModal');
       if (gear) { e.stopPropagation(); this.openProfile(); return; }
@@ -45,7 +48,8 @@ const Auth = {
       if (avatarBtn) {
         e.stopPropagation();
         const dd = document.getElementById('avatarDropdown');
-        if (dd) dd.classList.toggle('show');
+        const open = dd?.classList.toggle('show');
+        avatarBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
         return;
       }
 
@@ -53,8 +57,17 @@ const Auth = {
       const wrap = e.target.closest('#avatarWrap');
       if (!wrap) {
         const dd = document.getElementById('avatarDropdown');
-        if (dd) dd.classList.remove('show');
+        dd?.classList.remove('show');
+        document.getElementById('topbarProfileBtn')?.setAttribute('aria-expanded', 'false');
       }
+
+      const actionEl = e.target.closest('[data-action]');
+      if (!actionEl) return;
+      const action = actionEl.dataset.action;
+      if (action === 'auth-tab-login')    this.showTab('login');
+      else if (action === 'auth-tab-register') this.showTab('register');
+      else if (action === 'toggle-pwd')   this.togglePwd(actionEl.dataset.target);
+      else if (action === 'try-demo')     this.tryDemo();
     });
 
     // Dropdown items
@@ -76,9 +89,13 @@ const Auth = {
     document.addEventListener('click', e => {
       const tab = e.target.closest('.profile-tab');
       if (!tab || !tab.dataset.ptab) return;
-      document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.profile-tab').forEach(t => {
+        t.classList.remove('active');
+        t.setAttribute('aria-selected', 'false');
+      });
       document.querySelectorAll('.profile-panel').forEach(p => p.style.display = 'none');
       tab.classList.add('active');
+      tab.setAttribute('aria-selected', 'true');
       const panel = document.getElementById('ptab-' + tab.dataset.ptab);
       if (panel) panel.style.display = 'block';
     });
@@ -89,13 +106,19 @@ const Auth = {
     document.getElementById('formRegister').style.display = tab === 'register' ? 'block' : 'none';
     document.getElementById('tabLogin').classList.toggle('active',    tab === 'login');
     document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
+    document.getElementById('tabLogin').setAttribute('aria-selected',    tab === 'login'    ? 'true' : 'false');
+    document.getElementById('tabRegister').setAttribute('aria-selected', tab === 'register' ? 'true' : 'false');
     document.getElementById('loginError').textContent    = '';
     document.getElementById('registerError').textContent = '';
   },
 
   togglePwd(id) {
     const el = document.getElementById(id);
-    el.type = el.type === 'password' ? 'text' : 'password';
+    if (!el) return;
+    const nowVisible = el.type === 'password';
+    el.type = nowVisible ? 'text' : 'password';
+    const btn = el.parentElement?.querySelector('.eye-btn');
+    if (btn) btn.setAttribute('aria-label', nowVisible ? 'Hide password' : 'Show password');
   },
 
   setError(id, msg) {
@@ -196,9 +219,14 @@ const Auth = {
       set('profileName',     stored.name  || '');
       set('profileEmail',    stored.email || '');
       set('profileCurrency', stored.currency || '₹');
-      document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.profile-tab').forEach(t => {
+        t.classList.remove('active');
+        t.setAttribute('aria-selected', 'false');
+      });
       document.querySelectorAll('.profile-panel').forEach(p => p.style.display = 'none');
-      document.querySelector('.profile-tab')?.classList.add('active');
+      const firstTab = document.querySelector('.profile-tab');
+      firstTab?.classList.add('active');
+      firstTab?.setAttribute('aria-selected', 'true');
       const infoPanel = document.getElementById('ptab-info');
       if (infoPanel) infoPanel.style.display = 'block';
       document.getElementById('profileModal')?.classList.add('open');

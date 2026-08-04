@@ -517,6 +517,18 @@ const App = {
 
       if      (a === 'type-income')  UI.setType('income');
       else if (a === 'type-expense') UI.setType('expense');
+      else if (a === 'rec-type-income') {
+        document.getElementById('recType').value = 'income';
+        t.className = 'type-btn active-income';
+        const other = document.getElementById('recTypeExpense');
+        if (other) other.className = 'type-btn';
+      }
+      else if (a === 'rec-type-expense') {
+        document.getElementById('recType').value = 'expense';
+        t.className = 'type-btn active-expense';
+        const other = document.getElementById('recTypeIncome');
+        if (other) other.className = 'type-btn';
+      }
       else if (a === 'select-cat') {
         document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
         t.classList.add('active');
@@ -600,7 +612,11 @@ const App = {
     const hb = document.getElementById('hamburger');
     const sb = document.getElementById('sidebar');
     const ov = document.getElementById('sidebarOverlay');
-    hb?.addEventListener('click', () => { sb?.classList.toggle('open'); ov?.classList.toggle('show'); });
+    hb?.addEventListener('click', () => {
+      const open = sb?.classList.toggle('open');
+      ov?.classList.toggle('show');
+      hb?.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
     ov?.addEventListener('click', () => { sb?.classList.remove('open'); ov?.classList.remove('show'); });
   }
 };

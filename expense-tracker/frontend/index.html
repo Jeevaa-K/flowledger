@@ -4,6 +4,24 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FlowLedger — Smart Expense Tracker</title>
+  <meta name="description" content="Track income and expenses, set budgets, hit savings goals, and get AI-powered financial insights with FlowLedger — a fast, privacy-respecting expense tracker." />
+  <meta name="color-scheme" content="light" />
+
+  <!-- Open Graph / social preview -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="FlowLedger — Smart Expense Tracker" />
+  <meta property="og:description" content="Track income and expenses, set budgets, hit savings goals, and get AI-powered financial insights." />
+  <meta property="og:image" content="/favicon-192.png" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="FlowLedger — Smart Expense Tracker" />
+  <meta name="twitter:description" content="Track income and expenses, set budgets, hit savings goals, and get AI-powered financial insights." />
+
+  <!-- Favicons -->
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png" />
+  <link rel="icon" href="favicon-16.png" sizes="16x16" type="image/png" />
+  <link rel="apple-touch-icon" href="favicon-192.png" />
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -11,7 +29,6 @@
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#BF5730" />
   <meta name="mobile-web-app-capable" content="yes" />
-  <script src="js/theme.js"></script>
   <script src="js/chart.min.js"></script>
 
 </head>
@@ -90,7 +107,7 @@
       <div class="user-name" id="userName">Loading...</div>
       <div class="user-email" id="userEmail"></div>
     </div>
-    <button class="user-menu-btn" id="openProfileModal" title="Profile">⚙</button>
+    <button class="user-menu-btn" id="openProfileModal" title="Profile" aria-label="Open profile settings">⚙</button>
   </div>
   <div class="sidebar-footer">
     <div class="balance-widget">
@@ -109,7 +126,7 @@
 <!-- MAIN -->
 <div class="main-wrapper">
   <header class="topbar">
-    <button class="hamburger" id="hamburger">
+    <button class="hamburger" id="hamburger" aria-label="Toggle sidebar menu" aria-expanded="false" aria-controls="sidebar">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
     <div class="topbar-search" style="position:relative">
@@ -123,10 +140,10 @@
       </div>
 
       <div class="avatar-wrap" id="avatarWrap">
-        <button class="topbar-avatar" id="topbarProfileBtn" title="Menu">
+        <button class="topbar-avatar" id="topbarProfileBtn" title="Menu" aria-label="Open account menu" aria-haspopup="true" aria-expanded="false" aria-controls="avatarDropdown">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         </button>
-        <div class="avatar-dropdown" id="avatarDropdown">
+        <div class="avatar-dropdown" id="avatarDropdown" role="menu">
           <div class="av-user">
             <div class="av-avatar" id="avAvatar">U</div>
             <div>
@@ -247,7 +264,7 @@
 
     <!-- TRANSACTIONS -->
     <section class="page" id="page-transactions">
-      <button class="mobile-back-btn" onclick="App.navigate('dashboard')">← Back</button>
+      <button class="mobile-back-btn" data-action="goto-dashboard">← Back</button>
       <div class="page-header">
         <div><h1 class="page-title">Transactions</h1><p class="page-sub">Manage all your income &amp; expenses</p></div>
         <button class="btn-primary" id="openAddModal">+ Add New</button>
@@ -270,7 +287,7 @@
 
     <!-- BUDGETS -->
     <section class="page" id="page-budgets">
-      <button class="mobile-back-btn" onclick="App.navigate('dashboard')">← Back</button>
+      <button class="mobile-back-btn" data-action="goto-dashboard">← Back</button>
       <div class="page-header">
         <div><h1 class="page-title">Budgets</h1><p class="page-sub">Set and track monthly spending limits</p></div>
         <button class="btn-primary" id="openBudgetModal">+ Set Budget</button>
@@ -281,7 +298,7 @@
 
     <!-- ANALYTICS -->
     <section class="page" id="page-analytics">
-      <button class="mobile-back-btn" onclick="App.navigate('dashboard')">← Back</button>
+      <button class="mobile-back-btn" data-action="goto-dashboard">← Back</button>
       <div class="page-header"><h1 class="page-title">Analytics</h1><p class="page-sub">Deep dive into your financial patterns</p></div>
       <div class="analytics-grid">
         <div class="card card-full">
@@ -301,7 +318,7 @@
 
     <!-- GOALS -->
     <section class="page" id="page-goals">
-      <button class="mobile-back-btn" onclick="App.navigate('dashboard')">← Back</button>
+      <button class="mobile-back-btn" data-action="goto-dashboard">← Back</button>
       <div class="page-header">
         <div><h1 class="page-title">Financial Goals</h1><p class="page-sub">Track your savings goals</p></div>
         <button class="btn-primary" id="openGoalModal">+ Add Goal</button>
@@ -311,7 +328,7 @@
 
     <!-- AI -->
     <section class="page" id="page-ai">
-      <button class="mobile-back-btn" onclick="App.navigate('dashboard')">← Back</button>
+      <button class="mobile-back-btn" data-action="goto-dashboard">← Back</button>
       <div class="page-header">
         <div><h1 class="page-title">AI Assistant</h1><p class="page-sub">Powered by NOVA × Groq LLaMA 3.3</p></div>
         <button class="btn-ghost" id="clearChat">Clear Chat</button>
@@ -355,7 +372,7 @@
 
     <!-- RECURRING -->
     <section class="page" id="page-recurring">
-      <button class="mobile-back-btn" onclick="App.navigate('dashboard')">← Back</button>
+      <button class="mobile-back-btn" data-action="goto-dashboard">← Back</button>
       <div class="page-header">
         <div><h1 class="page-title">Recurring</h1><p class="page-sub">Auto-track regular income & expenses</p></div>
         <button class="btn-primary" id="openRecurringModal">+ Add Recurring</button>
@@ -367,7 +384,7 @@
 
     <!-- IMPORT -->
     <section class="page" id="page-import">
-      <button class="mobile-back-btn" onclick="App.navigate('dashboard')">← Back</button>
+      <button class="mobile-back-btn" data-action="goto-dashboard">← Back</button>
       <div class="page-header">
         <div><h1 class="page-title">Import CSV</h1><p class="page-sub">Import transactions from your bank statement</p></div>
       </div>
@@ -399,7 +416,7 @@
 
     <!-- REPORTS -->
     <section class="page" id="page-reports">
-      <button class="mobile-back-btn" onclick="App.navigate('dashboard')">← Back</button>
+      <button class="mobile-back-btn" data-action="goto-dashboard">← Back</button>
       <div class="page-header">
         <div><h1 class="page-title">PDF Reports</h1><p class="page-sub">Download monthly financial reports</p></div>
       </div>
@@ -441,7 +458,7 @@
 </div>
 
 <!-- ADD TRANSACTION MODAL -->
-<div class="modal-overlay" id="addModal">
+<div class="modal-overlay" id="addModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
   <div class="modal">
     <div class="modal-header">
       <div class="modal-icon">💳</div>
@@ -477,11 +494,11 @@
 </div>
 
 <!-- BUDGET MODAL -->
-<div class="modal-overlay" id="budgetModal">
+<div class="modal-overlay" id="budgetModal" role="dialog" aria-modal="true" aria-labelledby="budgetModalTitle">
   <div class="modal">
     <div class="modal-header">
       <div class="modal-icon"></div>
-      <h2 class="modal-title">Set Monthly Budget</h2>
+      <h2 class="modal-title" id="budgetModalTitle">Set Monthly Budget</h2>
       <button class="modal-close" id="closeBudgetModal">×</button>
     </div>
     <div class="form-grid">
@@ -499,7 +516,7 @@
 </div>
 
 <!-- GOAL MODAL -->
-<div class="modal-overlay" id="goalModal">
+<div class="modal-overlay" id="goalModal" role="dialog" aria-modal="true" aria-labelledby="goalModalTitle">
   <div class="modal">
     <div class="modal-header">
       <div class="modal-icon"></div>
@@ -531,16 +548,16 @@
 
 
 <!-- RECURRING MODAL -->
-<div class="modal-overlay" id="recurringModal">
+<div class="modal-overlay" id="recurringModal" role="dialog" aria-modal="true" aria-labelledby="recurringModalTitle">
   <div class="modal">
     <div class="modal-header">
       <div class="modal-icon"></div>
-      <h2 class="modal-title">Add Recurring Transaction</h2>
+      <h2 class="modal-title" id="recurringModalTitle">Add Recurring Transaction</h2>
       <button class="modal-close" id="closeRecurringModal">×</button>
     </div>
     <div class="type-toggle">
-      <button class="type-btn active-income" id="recTypeIncome"  onclick="document.getElementById('recType').value='income';this.className='type-btn active-income';document.getElementById('recTypeExpense').className='type-btn'">↑ Income</button>
-      <button class="type-btn"               id="recTypeExpense" onclick="document.getElementById('recType').value='expense';this.className='type-btn active-expense';document.getElementById('recTypeIncome').className='type-btn'">↓ Expense</button>
+      <button class="type-btn active-income" id="recTypeIncome"  data-action="rec-type-income">↑ Income</button>
+      <button class="type-btn"               id="recTypeExpense" data-action="rec-type-expense">↓ Expense</button>
     </div>
     <select id="recType" style="display:none"><option value="income">income</option><option value="expense">expense</option></select>
     <div class="form-grid">
@@ -594,76 +611,76 @@
     </div>
 
     <!-- Tab Toggle -->
-    <div class="auth-tabs">
-      <button class="auth-tab active" id="tabLogin"  onclick="Auth.showTab('login')">Login</button>
-      <button class="auth-tab"        id="tabRegister" onclick="Auth.showTab('register')">Register</button>
+    <div class="auth-tabs" role="tablist" aria-label="Login or register">
+      <button class="auth-tab active" id="tabLogin" role="tab" aria-selected="true" aria-controls="formLogin" data-action="auth-tab-login">Login</button>
+      <button class="auth-tab" id="tabRegister" role="tab" aria-selected="false" aria-controls="formRegister" data-action="auth-tab-register">Register</button>
     </div>
 
     <!-- Login Form -->
-    <div id="formLogin">
+    <div id="formLogin" role="tabpanel" aria-labelledby="tabLogin">
       <div class="auth-form-group">
-        <label>Email</label>
-        <input type="email" id="loginEmail" placeholder="you@example.com" />
+        <label for="loginEmail">Email</label>
+        <input type="email" id="loginEmail" placeholder="you@example.com" autocomplete="email" />
       </div>
       <div class="auth-form-group">
-        <label>Password</label>
+        <label for="loginPassword">Password</label>
         <div style="position:relative">
-          <input type="password" id="loginPassword" placeholder="••••••••" />
-          <button class="eye-btn" onclick="Auth.togglePwd('loginPassword')">👁</button>
+          <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password" />
+          <button class="eye-btn" type="button" data-action="toggle-pwd" data-target="loginPassword" aria-label="Show password">👁</button>
         </div>
       </div>
       <div class="auth-remember">
         <label><input type="checkbox" id="rememberMe" /> Remember me</label>
       </div>
-      <div class="auth-error" id="loginError"></div>
+      <div class="auth-error" id="loginError" role="alert"></div>
       <button class="auth-btn" id="loginBtn">Login →</button>
       <div class="auth-demo">
-        <button class="demo-btn" onclick="Auth.tryDemo()">Try Demo (no account needed)</button>
+        <button class="demo-btn" type="button" data-action="try-demo">Try Demo (no account needed)</button>
       </div>
     </div>
 
     <!-- Register Form -->
-    <div id="formRegister" style="display:none">
+    <div id="formRegister" role="tabpanel" aria-labelledby="tabRegister" style="display:none">
       <div class="auth-form-group">
-        <label>Full Name</label>
-        <input type="text" id="regName" placeholder="John Doe" />
+        <label for="regName">Full Name</label>
+        <input type="text" id="regName" placeholder="John Doe" autocomplete="name" />
       </div>
       <div class="auth-form-group">
-        <label>Email</label>
-        <input type="email" id="regEmail" placeholder="you@example.com" />
+        <label for="regEmail">Email</label>
+        <input type="email" id="regEmail" placeholder="you@example.com" autocomplete="email" />
       </div>
       <div class="auth-form-group">
-        <label>Password <span style="color:#A79C8C;font-size:11px">(min 6 chars)</span></label>
+        <label for="regPassword">Password <span style="color:#A79C8C;font-size:11px">(min 6 chars)</span></label>
         <div style="position:relative">
-          <input type="password" id="regPassword" placeholder="••••••••" />
-          <button class="eye-btn" onclick="Auth.togglePwd('regPassword')">👁</button>
+          <input type="password" id="regPassword" placeholder="••••••••" autocomplete="new-password" />
+          <button class="eye-btn" type="button" data-action="toggle-pwd" data-target="regPassword" aria-label="Show password">👁</button>
         </div>
       </div>
       <div class="auth-form-group">
-        <label>Confirm Password</label>
-        <input type="password" id="regConfirm" placeholder="••••••••" />
+        <label for="regConfirm">Confirm Password</label>
+        <input type="password" id="regConfirm" placeholder="••••••••" autocomplete="new-password" />
       </div>
-      <div class="auth-error" id="registerError"></div>
+      <div class="auth-error" id="registerError" role="alert"></div>
       <button class="auth-btn" id="registerBtn">Create Account →</button>
     </div>
   </div>
 </div>
 
 <!-- ── PROFILE MODAL ─────────────────────────────────────────── -->
-<div class="modal-overlay" id="profileModal">
+<div class="modal-overlay" id="profileModal" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle">
   <div class="modal">
     <div class="modal-header">
       <div class="modal-icon">👤</div>
-      <h2 class="modal-title">My Profile</h2>
+      <h2 class="modal-title" id="profileModalTitle">My Profile</h2>
       <button class="modal-close" id="closeProfileModal">×</button>
     </div>
-    <div class="profile-tabs">
-      <button class="profile-tab active" data-ptab="info">Profile</button>
-      <button class="profile-tab" data-ptab="password">Password</button>
-      <button class="profile-tab" data-ptab="danger">Account</button>
+    <div class="profile-tabs" role="tablist" aria-label="Profile settings">
+      <button class="profile-tab active" role="tab" aria-selected="true" aria-controls="ptab-info" data-ptab="info">Profile</button>
+      <button class="profile-tab" role="tab" aria-selected="false" aria-controls="ptab-password" data-ptab="password">Password</button>
+      <button class="profile-tab" role="tab" aria-selected="false" aria-controls="ptab-danger" data-ptab="danger">Account</button>
     </div>
     <!-- Info Tab -->
-    <div class="profile-panel" id="ptab-info">
+    <div class="profile-panel" id="ptab-info" role="tabpanel">
       <div class="form-grid">
         <div class="form-group span2">
           <label>Full Name</label>
@@ -686,7 +703,7 @@
       <button class="btn-primary full" id="saveProfileBtn">Save Changes</button>
     </div>
     <!-- Password Tab -->
-    <div class="profile-panel" id="ptab-password" style="display:none">
+    <div class="profile-panel" id="ptab-password" role="tabpanel" style="display:none">
       <div class="form-grid">
         <div class="form-group span2">
           <label>Current Password</label>
@@ -704,7 +721,7 @@
       <button class="btn-primary full" id="changePasswordBtn">Change Password</button>
     </div>
     <!-- Danger Tab -->
-    <div class="profile-panel" id="ptab-danger" style="display:none">
+    <div class="profile-panel" id="ptab-danger" role="tabpanel" style="display:none">
       <div style="background:#F3E0DA;border:1px solid #D6A090;border-radius:10px;padding:16px;margin-bottom:16px">
         <div style="font-weight:700;color:#7A2E20;margin-bottom:6px">⚠ Delete Account</div>
         <div style="font-size:13px;color:#7C7266">This will permanently delete your account and all data. This cannot be undone.</div>

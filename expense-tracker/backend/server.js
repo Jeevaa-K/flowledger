@@ -34,8 +34,12 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc:   ["'self'"],
+      // scriptSrcAttr no longer needs 'unsafe-inline': all inline
+      // onclick="..." handlers were migrated to addEventListener with
+      // data-action delegation, so the browser never needs to execute
+      // an inline event-handler attribute — closing off that XSS vector.
       scriptSrc:    ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
-      scriptSrcAttr:["'self'", "'unsafe-inline'"],
+      scriptSrcAttr:["'none'"],
       styleSrc:     ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc:      ["'self'", "data:", "https://fonts.gstatic.com"],
       imgSrc:       ["'self'", "data:", "blob:"],
