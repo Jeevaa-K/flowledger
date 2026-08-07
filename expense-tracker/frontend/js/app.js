@@ -5,7 +5,14 @@ const State = {
   year:  new Date().getFullYear(),
   transactions: [],
   summary: {},
-  goals: JSON.parse(localStorage.getItem('fl_goals') || '[]')
+  // Goals load from the backend (see loadGoals) — no longer localStorage,
+  // so they survive a cleared browser or a switch to a new device.
+  goals: [],
+  // Transactions-page pagination (separate from the small `limit=`
+  // snapshots the dashboard/analytics widgets pull — those stay unpaginated).
+  txnPage: 1,
+  txnPageSize: 50,
+  txnTotal: 0
 };
 
 // ── App ────────────────────────────────────────────────────────
@@ -67,7 +74,7 @@ const App = {
     else if (page === 'budgets')      await this.loadBudgets();
     else if (page === 'analytics')    await this.loadAnalytics();
     else if (page === 'ai')           await this.loadAI();
-    else if (page === 'goals')              this.loadGoals();
+    else if (page === 'goals')        await this.loadGoals();
     else if (page === 'recurring')    await Recurring.load();
     else if (page === 'import')             Importer.init();
     else if (page === 'reports')            this.initReports();
@@ -168,20 +175,36 @@ const App = {
   },
 
   // ── Transactions ───────────────────────────────────────────
-  async loadTransactions(filters={}) {
+  async loadTransactions(filters={}, resetPage=true) {
     const list = document.getElementById('allTxns');
     list?.classList.add('is-fetching');
+    if (resetPage) State.txnPage = 1;
     try {
       const qs = new URLSearchParams();
       if (filters.type)     qs.set('type',     filters.type);
       if (filters.category) qs.set('category', filters.category);
       if (filters.from)     qs.set('from',     filters.from);
       if (filters.to)       qs.set('to',       filters.to);
-      const txns = await API.get('/transactions?' + qs);
+      qs.set('limit', State.txnPageSize);
+      qs.set('page',  State.txnPage);
+      const { data: txns, total } = await API.getWithCount('/transactions?' + qs);
       State.transactions = txns;
+      State.txnTotal = total;
+      State.lastTxnFilters = filters;
       UI.renderTxnList(txns, 'allTxns', null, true);
+      this.renderTxnPagination();
     } catch { UI.toast('Error loading transactions', 'error'); }
     finally { list?.classList.remove('is-fetching'); }
+  },
+
+  renderTxnPagination() {
+    const totalPages = Math.max(Math.ceil(State.txnTotal / State.txnPageSize), 1);
+    const label = document.getElementById('txnPageLabel');
+    const prev  = document.getElementById('txnPrevPage');
+    const next  = document.getElementById('txnNextPage');
+    if (label) label.textContent = `Page ${State.txnPage} of ${totalPages} (${State.txnTotal} total)`;
+    if (prev)  prev.disabled = State.txnPage <= 1;
+    if (next)  next.disabled = State.txnPage >= totalPages;
   },
 
   async saveTxn() {
@@ -329,9 +352,19 @@ const App = {
   },
 
   // ── Goals ──────────────────────────────────────────────────
-  loadGoals() { UI.renderGoals(State.goals); },
+  // Backed by /api/goals (Postgres) — previously localStorage-only, so
+  // goals would silently vanish on a cleared browser or a new device.
+  async loadGoals() {
+    try {
+      State.goals = await API.get('/goals');
+      UI.renderGoals(State.goals);
+    } catch(e) {
+      console.error('Load goals error:', e);
+      UI.toast('⚠ Could not load goals', 'error');
+    }
+  },
 
-  saveGoal() {
+  async saveGoal() {
     const nameEl   = document.getElementById('goalName');
     const targetEl = document.getElementById('goalTarget');
     const savedEl  = document.getElementById('goalSaved');
@@ -345,17 +378,22 @@ const App = {
     const date   = dateEl.value;
     const editId = editIdEl.value;
     if (!name || !target) { UI.toast('⚠ Fill in goal name and target', 'error'); return; }
-    if (editId) {
-      const idx = State.goals.findIndex(g => g.id === parseInt(editId));
-      if (idx !== -1) { State.goals[idx] = { ...State.goals[idx], name, target, saved, date }; }
-      UI.toast('✓ Goal updated', 'success');
-    } else {
-      State.goals.push({ id: Date.now(), name, target, saved, date });
-      UI.toast('✓ Goal added', 'success');
-    }
-    localStorage.setItem('fl_goals', JSON.stringify(State.goals));
-    UI.closeGoalModal();
-    UI.renderGoals(State.goals);
+
+    const btn = document.getElementById('saveGoalBtn');
+    if (btn) btn.disabled = true;
+    try {
+      if (editId) {
+        await API.put(`/goals/${editId}`, { name, target, saved, date });
+        UI.toast('✓ Goal updated', 'success');
+      } else {
+        await API.post('/goals', { name, target, saved, date });
+        UI.toast('✓ Goal added', 'success');
+      }
+      UI.closeGoalModal();
+      await this.loadGoals();
+    } catch(e) {
+      UI.toast('⚠ ' + e.message.replace(/^\d+:\s*/,''), 'error');
+    } finally { if (btn) btn.disabled = false; }
   },
 
   editGoal(id) {
@@ -363,23 +401,29 @@ const App = {
     if (goal) UI.openGoalModal(goal);
   },
 
-  addSavings(id) {
+  async addSavings(id) {
     const goal = State.goals.find(g => g.id === id);
     if (!goal) return;
     const amount = parseFloat(prompt(`Add savings to "${goal.name}"\nCurrently saved: ${fmt(goal.saved)}\n\nEnter amount to add:`));
     if (!amount || isNaN(amount) || amount <= 0) return;
-    goal.saved = (goal.saved || 0) + amount;
-    localStorage.setItem('fl_goals', JSON.stringify(State.goals));
-    UI.toast(`✓ Added ${fmt(amount)} to ${goal.name}`, 'success');
-    UI.renderGoals(State.goals);
+    try {
+      await API.put(`/goals/${id}`, { name: goal.name, target: goal.target, saved: goal.saved + amount, date: goal.date });
+      UI.toast(`✓ Added ${fmt(amount)} to ${goal.name}`, 'success');
+      await this.loadGoals();
+    } catch(e) {
+      UI.toast('⚠ ' + e.message.replace(/^\d+:\s*/,''), 'error');
+    }
   },
 
-  deleteGoal(id) {
+  async deleteGoal(id) {
     if (!confirm('Delete this goal?')) return;
-    State.goals = State.goals.filter(g => g.id !== id);
-    localStorage.setItem('fl_goals', JSON.stringify(State.goals));
-    UI.renderGoals(State.goals);
-    UI.toast('✓ Goal removed', 'success');
+    try {
+      await API.del(`/goals/${id}`);
+      UI.toast('✓ Goal removed', 'success');
+      await this.loadGoals();
+    } catch(e) {
+      UI.toast('⚠ ' + e.message.replace(/^\d+:\s*/,''), 'error');
+    }
   },
 
   // ── AI ─────────────────────────────────────────────────────
@@ -585,6 +629,17 @@ const App = {
       ['filterType','filterCategory'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
       ['filterFrom','filterTo'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
       this.loadTransactions();
+    });
+    this.on('txnPrevPage', 'click', () => {
+      if (State.txnPage <= 1) return;
+      State.txnPage--;
+      this.loadTransactions(State.lastTxnFilters || {}, false);
+    });
+    this.on('txnNextPage', 'click', () => {
+      const totalPages = Math.max(Math.ceil(State.txnTotal / State.txnPageSize), 1);
+      if (State.txnPage >= totalPages) return;
+      State.txnPage++;
+      this.loadTransactions(State.lastTxnFilters || {}, false);
     });
   },
 

@@ -282,6 +282,11 @@
       <div class="card">
         <div class="txn-table-header"><span>Description</span><span>Category</span><span>Date</span><span>Amount</span><span></span></div>
         <div class="txn-list table-mode" id="allTxns"></div>
+        <div class="txn-pagination" id="txnPagination" style="display:flex;align-items:center;justify-content:center;gap:12px;padding:16px 0 4px">
+          <button class="btn-ghost" id="txnPrevPage" aria-label="Previous page">← Prev</button>
+          <span id="txnPageLabel" style="font-size:13px;color:#7C7266"></span>
+          <button class="btn-ghost" id="txnNextPage" aria-label="Next page">Next →</button>
+        </div>
       </div>
     </section>
 
@@ -408,6 +413,14 @@
           <div class="card-header">
             <div class="card-title">Preview</div>
             <button class="btn-primary" id="importBtn" disabled>Import All</button>
+          </div>
+          <div id="dateFormatWarning" style="display:none;margin-bottom:12px;padding:10px 12px;background:#FBEFD9;border-radius:8px;font-size:12px;color:#7A5A20">
+            ⚠ Some dates in this file are ambiguous (day and month both ≤ 12, e.g. 03/04/2025). Pick the format your file uses so dates aren't misread:
+            <div style="margin-top:8px">
+              <label style="margin-right:14px"><input type="radio" name="dateFormat" value="auto" checked /> Auto (day-first, e.g. 03/04 = 3 Apr)</label>
+              <label style="margin-right:14px"><input type="radio" name="dateFormat" value="dmy" /> Day/Month/Year</label>
+              <label><input type="radio" name="dateFormat" value="mdy" /> Month/Day/Year (US)</label>
+            </div>
           </div>
           <div id="csvPreview"></div>
         </div>

@@ -42,10 +42,33 @@ const API = {
   put(path, body)  { return this.request('PUT',    path, body); },
   del(path)        { return this.request('DELETE', path); },
 
+  // Same as get(), but also returns the X-Total-Count header — used only
+  // by the paginated transactions list, so request()'s return shape
+  // (plain parsed JSON) stays unchanged for every other call site.
+  async getWithCount(path) {
+    const r = await fetch(BASE + path, { headers: this.headers() });
+    if (r.status === 401) {
+      localStorage.removeItem('fl_token');
+      localStorage.removeItem('fl_user');
+      window.location.reload();
+      return { data: [], total: 0 };
+    }
+    if (!r.ok) {
+      let msg;
+      try { const j = await r.json(); msg = j.error || JSON.stringify(j); }
+      catch { msg = await r.text(); }
+      throw new Error(`${r.status}: ${msg}`);
+    }
+    const data = await r.json();
+    const total = parseInt(r.headers.get('X-Total-Count')) || data.length;
+    return { data, total };
+  },
+
   async exportCSV() {
     try {
-      const token = this.getToken();
-      const res = await fetch(BASE + '/export/csv?token=' + token);
+      // Token goes in the Authorization header, never the URL — a query
+      // param would end up in server access logs and browser history.
+      const res = await fetch(BASE + '/export/csv', { headers: this.headers() });
       if (!res.ok) throw new Error('Export failed');
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);

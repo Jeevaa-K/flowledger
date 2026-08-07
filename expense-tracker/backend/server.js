@@ -62,7 +62,11 @@ app.use(cors({
     if (allowedOrigins.includes(origin)) return callback(null, true);
     callback(new Error('Not allowed by CORS'));
   },
-  credentials: true
+  credentials: true,
+  // Custom response headers are hidden from browser JS by default even
+  // on same-origin — X-Total-Count (transaction pagination) needs this
+  // to be explicitly exposed or fetch()'s res.headers.get() returns null.
+  exposedHeaders: ['X-Total-Count']
 }));
 
 app.use(express.json({ limit: '100kb' })); // caps request body size against abuse
@@ -142,6 +146,15 @@ async function initDB() {
     frequency TEXT NOT NULL,
     next_date DATE NOT NULL,
     active INTEGER DEFAULT 1,
+    created_at TIMESTAMP DEFAULT NOW()
+  )`);
+  await db.run(`CREATE TABLE IF NOT EXISTS goals (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    target NUMERIC NOT NULL,
+    saved NUMERIC NOT NULL DEFAULT 0,
+    target_date DATE,
     created_at TIMESTAMP DEFAULT NOW()
   )`);
   console.log('✅ Database tables ready');
@@ -253,17 +266,35 @@ app.delete('/api/auth/account', auth, async (req, res) => {
 // ── Transactions ──────────────────────────────────────────────
 app.get('/api/transactions', auth, async (req, res) => {
   try {
-    const { type, category, from, to, limit=200 } = req.query;
-    let q = 'SELECT * FROM transactions WHERE user_id=$1';
+    const { type, category, from, to, limit=200, page } = req.query;
+    let where = ' WHERE user_id=$1';
     const p = [req.user.id];
     let i = 2;
-    if (type)     { q += ` AND type=$${i++}`;     p.push(type); }
-    if (category) { q += ` AND category=$${i++}`; p.push(category); }
-    if (from)     { q += ` AND date>=$${i++}`;    p.push(from); }
-    if (to)       { q += ` AND date<=$${i++}`;    p.push(to); }
-    q += ` ORDER BY date DESC, created_at DESC LIMIT $${i}`;
-    p.push(Math.min(parseInt(limit) || 200, 1000)); // cap to prevent huge unbounded queries
-    res.json(await db.all(q, p));
+    if (type)     { where += ` AND type=$${i++}`;     p.push(type); }
+    if (category) { where += ` AND category=$${i++}`; p.push(category); }
+    if (from)     { where += ` AND date>=$${i++}`;    p.push(from); }
+    if (to)       { where += ` AND date<=$${i++}`;    p.push(to); }
+
+    const pageSize = Math.min(parseInt(limit) || 200, 1000); // cap to prevent huge unbounded queries
+
+    // page is optional and additive — omitting it keeps the old behavior
+    // (plain array, most-recent `limit` rows) so the dashboard/analytics/
+    // import call sites that just want a quick recent slice are unaffected.
+    // Passing page=1,2,3... switches on real OFFSET pagination for the
+    // Transactions page, plus an X-Total-Count header so the frontend can
+    // render page numbers without changing the JSON response shape.
+    if (page) {
+      const pageNum = Math.max(parseInt(page) || 1, 1);
+      const offset = (pageNum - 1) * pageSize;
+      const countRow = await db.get(`SELECT COUNT(*) as c FROM transactions${where}`, p);
+      const q = `SELECT * FROM transactions${where} ORDER BY date DESC, created_at DESC LIMIT $${i} OFFSET $${i+1}`;
+      const rows = await db.all(q, [...p, pageSize, offset]);
+      res.setHeader('X-Total-Count', countRow?.c || 0);
+      return res.json(rows);
+    }
+
+    const q = `SELECT * FROM transactions${where} ORDER BY date DESC, created_at DESC LIMIT $${i}`;
+    res.json(await db.all(q, [...p, pageSize]));
   } catch(e) { safeError(res, e, 'List transactions'); }
 });
 
@@ -313,19 +344,38 @@ app.post('/api/transactions/import', auth, async (req, res) => {
     return res.status(400).json({ error: 'No transactions provided' });
   if (transactions.length > 5000) return res.status(400).json({ error: 'Too many rows in one import (max 5000)' });
   try {
-    let imported = 0;
+    // Duplicate guard: re-importing the same file (or a browser retry)
+    // used to silently double every row. A row counts as a duplicate of
+    // an already-stored transaction when description+amount+type+category+
+    // date all match exactly — narrow enough that two genuinely different
+    // same-day purchases (different description) still both import.
+    const dates = [...new Set(transactions.map(t => t.date).filter(Boolean))];
+    const existingRows = dates.length
+      ? await db.all(
+          `SELECT description,amount,type,category,date FROM transactions WHERE user_id=$1 AND date = ANY($2::date[])`,
+          [req.user.id, dates]
+        )
+      : [];
+    const dupKey = r => `${r.description}|${Number(r.amount)}|${r.type}|${r.category}|${new Date(r.date).toISOString().slice(0,10)}`;
+    const existingKeys = new Set(existingRows.map(dupKey));
+
+    let imported = 0, skipped = 0;
     for (const t of transactions) {
       if (!t.description || !t.amount || !t.type || !t.category || !t.date) continue;
       if (!['income','expense'].includes(t.type)) continue;
       const amt = parseFloat(t.amount);
       if (!Number.isFinite(amt) || amt <= 0) continue;
+      const description = String(t.description).slice(0,500);
+      const key = `${description}|${amt}|${t.type}|${t.category}|${t.date}`;
+      if (existingKeys.has(key)) { skipped++; continue; }
       await db.run(
         'INSERT INTO transactions (user_id,description,amount,type,category,date) VALUES ($1,$2,$3,$4,$5,$6)',
-        [req.user.id, String(t.description).slice(0,500), amt, t.type, t.category, t.date]
+        [req.user.id, description, amt, t.type, t.category, t.date]
       );
+      existingKeys.add(key); // guards against duplicates within the same uploaded file too
       imported++;
     }
-    res.json({ success: true, imported });
+    res.json({ success: true, imported, skipped });
   } catch(e) { safeError(res, e, 'Import transactions'); }
 });
 
@@ -405,6 +455,62 @@ app.delete('/api/budgets/:id', auth, async (req, res) => {
   } catch(e) { safeError(res, e, 'Delete budget'); }
 });
 
+// ── Goals ─────────────────────────────────────────────────────
+// Frontend maps target_date <-> "date" and target/saved as numbers;
+// mapRow keeps that translation in one place instead of scattered
+// across every route below.
+function mapGoalRow(g) {
+  return { id: g.id, name: g.name, target: Number(g.target), saved: Number(g.saved), date: g.target_date };
+}
+
+app.get('/api/goals', auth, async (req, res) => {
+  try {
+    const rows = await db.all('SELECT * FROM goals WHERE user_id=$1 ORDER BY created_at ASC', [req.user.id]);
+    res.json(rows.map(mapGoalRow));
+  } catch(e) { safeError(res, e, 'List goals'); }
+});
+
+app.post('/api/goals', auth, async (req, res) => {
+  try {
+    const { name, target, saved, date } = req.body;
+    if (!name || name.length > 100) return res.status(400).json({ error: 'Goal name required (max 100 chars)' });
+    const targetNum = parseFloat(target);
+    if (!Number.isFinite(targetNum) || targetNum <= 0) return res.status(400).json({ error: 'Invalid target amount' });
+    const savedNum = parseFloat(saved);
+    const savedVal = Number.isFinite(savedNum) && savedNum >= 0 ? savedNum : 0;
+    const row = await db.get(
+      'INSERT INTO goals (user_id,name,target,saved,target_date) VALUES ($1,$2,$3,$4,$5) RETURNING *',
+      [req.user.id, name, targetNum, savedVal, date || null]
+    );
+    res.status(201).json(mapGoalRow(row));
+  } catch(e) { safeError(res, e, 'Create goal'); }
+});
+
+app.put('/api/goals/:id', auth, async (req, res) => {
+  try {
+    const { name, target, saved, date } = req.body;
+    if (name && name.length > 100) return res.status(400).json({ error: 'Goal name too long' });
+    const targetNum = target !== undefined ? parseFloat(target) : undefined;
+    if (targetNum !== undefined && (!Number.isFinite(targetNum) || targetNum <= 0)) return res.status(400).json({ error: 'Invalid target amount' });
+    const savedNum = saved !== undefined ? parseFloat(saved) : undefined;
+    if (savedNum !== undefined && (!Number.isFinite(savedNum) || savedNum < 0)) return res.status(400).json({ error: 'Invalid saved amount' });
+    const row = await db.get(
+      'UPDATE goals SET name=$1,target=$2,saved=$3,target_date=$4 WHERE id=$5 AND user_id=$6 RETURNING *',
+      [name, targetNum, savedNum, date || null, req.params.id, req.user.id]
+    );
+    if (!row) return res.status(404).json({ error: 'Goal not found' });
+    res.json(mapGoalRow(row));
+  } catch(e) { safeError(res, e, 'Update goal'); }
+});
+
+app.delete('/api/goals/:id', auth, async (req, res) => {
+  try {
+    const result = await db.run('DELETE FROM goals WHERE id=$1 AND user_id=$2', [req.params.id, req.user.id]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Goal not found' });
+    res.json({ success: true });
+  } catch(e) { safeError(res, e, 'Delete goal'); }
+});
+
 // ── Recurring ─────────────────────────────────────────────────
 app.get('/api/recurring', auth, async (req, res) => {
   try { res.json(await db.all('SELECT * FROM recurring WHERE user_id=$1 ORDER BY next_date ASC', [req.user.id])); }
@@ -450,6 +556,30 @@ app.delete('/api/recurring/:id', auth, async (req, res) => {
 });
 
 // ── Cron: Recurring ───────────────────────────────────────────
+// Advances a date by one period, clamping to the last valid day of the
+// target month instead of letting JS overflow (e.g. Jan 31 + 1 month
+// would silently become Mar 3, not Feb 28/29). anchorDay is the
+// recurring rule's original day-of-month (e.g. 31) and is passed in
+// explicitly on every call so a short month (Feb) only clamps that one
+// occurrence — it doesn't permanently shrink a Jan-31 rule down to the
+// 28th forever; March still lands back on the 31st.
+function addPeriod(date, frequency, anchorDay) {
+  const next = new Date(date);
+  if (frequency === 'daily')  { next.setDate(next.getDate() + 1); return next; }
+  if (frequency === 'weekly') { next.setDate(next.getDate() + 7); return next; }
+  if (frequency === 'monthly' || frequency === 'yearly') {
+    const monthsToAdd = frequency === 'monthly' ? 1 : 12;
+    // Setting date to 1 first avoids JS's own overflow before we control it
+    // (e.g. jumping from day 31 straight into setMonth would already roll over).
+    next.setDate(1);
+    next.setMonth(next.getMonth() + monthsToAdd);
+    const lastDayOfTargetMonth = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
+    next.setDate(Math.min(anchorDay, lastDayOfTargetMonth));
+    return next;
+  }
+  return next; // unknown frequency — leave unchanged rather than guess
+}
+
 cron.schedule('0 0 * * *', async () => {
   const today = new Date().toISOString().slice(0,10);
   try {
@@ -459,11 +589,16 @@ cron.schedule('0 0 * * *', async () => {
         'INSERT INTO transactions (user_id,description,amount,type,category,date) VALUES ($1,$2,$3,$4,$5,$6)',
         [r.user_id, r.description, r.amount, r.type, r.category, today]
       );
-      const next = new Date(r.next_date);
-      if      (r.frequency==='daily')   next.setDate(next.getDate()+1);
-      else if (r.frequency==='weekly')  next.setDate(next.getDate()+7);
-      else if (r.frequency==='monthly') next.setMonth(next.getMonth()+1);
-      else if (r.frequency==='yearly')  next.setFullYear(next.getFullYear()+1);
+      // anchorDay is fixed from the rule's ORIGINAL next_date, not
+      // re-derived after each step — otherwise a clamp in a short month
+      // (e.g. Feb 28) would permanently shrink a "31st of the month" rule.
+      const anchorDay = new Date(r.next_date).getDate();
+      // Loop in case next_date fell more than one period behind (e.g. server
+      // was down) — advances one period at a time so intermediate months
+      // are still generated correctly rather than skipped.
+      let next = new Date(r.next_date);
+      do { next = addPeriod(next, r.frequency, anchorDay); }
+      while (next.toISOString().slice(0,10) <= today);
       await db.run('UPDATE recurring SET next_date=$1 WHERE id=$2', [next.toISOString().slice(0,10), r.id]);
     }
     if (due.length) console.log(`✅ Processed ${due.length} recurring transactions`);
@@ -578,6 +713,16 @@ STRICT RULES:
     if (trace) trace.update({ output:reply });
 
     await db.run('INSERT INTO ai_chats (user_id,role,content) VALUES ($1,$2,$3)', [req.user.id, 'assistant', reply]);
+    // Cap stored history per user so the table doesn't grow forever —
+    // only the 12 most recent messages are ever read for context (above)
+    // and 30 for the history view, so anything beyond a generous buffer
+    // of that is just dead storage. Keeps the last 100 messages.
+    await db.run(
+      `DELETE FROM ai_chats WHERE user_id=$1 AND id NOT IN (
+         SELECT id FROM ai_chats WHERE user_id=$1 ORDER BY created_at DESC LIMIT 100
+       )`,
+      [req.user.id]
+    );
     res.json({ reply });
   } catch(e) { console.error('AI error:', e.message); res.status(500).json({ error:'AI unavailable right now. Please try again shortly.' }); }
 });
@@ -602,13 +747,13 @@ function csvField(val) {
 }
 
 // ── CSV Export ────────────────────────────────────────────────
-app.get('/api/export/csv', async (req, res) => {
-  const authHeader = req.headers.authorization;
-  const token = (authHeader && authHeader.startsWith('Bearer ')) ? authHeader.slice(7) : req.query.token;
-  if (!token) return res.status(401).json({ error: 'No token' });
-  let user;
-  try { user = jwt.verify(token, JWT_SECRET); }
-  catch { return res.status(401).json({ error: 'Invalid token' }); }
+// Auth token must come from the Authorization header, never a ?token=
+// query string — query params get written to server access logs, browser
+// history, and proxy logs, which would leak a valid JWT. The frontend
+// fetches this as a blob (see api.js) instead of navigating a plain URL,
+// so it can send the header.
+app.get('/api/export/csv', auth, async (req, res) => {
+  const user = req.user;
   try {
     const rows = await db.all('SELECT * FROM transactions WHERE user_id=$1 ORDER BY date DESC', [user.id]);
     const csv  = 'ID,Description,Amount,Type,Category,Date\n' +
@@ -620,14 +765,9 @@ app.get('/api/export/csv', async (req, res) => {
 });
 
 // ── PDF Report ────────────────────────────────────────────────
-app.get('/api/export/pdf', async (req, res) => {
-  const authHeader = req.headers.authorization;
-  const token = (authHeader && authHeader.startsWith('Bearer ')) ? authHeader.slice(7) : req.query.token;
-  if (!token) return res.status(401).json({ error: 'No token' });
-  let user;
-  try { user = jwt.verify(token, JWT_SECRET); }
-  catch { return res.status(401).json({ error: 'Invalid token' }); }
-
+// Same header-only auth as /api/export/csv above — no ?token= fallback.
+app.get('/api/export/pdf', auth, async (req, res) => {
+  const user = req.user;
   try {
     const { month, year } = req.query;
     const m = month && year ? `${year}-${String(month).padStart(2,'0')}` : new Date().toISOString().slice(0,7);

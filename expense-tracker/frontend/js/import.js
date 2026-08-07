@@ -1,5 +1,7 @@
 const Importer = {
   parsed: [],
+  rawRows: [],       // holds {..., _rawDate} so changing date format can re-parse without re-reading the file
+  dateFormat: 'auto', // 'auto' | 'dmy' | 'mdy'
 
   init() {
     // Always rebind — remove old listeners by cloning elements
@@ -12,6 +14,15 @@ const Importer = {
     const fileInput = oldInput.cloneNode(true);
     oldDropzone.replaceWith(dropzone);
     oldInput.replaceWith(fileInput);
+
+    // Date-format radios — re-parse in place when the user picks a format,
+    // no need to re-read the file since rawRows keeps the original strings.
+    document.querySelectorAll('input[name="dateFormat"]').forEach(el => {
+      el.addEventListener('change', () => {
+        this.dateFormat = document.querySelector('input[name="dateFormat"]:checked')?.value || 'auto';
+        this.reparseDates();
+      });
+    });
 
     // File input change
     fileInput.addEventListener('change', (e) => {
@@ -87,15 +98,45 @@ const Importer = {
         amount,
         type: this.detectType(row),
         category: row.category || 'Other',
-        date: this.parseDate(row.date || row.txn_date || row.transaction_date || '')
+        _rawDate: row.date || row.txn_date || row.transaction_date || ''
       });
     }
 
     console.log('✅ Parsed rows:', rows.length);
     if (!rows.length) { UI.toast('⚠ No valid rows found. Check your CSV format.', 'error'); return; }
 
+    this.rawRows = rows;
+    this.dateFormat = 'auto';
+    const auto = document.querySelector('input[name="dateFormat"][value="auto"]');
+    if (auto) auto.checked = true;
+    this.reparseDates();
+  },
+
+  // Re-derives `date` on every row from `_rawDate` using the currently
+  // selected format. Called on initial parse and whenever the user
+  // switches the date-format radio, so no re-read of the file is needed.
+  reparseDates() {
+    const rows = this.rawRows.map(r => ({ ...r, date: this.parseDate(r._rawDate) }));
     this.parsed = rows;
+    this.updateAmbiguityWarning();
     this.showPreview(rows);
+  },
+
+  // A slash-separated date like 03/04/2025 is ambiguous only when BOTH
+  // parts could be a day (i.e. both ≤ 12) — 25/03/2025 is unambiguous
+  // (25 can't be a month) and doesn't need a warning.
+  isAmbiguousDate(s) {
+    const m = /^(\d{1,2})\/(\d{1,2})\/\d{4}$/.exec((s || '').trim());
+    if (!m) return false;
+    const a = parseInt(m[1], 10), b = parseInt(m[2], 10);
+    return a <= 12 && b <= 12 && a !== b;
+  },
+
+  updateAmbiguityWarning() {
+    const warning = document.getElementById('dateFormatWarning');
+    if (!warning) return;
+    const anyAmbiguous = this.rawRows.some(r => this.isAmbiguousDate(r._rawDate));
+    warning.style.display = anyAmbiguous ? 'block' : 'none';
   },
 
   detectType(row) {
@@ -119,21 +160,30 @@ const Importer = {
     return result;
   },
 
-  parseDate(s) {
+  // format: 'auto' (day-first when ambiguous — matches most non-US bank
+  // exports), 'dmy' (always day/month/year), or 'mdy' (always month/day/
+  // year, US-style). ISO (YYYY-MM-DD) and DD-MM-YYYY are unambiguous and
+  // ignore the format setting.
+  parseDate(s, format = this.dateFormat) {
     if (!s) return new Date().toISOString().slice(0, 10);
     s = s.trim().replace(/"/g, '');
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-    if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
-      const [d, m, y] = s.split('/');
-      return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
-    }
-    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)) {
-      const p = s.split('/');
-      return `${p[2]}-${p[0].padStart(2,'0')}-${p[1].padStart(2,'0')}`;
-    }
     if (/^\d{2}-\d{2}-\d{4}$/.test(s)) {
       const [d, m, y] = s.split('-');
       return `${y}-${m}-${d}`;
+    }
+    const slash = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s);
+    if (slash) {
+      let [, a, b, y] = slash;
+      // a/b are ambiguous when both ≤ 12 unless the user picked a format.
+      // If one side is > 12 it can only be the day, regardless of format.
+      const aNum = parseInt(a, 10), bNum = parseInt(b, 10);
+      let day, month;
+      if (aNum > 12)      { day = a; month = b; }        // a can't be a month
+      else if (bNum > 12) { day = b; month = a; }        // b can't be a month
+      else if (format === 'mdy') { month = a; day = b; }
+      else                { day = a; month = b; }         // 'auto' and 'dmy' both default day-first
+      return `${y}-${month.padStart(2,'0')}-${day.padStart(2,'0')}`;
     }
     try { const d = new Date(s); if (!isNaN(d)) return d.toISOString().slice(0,10); } catch {}
     return new Date().toISOString().slice(0, 10);
@@ -171,14 +221,23 @@ const Importer = {
     if (btn) { btn.textContent = 'Importing...'; btn.disabled = true; }
     try {
       const result = await API.post('/transactions/import', { transactions: this.parsed });
-      UI.toast(`✓ Imported ${result.imported} transactions!`, 'success');
+      const skipped = result.skipped || 0;
+      UI.toast(
+        skipped > 0
+          ? `✓ Imported ${result.imported}, skipped ${skipped} duplicate${skipped === 1 ? '' : 's'}`
+          : `✓ Imported ${result.imported} transactions!`,
+        'success', skipped > 0 ? 4000 : 2800
+      );
       this.parsed = [];
+      this.rawRows = [];
       const section = document.getElementById('importPreviewSection');
       const preview = document.getElementById('csvPreview');
       const fi      = document.getElementById('csvFileInput');
+      const warning = document.getElementById('dateFormatWarning');
       if (section) section.style.display = 'none';
       if (preview) preview.innerHTML = '';
       if (fi)      fi.value = '';
+      if (warning) warning.style.display = 'none';
       if (btn)     { btn.textContent = 'Import All'; btn.disabled = true; }
     } catch(e) {
       UI.toast('Error: ' + e.message, 'error');
