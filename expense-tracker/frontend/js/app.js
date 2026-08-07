@@ -92,9 +92,15 @@ const App = {
     kpiIds.forEach(id => document.getElementById(id)?.classList.add('is-loading'));
 
     try {
-      const [summary, txns] = await Promise.all([
+      const isCurrentMonth = State.month === (new Date().getMonth() + 1) && State.year === new Date().getFullYear();
+      const [summary, txns, budgets] = await Promise.all([
         API.get(`/summary?month=${State.month}&year=${State.year}`),
-        API.get('/transactions?limit=6')
+        API.get('/transactions?limit=6'),
+        // Budgets always reflect the CURRENT calendar month server-side, so
+        // only fetch/show the alert when that's actually what's on screen —
+        // otherwise browsing a past month would show a misleading "over
+        // budget" banner for spending that happened in a different month.
+        isCurrentMonth ? API.get('/budgets') : Promise.resolve([])
       ]);
       State.summary = summary;
       State.transactions = txns;
@@ -131,6 +137,8 @@ const App = {
         if (fb2) fb2.style.display = 'block';
         if (fa2) fa2.textContent = fmt(summary.forecastExpense);
       }
+
+      this.renderBudgetAlert(budgets);
       UI.renderTxnList(txns, 'recentTxns', 6, false);
       UI.renderTopCats(summary.byCategory || []);
 
@@ -151,6 +159,33 @@ const App = {
     set('aiStatInc', fmt(summary.income  || 0));
     set('aiStatExp', fmt(summary.expense || 0));
     set('aiStatSav', fmt((summary.income || 0) - (summary.expense || 0)));
+  },
+
+  // Shows a dashboard banner when any budget is over 100%, or nearing
+  // it (>=80%) — otherwise a budget only surfaces its status on the
+  // Budgets page, so a user could go the whole month without noticing
+  // they're close to (or already past) a limit.
+  renderBudgetAlert(budgets) {
+    const banner = document.getElementById('budgetAlertBanner');
+    if (!banner) return;
+    if (!budgets || !budgets.length) { banner.style.display = 'none'; return; }
+
+    const over   = budgets.filter(b => b.percent >= 100);
+    const nearing = budgets.filter(b => b.percent >= 80 && b.percent < 100);
+    if (!over.length && !nearing.length) { banner.style.display = 'none'; return; }
+
+    const title = document.getElementById('budgetAlertTitle');
+    const sub   = document.getElementById('budgetAlertSub');
+    if (over.length) {
+      const names = over.map(b => b.category).join(', ');
+      if (title) title.textContent = over.length === 1 ? 'Over Budget' : `Over Budget in ${over.length} Categories`;
+      if (sub)   sub.textContent = `You've gone over your limit for ${names}. Check the Budgets page for details.`;
+    } else {
+      const names = nearing.map(b => b.category).join(', ');
+      if (title) title.textContent = nearing.length === 1 ? 'Approaching Budget Limit' : `Approaching Limits in ${nearing.length} Categories`;
+      if (sub)   sub.textContent = `You're at 80%+ of your budget for ${names}.`;
+    }
+    banner.style.display = 'flex';
   },
 
   async updateNavCount() {
@@ -225,12 +260,20 @@ const App = {
     const btn = document.getElementById('saveTxnBtn');
     if (btn) { btn.disabled = true; btn.dataset.origText = btn.textContent; btn.textContent = 'Saving...'; }
     try {
+      let budgetToastShown = false;
       if (UI.editId) {
         await API.put(`/transactions/${UI.editId}`, { description:desc, amount, type, category, date });
         UI.toast('✓ Transaction updated', 'success');
       } else {
         await API.post('/transactions', { description:desc, amount, type, category, date });
-        UI.toast('✓ Transaction added', 'success');
+        // Only worth checking for a fresh expense in the current month —
+        // that's the only case /api/budgets' spend total actually covers,
+        // and only expenses count against a budget in the first place.
+        const isCurrentMonth = new Date(date).toISOString().slice(0,7) === new Date().toISOString().slice(0,7);
+        if (type === 'expense' && isCurrentMonth) {
+          budgetToastShown = await this.checkBudgetAfterSave(category);
+        }
+        if (!budgetToastShown) UI.toast('✓ Transaction added', 'success');
       }
       UI.closeAddModal();
       this.updateNavCount();
@@ -238,6 +281,27 @@ const App = {
       else await this.loadDashboard();
     } catch(e) { UI.toast(e.message.match(/^\d+:/) ? 'Error: ' + e.message : e.message, 'error'); }
     finally { if (btn) { btn.disabled = false; btn.textContent = btn.dataset.origText || 'Save'; } }
+  },
+
+  // Re-fetches budgets right after saving and, if the just-saved category
+  // has a budget that's now at/over its limit, shows that instead of the
+  // generic "Transaction added" toast. Returns true if it showed a
+  // budget-specific toast (so the caller skips the generic one).
+  async checkBudgetAfterSave(category) {
+    try {
+      const budgets = await API.get('/budgets');
+      const match = budgets.find(b => b.category === category);
+      if (!match) return false;
+      if (match.percent >= 100) {
+        UI.toast(`⚠ Over budget for ${category} (${match.percent}%)`, 'error', 4000);
+        return true;
+      }
+      if (match.percent >= 80) {
+        UI.toast(`⚠ ${category} budget at ${match.percent}%`, 'error', 3500);
+        return true;
+      }
+      return false;
+    } catch { return false; } // budget check is a nice-to-have, never block the save on it
   },
 
   async editTxn(id) {
