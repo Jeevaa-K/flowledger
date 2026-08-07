@@ -5,12 +5,15 @@ const TOOLTIP = {
   backgroundColor:'#2B2620',borderColor:'#453E34',borderWidth:1,
   titleColor:'#FAF6EF',bodyColor:'#C7BEB0',
   bodyFont:{family:'JetBrains Mono',size:12},padding:12,
-  callbacks:{label:ctx=>' ₹'+Number(ctx.raw).toLocaleString('en-IN')}
+  // currentCurrency()/CURRENCY_LOCALE are defined in ui.js, which loads
+  // AFTER this file — safe because callbacks only run when a chart is
+  // actually rendered, well after every script has finished loading.
+  callbacks:{label:ctx=>' '+currentCurrency()+Number(ctx.raw).toLocaleString(CURRENCY_LOCALE[currentCurrency()]||'en-IN')}
 };
 
 const SCALES = {
   x:{ticks:{color:'#A79C8C',font:{family:'JetBrains Mono',size:10}},grid:{display:false},border:{display:false}},
-  y:{ticks:{color:'#A79C8C',font:{family:'JetBrains Mono',size:10},callback:v=>'₹'+(v>=1000?(v/1000).toFixed(0)+'k':v)},grid:{color:'#EFE8D8'},border:{display:false}}
+  y:{ticks:{color:'#A79C8C',font:{family:'JetBrains Mono',size:10},callback:v=>currentCurrency()+(v>=1000?(v/1000).toFixed(0)+'k':v)},grid:{color:'#EFE8D8'},border:{display:false}}
 };
 
 let charts = {};
@@ -117,12 +120,12 @@ const Charts = {
             backgroundColor:'#2B2620', borderColor:'#453E34', borderWidth:1,
             titleColor:'#FAF6EF', bodyColor:'#C7BEB0',
             bodyFont:{family:'JetBrains Mono',size:12}, padding:12,
-            callbacks:{ label:ctx=>' '+ctx.dataset.label+': ₹'+Number(ctx.raw).toLocaleString('en-IN') }
+            callbacks:{ label:ctx=>' '+ctx.dataset.label+': '+currentCurrency()+Number(ctx.raw).toLocaleString(CURRENCY_LOCALE[currentCurrency()]||'en-IN') }
           }
         },
         scales: {
           x:{ ticks:{color:'#7C7266',font:{family:'Inter',size:12}}, grid:{display:false}, border:{display:false} },
-          y:{ ticks:{color:'#7C7266',font:{family:'JetBrains Mono',size:11},callback:v=>'₹'+(v>=1000?(v/1000).toFixed(0)+'k':v)}, grid:{color:'#EFE8D8'}, border:{display:false}, beginAtZero:true }
+          y:{ ticks:{color:'#7C7266',font:{family:'JetBrains Mono',size:11},callback:v=>currentCurrency()+(v>=1000?(v/1000).toFixed(0)+'k':v)}, grid:{color:'#EFE8D8'}, border:{display:false}, beginAtZero:true }
         }
       }
     });

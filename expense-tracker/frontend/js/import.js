@@ -211,7 +211,7 @@ const Importer = {
               <div style="font-size:11px;color:#A79C8C">${r.category} · ${r.date} · ${r.type}</div>
             </div>
             <div style="font-size:13px;font-family:monospace;font-weight:600;color:${r.type==='income'?'#3E6154':'#A6402F'};flex-shrink:0">
-              ${r.type==='income'?'+':'-'}₹${r.amount.toLocaleString('en-IN')}
+              ${r.type==='income'?'+':'-'}${fmt(r.amount)}
             </div>
           </div>`).join('')}
         ${rows.length > 15 ? `<div style="text-align:center;padding:10px;color:#A79C8C;font-size:12px">...and ${rows.length-15} more</div>` : ''}

@@ -298,6 +298,17 @@ app.get('/api/transactions', auth, async (req, res) => {
   } catch(e) { safeError(res, e, 'List transactions'); }
 });
 
+// Single transaction by id — used by the Edit action so it always finds
+// the row directly instead of searching a capped/paginated list (which
+// silently missed anything past the 200 most recent transactions).
+app.get('/api/transactions/:id', auth, async (req, res) => {
+  try {
+    const row = await db.get('SELECT * FROM transactions WHERE id=$1 AND user_id=$2', [req.params.id, req.user.id]);
+    if (!row) return res.status(404).json({ error: 'Transaction not found' });
+    res.json(row);
+  } catch(e) { safeError(res, e, 'Get transaction'); }
+});
+
 app.post('/api/transactions', auth, async (req, res) => {
   try {
     const { description, amount, type, category, date } = req.body;

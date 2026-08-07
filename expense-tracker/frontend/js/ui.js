@@ -1,4 +1,21 @@
-const fmt = n => '₹' + Math.abs(n).toLocaleString('en-IN', {minimumFractionDigits:0, maximumFractionDigits:0});
+// Locale per symbol so number grouping looks native for each currency
+// (₹ uses Indian lakh/crore grouping — 1,50,000 — the others use the
+// standard thousands grouping — 150,000).
+const CURRENCY_LOCALE = { '₹': 'en-IN', '$': 'en-US', '€': 'de-DE', '£': 'en-GB' };
+
+// Reads the symbol from localStorage on every call (not cached) so a
+// profile change takes effect immediately without a page reload —
+// saveProfile() already updates fl_user before re-rendering the page.
+function currentCurrency() {
+  try { return JSON.parse(localStorage.getItem('fl_user') || '{}').currency || '₹'; }
+  catch { return '₹'; }
+}
+
+const fmt = n => {
+  const symbol = currentCurrency();
+  const locale = CURRENCY_LOCALE[symbol] || 'en-IN';
+  return symbol + Math.abs(n).toLocaleString(locale, {minimumFractionDigits:0, maximumFractionDigits:0});
+};
 
 const UI = {
   currentType: 'income',

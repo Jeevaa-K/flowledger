@@ -306,9 +306,11 @@ const App = {
 
   async editTxn(id) {
     try {
-      const all = await API.get('/transactions');
-      const txn = all.find(t => t.id === id);
-      if (txn) UI.openAddModal(txn);
+      // Fetches the single row directly — previously pulled the (capped,
+      // most-recent-200) list and searched it client-side, which silently
+      // did nothing when the clicked transaction was older than that.
+      const txn = await API.get(`/transactions/${id}`);
+      UI.openAddModal(txn);
     } catch { UI.toast('Could not load transaction', 'error'); }
   },
 
