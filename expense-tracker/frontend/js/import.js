@@ -50,10 +50,15 @@ const Importer = {
       if (file) this.handleFile(file);
     });
 
-    // Click to browse
+    // Click to browse. The file input now lives OUTSIDE the dropzone in the
+    // DOM (previously nested inside it), so this click can never bubble
+    // back into a listener on the input itself — no double-open risk.
+    // Uses the `fileInput` reference from this same init() call (not a
+    // fresh getElementById) so it's guaranteed to be the element that
+    // actually has the change listener bound just above.
     dropzone.addEventListener('click', (e) => {
       e.stopPropagation();
-      document.getElementById('csvFileInput').click();
+      fileInput.click();
     });
 
     console.log('✅ Importer initialized');

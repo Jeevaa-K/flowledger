@@ -491,17 +491,37 @@ const App = {
   },
 
   // ── AI ─────────────────────────────────────────────────────
+  // Default welcome bubble shown when the current user has no chat
+  // history — also what the container gets reset to for a fresh
+  // session, so a previous user's messages (rendered before a login
+  // that didn't fully reload the page) never linger for the next one.
+  AI_WELCOME_HTML: `
+    <div class="chat-msg assistant">
+      <div class="msg-avatar">N</div>
+      <div class="msg-content">
+        <div class="msg-bubble">Hi! I'm <strong>NOVA</strong> 🚀 Your AI financial assistant. Ask me anything about your finances!</div>
+        <div class="msg-time">Just now</div>
+      </div>
+    </div>`,
+
   async loadAI() {
     this.updateAIStats(State.summary);
+    const container = document.getElementById('chatMessages');
+    if (!container) return;
     try {
       const history = await API.get('/ai/history');
-      if (!history.length) return;
-      const container = document.getElementById('chatMessages');
-      if (!container) return;
+      // Always rebuild the container for the CURRENT user's data — never
+      // leave a previous user's rendered messages sitting in the DOM.
       container.innerHTML = '';
+      if (!history.length) {
+        container.innerHTML = this.AI_WELCOME_HTML;
+        return;
+      }
       history.forEach(m => this.appendMsg(m.role, m.content));
       container.scrollTop = container.scrollHeight;
-    } catch {}
+    } catch {
+      container.innerHTML = this.AI_WELCOME_HTML;
+    }
   },
 
   appendMsg(role, content) {
@@ -558,8 +578,15 @@ const App = {
       if (resultsEl) { resultsEl.remove(); resultsEl = null; }
       if (q.length < 2) return;
       try {
-        const txns    = await API.get('/transactions?limit=500');
-        const matches = txns.filter(t => t.description.toLowerCase().includes(q) || t.category.toLowerCase().includes(q)).slice(0,6);
+        const txns = await API.get('/transactions?limit=500');
+        const matches = txns.filter(t =>
+          t.description.toLowerCase().includes(q) ||
+          t.category.toLowerCase().includes(q) ||
+          // Matches the raw number ("1500") and the ₹-formatted display
+          // string ("1,500") so a search for either form finds it.
+          String(t.amount).includes(q) ||
+          fmt(t.amount).toLowerCase().includes(q)
+        ).slice(0,6);
         if (!matches.length) return;
         resultsEl = document.createElement('div');
         resultsEl.className = 'search-results';
@@ -714,16 +741,27 @@ const App = {
     input?.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) this.sendChat(input.value); });
     document.querySelectorAll('.sug-btn').forEach(b => b.addEventListener('click', () => this.sendChat(b.dataset.prompt)));
     this.on('clearChat', 'click', async () => {
-      await API.del('/ai/history');
-      document.getElementById('chatMessages').innerHTML = `
-        <div class="chat-msg assistant">
-          <div class="msg-avatar">N</div>
-          <div class="msg-content">
-            <div class="msg-bubble">Chat cleared! How can I help you today? 🚀</div>
-            <div class="msg-time">Just now</div>
-          </div>
-        </div>`;
-      UI.toast('✓ Chat cleared', 'success');
+      const btn = document.getElementById('clearChat');
+      if (btn) { btn.disabled = true; }
+      try {
+        await API.del('/ai/history');
+        document.getElementById('chatMessages').innerHTML = `
+          <div class="chat-msg assistant">
+            <div class="msg-avatar">N</div>
+            <div class="msg-content">
+              <div class="msg-bubble">Chat cleared! How can I help you today? 🚀</div>
+              <div class="msg-time">Just now</div>
+            </div>
+          </div>`;
+        UI.toast('✓ Chat cleared', 'success');
+      } catch(e) {
+        // Previously any failure here (expired token, network drop, server
+        // error) threw silently — the button did nothing and no message
+        // told the user why. Now it's visible and the button re-enables.
+        UI.toast('⚠ Could not clear chat: ' + e.message.replace(/^\d+:\s*/, ''), 'error');
+      } finally {
+        if (btn) btn.disabled = false;
+      }
     });
   },
 

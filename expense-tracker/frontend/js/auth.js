@@ -136,10 +136,18 @@ const Auth = {
     try {
       const data = await API.post('/auth/login', { email, password });
       this.storeSession(data, document.getElementById('rememberMe').checked);
-      this.onLoggedIn(data.user);
+      // Full reload rather than calling onLoggedIn() in-place: if App was
+      // already initialized for a DIFFERENT user earlier in this browser
+      // tab (session ended without hitting the logout button — closed
+      // tab, expired token, etc.), App._started would still be true and
+      // App.init() would silently be skipped, leaving the previous
+      // user's dashboard/chat DOM on screen under the new login.
+      // Reloading guarantees a clean slate every time, matching logout().
+      window.location.reload();
     } catch(e) {
       this.setError('loginError', e.message.replace(/^\d+:\s*/, ''));
-    } finally { btn.textContent = 'Login →'; btn.disabled = false; }
+      btn.textContent = 'Login →'; btn.disabled = false;
+    }
   },
 
   async register() {
@@ -156,10 +164,13 @@ const Auth = {
     try {
       const data = await API.post('/auth/register', { name, email, password });
       this.storeSession(data, true);
-      this.onLoggedIn(data.user);
+      // See the comment in login() above — reload guarantees no stale
+      // App/DOM state from an earlier session leaks into this new one.
+      window.location.reload();
     } catch(e) {
       this.setError('registerError', e.message.replace(/^\d+:\s*/, ''));
-    } finally { btn.textContent = 'Create Account →'; btn.disabled = false; }
+      btn.textContent = 'Create Account →'; btn.disabled = false;
+    }
   },
 
   async tryDemo() {
@@ -172,7 +183,8 @@ const Auth = {
         data = await API.post('/auth/login', { email:'demo@flowledger.app', password:'demo123456' });
       }
       this.storeSession(data, false);
-      this.onLoggedIn(data.user);
+      // See the comment in login() above.
+      window.location.reload();
     } catch(e) {
       this.setError('loginError', 'Demo failed: ' + e.message.replace(/^\d+:\s*/,''));
     }
