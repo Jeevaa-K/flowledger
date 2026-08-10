@@ -54,6 +54,8 @@ const UI = {
     set('txnDate',   txn ? txn.date : new Date().toISOString().slice(0,10));
     this.setType(txn ? txn.type : 'income');
     this.buildCatPicker(txn ? txn.type : 'income', txn ? txn.category : null);
+    const accSel = document.getElementById('txnAccount');
+    if (accSel && txn?.account_id) accSel.value = txn.account_id;
     document.getElementById('addModal')?.classList.add('open');
     setTimeout(() => document.getElementById('txnDesc')?.focus(), 100);
   },
@@ -84,6 +86,94 @@ const UI = {
     setTimeout(() => document.getElementById('goalName')?.focus(), 100);
   },
   closeGoalModal() { document.getElementById('goalModal')?.classList.remove('open'); },
+
+  openAccountModal(account=null) {
+    const title = document.getElementById('accountModalTitle');
+    if (title) title.textContent = account ? 'Edit Account' : 'Add Account';
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+    set('accountName',            account ? account.name : '');
+    set('accountType',            account ? account.type : 'cash');
+    set('accountStartingBalance', account ? account.starting_balance : '0');
+    set('editAccountId',          account ? account.id : '');
+    document.getElementById('accountModal')?.classList.add('open');
+    setTimeout(() => document.getElementById('accountName')?.focus(), 100);
+  },
+  closeAccountModal() { document.getElementById('accountModal')?.classList.remove('open'); },
+
+  // Fills every <select id="...Account"> in the DOM with the user's
+  // accounts (called after any accounts load, so the transaction modal,
+  // the transactions-page filter, and the import page all stay in sync
+  // without each needing its own fetch).
+  populateAccountSelects(accounts, filterEl='') {
+    const active = accounts.filter(a => !a.archived);
+    const opts = active.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+
+    const txnSel = document.getElementById('txnAccount');
+    if (txnSel) txnSel.innerHTML = opts || '<option value="">No accounts yet</option>';
+
+    const importSel = document.getElementById('importAccount');
+    if (importSel) importSel.innerHTML = opts || '<option value="">No accounts yet</option>';
+
+    const filterSel = document.getElementById('filterAccount');
+    if (filterSel) {
+      const current = filterSel.value;
+      filterSel.innerHTML = '<option value="">All Accounts</option>' + opts;
+      if ([...filterSel.options].some(o => o.value === current)) filterSel.value = current;
+    }
+  },
+
+  renderAccounts(accounts) {
+    const grid    = document.getElementById('accountGrid');
+    const summary = document.getElementById('accountSummary');
+    if (!grid) return;
+    const totalBalance = accounts.reduce((s,a) => s + a.balance, 0);
+    const negativeCount = accounts.filter(a => a.balance < 0).length;
+    if (summary) summary.innerHTML = `
+      <div class="bs-card"><div class="bs-label">Total Balance</div><div class="bs-val" style="color:${totalBalance>=0?'#3E6154':'#A6402F'}">${fmt(totalBalance)}</div></div>
+      <div class="bs-card"><div class="bs-label">Accounts</div><div class="bs-val">${accounts.length}</div></div>
+      <div class="bs-card"><div class="bs-label">Negative Balance</div><div class="bs-val" style="color:${negativeCount>0?'#A6402F':'#3E6154'}">${negativeCount} account${negativeCount===1?'':'s'}</div></div>`;
+    if (!accounts.length) { grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1">No accounts yet. Add one to start tracking balances!</div>'; return; }
+    const typeEmoji = { cash:'💵', bank:'🏦', credit_card:'💳', wallet:'👛', other:'📦' };
+    const typeLabel = { cash:'Cash', bank:'Bank', credit_card:'Credit Card', wallet:'Wallet', other:'Other' };
+    grid.innerHTML = accounts.map(a => `
+      <div class="budget-card" style="${a.archived?'opacity:0.55':''}">
+        <div class="budget-header">
+          <div class="budget-cat-wrap">
+            <div class="budget-cat-dot" style="background:${a.color||'#6366f1'}"></div>
+            <div class="budget-cat">${typeEmoji[a.type]||'📦'} ${a.name}</div>
+          </div>
+          <div style="display:flex;gap:4px">
+            <button class="txn-btn edit" data-action="edit-account" data-id="${a.id}" title="Edit">✎</button>
+            <button class="budget-delete" data-action="del-account" data-id="${a.id}">✕</button>
+          </div>
+        </div>
+        <div class="budget-amounts">
+          <span>Type: <span>${typeLabel[a.type]||a.type}</span></span>
+          <span>Starting: <span>${fmt(a.starting_balance)}</span></span>
+        </div>
+        <div class="budget-footer" style="margin-top:8px">
+          <div class="budget-percent" style="color:${a.balance>=0?'#3E6154':'#A6402F'};font-size:20px">${fmt(a.balance)}</div>
+          <div class="budget-remaining">${a.archived ? 'Archived' : 'Current balance'}</div>
+        </div>
+      </div>`).join('');
+  },
+
+  renderAccountStrip(accounts) {
+    const card = document.getElementById('dashAccountsCard');
+    const el   = document.getElementById('dashAccountStrip');
+    if (!card || !el) return;
+    const active = accounts.filter(a => !a.archived);
+    // Hidden entirely when there's only the single auto-created default
+    // account — showing a one-item "By Account" strip is just noise
+    // until the user actually has more than one account to compare.
+    if (active.length < 2) { card.style.display = 'none'; return; }
+    card.style.display = 'block';
+    el.innerHTML = active.map(a => `
+      <div style="flex:1;min-width:140px;padding:12px 14px;border-radius:10px;background:#F5F0E6;border-left:3px solid ${a.color||'#6366f1'}">
+        <div style="font-size:12px;color:#7C7266;margin-bottom:4px">${a.name}</div>
+        <div style="font-size:16px;font-weight:600;color:${a.balance>=0?'#3E6154':'#A6402F'}">${fmt(a.balance)}</div>
+      </div>`).join('');
+  },
 
   toast(msg, type='success', duration=2800) {
     const el = document.getElementById('toast');

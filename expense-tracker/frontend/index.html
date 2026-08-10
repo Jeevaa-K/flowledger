@@ -62,6 +62,10 @@
       <span>Transactions</span>
       <div class="nav-count" id="txn-count">0</div>
     </button>
+    <button class="nav-item" data-page="accounts">
+      <div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div>
+      <span>Accounts</span>
+    </button>
     <button class="nav-item" data-page="budgets">
       <div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
       <span>Budgets</span>
@@ -208,6 +212,15 @@
         </div>
       </div>
 
+      <!-- By Account -->
+      <div class="card" id="dashAccountsCard" style="margin-top:20px;display:none">
+        <div class="card-header">
+          <div class="card-title">By Account</div>
+          <button class="pill-btn" data-action="goto-accounts">Manage</button>
+        </div>
+        <div id="dashAccountStrip" style="display:flex;gap:12px;flex-wrap:wrap"></div>
+      </div>
+
       <!-- Forecast Banner -->
       <div class="forecast-banner" id="forecastBanner" style="display:none">
         <div class="fb-icon">🔮</div>
@@ -272,6 +285,7 @@
       <div class="filter-bar">
         <select class="filter-select" id="filterType" aria-label="Filter by type"><option value="">All Types</option><option value="income">Income</option><option value="expense">Expense</option></select>
         <select class="filter-select" id="filterCategory" aria-label="Filter by category"><option value="">All Categories</option><option>Food</option><option>Transport</option><option>Shopping</option><option>Entertainment</option><option>Health</option><option>Bills</option><option>Salary</option><option>Freelance</option><option>Investment</option><option>Other</option></select>
+        <select class="filter-select" id="filterAccount" aria-label="Filter by account"><option value="">All Accounts</option></select>
         <div class="date-range">
           <input class="filter-input" type="date" id="filterFrom" aria-label="From date" />
           <span class="date-sep">→</span>
@@ -288,6 +302,17 @@
           <button class="btn-ghost" id="txnNextPage" aria-label="Next page">Next →</button>
         </div>
       </div>
+    </section>
+
+    <!-- ACCOUNTS -->
+    <section class="page" id="page-accounts">
+      <button class="mobile-back-btn" data-action="goto-dashboard">← Back</button>
+      <div class="page-header">
+        <div><h1 class="page-title">Accounts</h1><p class="page-sub">Track balances across cash, bank &amp; cards</p></div>
+        <button class="btn-primary" id="openAccountModal">+ Add Account</button>
+      </div>
+      <div class="budget-summary" id="accountSummary"></div>
+      <div class="budget-grid" id="accountGrid"></div>
     </section>
 
     <!-- BUDGETS -->
@@ -366,6 +391,7 @@
           <div class="sug-title">Quick Prompts</div>
           <button class="sug-btn" data-prompt="How am I doing financially this month?"> Monthly summary</button>
           <button class="sug-btn" data-prompt="Where am I spending the most money?"> Top spending</button>
+          <button class="sug-btn" data-prompt="What's the balance in each of my accounts?"> Account balances</button>
           <button class="sug-btn" data-prompt="Give me 3 tips to save more money"> Saving tips</button>
           <button class="sug-btn" data-prompt="Am I on track with my budget?"> Budget check</button>
           <button class="sug-btn" data-prompt="Predict my expenses for next month"> Forecast</button>
@@ -401,6 +427,10 @@
           <div class="dropzone-sub">Supports: date, description, amount, type, category columns</div>
         </div>
         <input type="file" id="csvFileInput" accept=".csv" style="display:none" />
+        <div class="form-group" style="margin-top:14px">
+          <label>Import into account</label>
+          <select id="importAccount"></select>
+        </div>
         <div style="margin-top:14px;padding:12px;background:#F5F0E6;border-radius:8px;font-size:12px;color:#7C7266">
           <strong>Expected CSV format:</strong><br/>
           <code>date,description,amount,type,category</code><br/>
@@ -500,9 +530,46 @@
         <div class="cat-picker" id="catPicker"></div>
         <select id="txnCategory" style="display:none"></select>
       </div>
+      <div class="form-group span2">
+        <label>Account</label>
+        <select id="txnAccount"></select>
+      </div>
     </div>
     <input type="hidden" id="editTxnId" />
     <button class="btn-primary full" id="saveTxnBtn">Save Transaction</button>
+  </div>
+</div>
+
+<!-- ACCOUNT MODAL -->
+<div class="modal-overlay" id="accountModal" role="dialog" aria-modal="true" aria-labelledby="accountModalTitle">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-icon"></div>
+      <h2 class="modal-title" id="accountModalTitle">Add Account</h2>
+      <button class="modal-close" id="closeAccountModal">×</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group span2">
+        <label>Account Name</label>
+        <input type="text" id="accountName" placeholder="e.g. HDFC Savings" />
+      </div>
+      <div class="form-group">
+        <label>Type</label>
+        <select id="accountType">
+          <option value="cash">Cash</option>
+          <option value="bank">Bank</option>
+          <option value="credit_card">Credit Card</option>
+          <option value="wallet">Wallet</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Starting Balance (₹)</label>
+        <div class="input-prefix"><span>₹</span><input type="number" id="accountStartingBalance" placeholder="0.00" step="0.01" /></div>
+      </div>
+    </div>
+    <input type="hidden" id="editAccountId" />
+    <button class="btn-primary full" id="saveAccountBtn">Save Account</button>
   </div>
 </div>
 

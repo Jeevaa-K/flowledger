@@ -8,6 +8,11 @@ const State = {
   // Goals load from the backend (see loadGoals) — no longer localStorage,
   // so they survive a cleared browser or a switch to a new device.
   goals: [],
+  // Accounts load once at App.init() (not per-page) since the account
+  // <select> in the transaction modal, the transactions filter, and the
+  // import page all need it available before the user ever visits the
+  // dedicated Accounts page.
+  accounts: [],
   // Transactions-page pagination (separate from the small `limit=`
   // snapshots the dashboard/analytics widgets pull — those stay unpaginated).
   txnPage: 1,
@@ -27,6 +32,7 @@ const App = {
     this.bindMobile();
     this.bindSearch();
     this.updateNavCount();
+    await this.loadAccounts();
     await this.loadDashboard();
   },
 
@@ -71,6 +77,7 @@ const App = {
     document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === `page-${page}`));
     if      (page === 'dashboard')    await this.loadDashboard();
     else if (page === 'transactions') await this.loadTransactions();
+    else if (page === 'accounts')     await this.loadAccounts(true);
     else if (page === 'budgets')      await this.loadBudgets();
     else if (page === 'analytics')    await this.loadAnalytics();
     else if (page === 'ai')           await this.loadAI();
@@ -216,10 +223,11 @@ const App = {
     if (resetPage) State.txnPage = 1;
     try {
       const qs = new URLSearchParams();
-      if (filters.type)     qs.set('type',     filters.type);
-      if (filters.category) qs.set('category', filters.category);
-      if (filters.from)     qs.set('from',     filters.from);
-      if (filters.to)       qs.set('to',       filters.to);
+      if (filters.type)       qs.set('type',       filters.type);
+      if (filters.category)   qs.set('category',   filters.category);
+      if (filters.from)       qs.set('from',       filters.from);
+      if (filters.to)         qs.set('to',         filters.to);
+      if (filters.account_id) qs.set('account_id', filters.account_id);
       qs.set('limit', State.txnPageSize);
       qs.set('page',  State.txnPage);
       const { data: txns, total } = await API.getWithCount('/transactions?' + qs);
@@ -247,13 +255,15 @@ const App = {
     const amtEl  = document.getElementById('txnAmount');
     const dateEl = document.getElementById('txnDate');
     const catEl  = document.getElementById('txnCategory');
+    const accEl  = document.getElementById('txnAccount');
     if (!descEl || !amtEl || !dateEl || !catEl) { UI.toast('⚠ Something went wrong loading the form', 'error'); return; }
 
-    const desc     = descEl.value.trim();
-    const amount   = parseFloat(amtEl.value);
-    const date     = dateEl.value;
-    const category = catEl.value;
-    const type     = UI.currentType;
+    const desc       = descEl.value.trim();
+    const amount     = parseFloat(amtEl.value);
+    const date       = dateEl.value;
+    const category   = catEl.value;
+    const type       = UI.currentType;
+    const account_id = accEl?.value || null;
     if (!desc || !amount || !date || !category) { UI.toast('⚠ Fill in all fields', 'error'); return; }
     if (amount <= 0) { UI.toast('⚠ Amount must be greater than 0', 'error'); return; }
 
@@ -262,10 +272,10 @@ const App = {
     try {
       let budgetToastShown = false;
       if (UI.editId) {
-        await API.put(`/transactions/${UI.editId}`, { description:desc, amount, type, category, date });
+        await API.put(`/transactions/${UI.editId}`, { description:desc, amount, type, category, date, account_id });
         UI.toast('✓ Transaction updated', 'success');
       } else {
-        await API.post('/transactions', { description:desc, amount, type, category, date });
+        await API.post('/transactions', { description:desc, amount, type, category, date, account_id });
         // Only worth checking for a fresh expense in the current month —
         // that's the only case /api/budgets' spend total actually covers,
         // and only expenses count against a budget in the first place.
@@ -277,6 +287,10 @@ const App = {
       }
       UI.closeAddModal();
       this.updateNavCount();
+      // A transaction changes account balances, so refresh accounts too —
+      // cheap call, keeps the dashboard strip and Accounts page correct
+      // without waiting for the user to navigate away and back.
+      this.loadAccounts(State.page === 'accounts');
       if (State.page === 'transactions') await this.loadTransactions();
       else await this.loadDashboard();
     } catch(e) { UI.toast(e.message.match(/^\d+:/) ? 'Error: ' + e.message : e.message, 'error'); }
@@ -320,9 +334,78 @@ const App = {
       await API.del(`/transactions/${id}`);
       UI.toast('✓ Deleted', 'success');
       this.updateNavCount();
+      this.loadAccounts(State.page === 'accounts');
       if (State.page === 'transactions') await this.loadTransactions();
       else await this.loadDashboard();
     } catch { UI.toast('Error deleting', 'error'); }
+  },
+
+  // ── Accounts ───────────────────────────────────────────────
+  // forceRerender=true when called from navigate() (user is actually
+  // looking at the Accounts page); false on the init() background load,
+  // where we only need State.accounts populated for the selects/strip.
+  async loadAccounts(forceRerender=false) {
+    try {
+      State.accounts = await API.get('/accounts');
+      UI.populateAccountSelects(State.accounts);
+      UI.renderAccountStrip(State.accounts);
+      if (forceRerender) UI.renderAccounts(State.accounts);
+    } catch(e) {
+      console.error('Load accounts error:', e);
+      if (forceRerender) UI.toast('⚠ Could not load accounts', 'error');
+    }
+  },
+
+  async saveAccount() {
+    const nameEl  = document.getElementById('accountName');
+    const typeEl  = document.getElementById('accountType');
+    const balEl   = document.getElementById('accountStartingBalance');
+    const editIdEl = document.getElementById('editAccountId');
+    if (!nameEl || !typeEl || !balEl || !editIdEl) { UI.toast('⚠ Something went wrong loading the form', 'error'); return; }
+
+    const name             = nameEl.value.trim();
+    const type              = typeEl.value;
+    const starting_balance = parseFloat(balEl.value) || 0;
+    const editId            = editIdEl.value;
+    if (!name) { UI.toast('⚠ Enter an account name', 'error'); return; }
+
+    const btn = document.getElementById('saveAccountBtn');
+    if (btn) { btn.disabled = true; btn.dataset.origText = btn.textContent; btn.textContent = 'Saving...'; }
+    try {
+      if (editId) {
+        await API.put(`/accounts/${editId}`, { name, type, starting_balance });
+        UI.toast('✓ Account updated', 'success');
+      } else {
+        await API.post('/accounts', { name, type, starting_balance });
+        UI.toast('✓ Account added', 'success');
+      }
+      UI.closeAccountModal();
+      await this.loadAccounts(State.page === 'accounts');
+      if (State.page === 'dashboard') await this.loadDashboard();
+    } catch(e) {
+      UI.toast('⚠ ' + e.message.replace(/^\d+:\s*/,''), 'error');
+    } finally { if (btn) { btn.disabled = false; btn.textContent = btn.dataset.origText || 'Save Account'; } }
+  },
+
+  editAccount(id) {
+    const account = State.accounts.find(a => a.id === id);
+    if (account) UI.openAccountModal(account);
+  },
+
+  async deleteAccount(id) {
+    // Deleting an account never deletes its transactions — see the
+    // ON DELETE SET NULL comment on the backend route. They just show
+    // as unassigned afterward, so this confirm only needs to warn about
+    // the account itself, not the history behind it.
+    if (!confirm('Delete this account? Transactions on it will stay in your history but become unassigned.')) return;
+    try {
+      await API.del(`/accounts/${id}`);
+      UI.toast('✓ Account removed', 'success');
+      await this.loadAccounts(true);
+      if (State.page === 'dashboard') await this.loadDashboard();
+    } catch(e) {
+      UI.toast('⚠ ' + e.message.replace(/^\d+:\s*/,''), 'error');
+    }
   },
 
   // ── Budgets ────────────────────────────────────────────────
@@ -627,6 +710,11 @@ const App = {
     this.on('saveBudgetBtn',   'click', () => this.saveBudget());
     this.on('budgetModal',     'click', e  => { if (e.target.id === 'budgetModal') UI.closeBudgetModal(); });
 
+    this.on('openAccountModal',  'click', () => UI.openAccountModal());
+    this.on('closeAccountModal', 'click', () => UI.closeAccountModal());
+    this.on('saveAccountBtn',    'click', () => this.saveAccount());
+    this.on('accountModal',      'click', e => { if (e.target.id === 'accountModal') UI.closeAccountModal(); });
+
     this.on('openGoalModal',   'click', () => UI.openGoalModal());
     this.on('closeGoalModal',  'click', () => UI.closeGoalModal());
     this.on('saveGoalBtn',     'click', () => this.saveGoal());
@@ -677,6 +765,9 @@ const App = {
       else if (a === 'edit-txn')          App.editTxn(id);
       else if (a === 'del-txn')           App.deleteTxn(id);
       else if (a === 'del-budget')        App.deleteBudget(id);
+      else if (a === 'edit-account')      App.editAccount(id);
+      else if (a === 'del-account')       App.deleteAccount(id);
+      else if (a === 'goto-accounts')     App.navigate('accounts');
       else if (a === 'edit-goal')         App.editGoal(id);
       else if (a === 'del-goal')          App.deleteGoal(id);
       else if (a === 'add-savings')       App.addSavings(id);
@@ -707,19 +798,21 @@ const App = {
     const go = () => {
       const typeEl = document.getElementById('filterType');
       const catEl  = document.getElementById('filterCategory');
+      const accEl  = document.getElementById('filterAccount');
       const fromEl = document.getElementById('filterFrom');
       const toEl   = document.getElementById('filterTo');
       this.loadTransactions({
-        type:     typeEl ? typeEl.value : '',
-        category: catEl  ? catEl.value  : '',
-        from:     fromEl ? fromEl.value : '',
-        to:       toEl   ? toEl.value   : ''
+        type:       typeEl ? typeEl.value : '',
+        category:   catEl  ? catEl.value  : '',
+        account_id: accEl  ? accEl.value  : '',
+        from:       fromEl ? fromEl.value : '',
+        to:         toEl   ? toEl.value   : ''
       });
     };
-    ['filterType','filterCategory','filterFrom','filterTo'].forEach(id =>
+    ['filterType','filterCategory','filterAccount','filterFrom','filterTo'].forEach(id =>
       document.getElementById(id)?.addEventListener('change', go));
     this.on('clearFilters', 'click', () => {
-      ['filterType','filterCategory'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      ['filterType','filterCategory','filterAccount'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
       ['filterFrom','filterTo'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
       this.loadTransactions();
     });

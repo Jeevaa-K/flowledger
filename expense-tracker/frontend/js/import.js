@@ -225,7 +225,8 @@ const Importer = {
     const btn = document.getElementById('importBtn');
     if (btn) { btn.textContent = 'Importing...'; btn.disabled = true; }
     try {
-      const result = await API.post('/transactions/import', { transactions: this.parsed });
+      const accEl = document.getElementById('importAccount');
+      const result = await API.post('/transactions/import', { transactions: this.parsed, account_id: accEl?.value || null });
       const skipped = result.skipped || 0;
       UI.toast(
         skipped > 0
@@ -233,6 +234,7 @@ const Importer = {
           : `✓ Imported ${result.imported} transactions!`,
         'success', skipped > 0 ? 4000 : 2800
       );
+      App.loadAccounts(State.page === 'accounts');
       this.parsed = [];
       this.rawRows = [];
       const section = document.getElementById('importPreviewSection');

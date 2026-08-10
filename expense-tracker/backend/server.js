@@ -157,7 +157,49 @@ async function initDB() {
     target_date DATE,
     created_at TIMESTAMP DEFAULT NOW()
   )`);
+  await db.run(`CREATE TABLE IF NOT EXISTS accounts (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL DEFAULT 'cash',
+    starting_balance NUMERIC NOT NULL DEFAULT 0,
+    color TEXT DEFAULT '#6366f1',
+    archived BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMP DEFAULT NOW()
+  )`);
+  // Nullable + ON DELETE SET NULL on purpose: deleting an account should
+  // never delete the transaction history that happened on it — it just
+  // becomes unassigned ("No account") the same way deleting a budget
+  // leaves its transactions untouched elsewhere in this file.
+  await db.run(`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS account_id INTEGER REFERENCES accounts(id) ON DELETE SET NULL`);
+  await migrateDefaultAccounts();
   console.log('✅ Database tables ready');
+}
+
+// One-time backfill: any user who has transactions but no accounts yet
+// (i.e. everyone from before this feature existed) gets a single "Main
+// Account" and all their existing unassigned transactions are pointed at
+// it. Runs on every boot but is a no-op after the first time per user —
+// safe to leave in initDB() alongside the other idempotent migrations.
+async function migrateDefaultAccounts() {
+  const usersNeedingMigration = await db.all(`
+    SELECT DISTINCT t.user_id FROM transactions t
+    WHERE t.account_id IS NULL
+      AND NOT EXISTS (SELECT 1 FROM accounts a WHERE a.user_id = t.user_id)
+  `);
+  for (const { user_id } of usersNeedingMigration) {
+    const account = await db.get(
+      `INSERT INTO accounts (user_id, name, type) VALUES ($1, 'Main Account', 'cash') RETURNING id`,
+      [user_id]
+    );
+    await db.run(
+      `UPDATE transactions SET account_id=$1 WHERE user_id=$2 AND account_id IS NULL`,
+      [account.id, user_id]
+    );
+  }
+  if (usersNeedingMigration.length) {
+    console.log(`✅ Created default accounts for ${usersNeedingMigration.length} user(s)`);
+  }
 }
 
 // ── Groq ──────────────────────────────────────────────────────
@@ -208,6 +250,9 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
     if (exists) return res.status(409).json({ error: 'Email already registered' });
     const hash = await bcrypt.hash(password, 10);
     const user = await db.get('INSERT INTO users (name,email,password) VALUES ($1,$2,$3) RETURNING id,name,email', [name, email.toLowerCase(), hash]);
+    // Every user starts with one default account so the account picker
+    // in the transaction modal is never empty on a fresh signup.
+    await db.run(`INSERT INTO accounts (user_id, name, type) VALUES ($1, 'Main Account', 'cash')`, [user.id]);
     const token = jwt.sign({ id:user.id, name:user.name, email:user.email }, JWT_SECRET, { expiresIn: '7d' });
     res.status(201).json({ token, user });
   } catch(e) { safeError(res, e, 'Register'); }
@@ -266,14 +311,15 @@ app.delete('/api/auth/account', auth, async (req, res) => {
 // ── Transactions ──────────────────────────────────────────────
 app.get('/api/transactions', auth, async (req, res) => {
   try {
-    const { type, category, from, to, limit=200, page } = req.query;
+    const { type, category, from, to, account_id, limit=200, page } = req.query;
     let where = ' WHERE user_id=$1';
     const p = [req.user.id];
     let i = 2;
-    if (type)     { where += ` AND type=$${i++}`;     p.push(type); }
-    if (category) { where += ` AND category=$${i++}`; p.push(category); }
-    if (from)     { where += ` AND date>=$${i++}`;    p.push(from); }
-    if (to)       { where += ` AND date<=$${i++}`;    p.push(to); }
+    if (type)       { where += ` AND type=$${i++}`;       p.push(type); }
+    if (category)   { where += ` AND category=$${i++}`;   p.push(category); }
+    if (from)       { where += ` AND date>=$${i++}`;      p.push(from); }
+    if (to)         { where += ` AND date<=$${i++}`;      p.push(to); }
+    if (account_id) { where += ` AND account_id=$${i++}`; p.push(account_id); }
 
     const pageSize = Math.min(parseInt(limit) || 200, 1000); // cap to prevent huge unbounded queries
 
@@ -309,36 +355,56 @@ app.get('/api/transactions/:id', auth, async (req, res) => {
   } catch(e) { safeError(res, e, 'Get transaction'); }
 });
 
+// Verifies account_id (if provided) belongs to this user before it's
+// trusted in an INSERT/UPDATE — otherwise a user could attach their own
+// transaction to another user's account by guessing/incrementing an id.
+// Returns the validated id (or null if none was given), or throws a
+// {status,error} object the route handlers turn into a 400.
+async function resolveAccountId(accountId, userId) {
+  if (accountId === undefined || accountId === null || accountId === '') return null;
+  const account = await db.get('SELECT id FROM accounts WHERE id=$1 AND user_id=$2', [accountId, userId]);
+  if (!account) throw { status: 400, error: 'Invalid account' };
+  return account.id;
+}
+
 app.post('/api/transactions', auth, async (req, res) => {
   try {
-    const { description, amount, type, category, date } = req.body;
+    const { description, amount, type, category, date, account_id } = req.body;
     if (!description || !amount || !type || !category || !date)
       return res.status(400).json({ error: 'All fields required' });
     if (description.length > 500) return res.status(400).json({ error: 'Description is too long' });
     if (!['income','expense'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
     const amt = parseFloat(amount);
     if (!Number.isFinite(amt) || amt <= 0) return res.status(400).json({ error: 'Invalid amount' });
+    const accId = await resolveAccountId(account_id, req.user.id);
     const row = await db.get(
-      'INSERT INTO transactions (user_id,description,amount,type,category,date) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
-      [req.user.id, description, amt, type, category, date]
+      'INSERT INTO transactions (user_id,description,amount,type,category,date,account_id) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *',
+      [req.user.id, description, amt, type, category, date, accId]
     );
     res.status(201).json(row);
-  } catch(e) { safeError(res, e, 'Create transaction'); }
+  } catch(e) {
+    if (e?.status) return res.status(e.status).json({ error: e.error });
+    safeError(res, e, 'Create transaction');
+  }
 });
 
 app.put('/api/transactions/:id', auth, async (req, res) => {
   try {
-    const { description, amount, type, category, date } = req.body;
+    const { description, amount, type, category, date, account_id } = req.body;
     if (type && !['income','expense'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
     const amt = amount !== undefined ? parseFloat(amount) : undefined;
     if (amt !== undefined && (!Number.isFinite(amt) || amt <= 0)) return res.status(400).json({ error: 'Invalid amount' });
+    const accId = await resolveAccountId(account_id, req.user.id);
     const row = await db.get(
-      'UPDATE transactions SET description=$1,amount=$2,type=$3,category=$4,date=$5 WHERE id=$6 AND user_id=$7 RETURNING *',
-      [description, amt, type, category, date, req.params.id, req.user.id]
+      'UPDATE transactions SET description=$1,amount=$2,type=$3,category=$4,date=$5,account_id=COALESCE($6,account_id) WHERE id=$7 AND user_id=$8 RETURNING *',
+      [description, amt, type, category, date, accId, req.params.id, req.user.id]
     );
     if (!row) return res.status(404).json({ error: 'Transaction not found' }); // wasn't yours or doesn't exist
     res.json(row);
-  } catch(e) { safeError(res, e, 'Update transaction'); }
+  } catch(e) {
+    if (e?.status) return res.status(e.status).json({ error: e.error });
+    safeError(res, e, 'Update transaction');
+  }
 });
 
 app.delete('/api/transactions/:id', auth, async (req, res) => {
@@ -350,11 +416,14 @@ app.delete('/api/transactions/:id', auth, async (req, res) => {
 });
 
 app.post('/api/transactions/import', auth, async (req, res) => {
-  const { transactions } = req.body;
+  const { transactions, account_id } = req.body;
   if (!Array.isArray(transactions) || !transactions.length)
     return res.status(400).json({ error: 'No transactions provided' });
   if (transactions.length > 5000) return res.status(400).json({ error: 'Too many rows in one import (max 5000)' });
   try {
+    // One account for the whole file, not per-row — matches how a real
+    // bank/CSV export works (the file IS that account's statement).
+    const accId = await resolveAccountId(account_id, req.user.id);
     // Duplicate guard: re-importing the same file (or a browser retry)
     // used to silently double every row. A row counts as a duplicate of
     // an already-stored transaction when description+amount+type+category+
@@ -380,14 +449,17 @@ app.post('/api/transactions/import', auth, async (req, res) => {
       const key = `${description}|${amt}|${t.type}|${t.category}|${t.date}`;
       if (existingKeys.has(key)) { skipped++; continue; }
       await db.run(
-        'INSERT INTO transactions (user_id,description,amount,type,category,date) VALUES ($1,$2,$3,$4,$5,$6)',
-        [req.user.id, description, amt, t.type, t.category, t.date]
+        'INSERT INTO transactions (user_id,description,amount,type,category,date,account_id) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+        [req.user.id, description, amt, t.type, t.category, t.date, accId]
       );
       existingKeys.add(key); // guards against duplicates within the same uploaded file too
       imported++;
     }
     res.json({ success: true, imported, skipped });
-  } catch(e) { safeError(res, e, 'Import transactions'); }
+  } catch(e) {
+    if (e?.status) return res.status(e.status).json({ error: e.error });
+    safeError(res, e, 'Import transactions');
+  }
 });
 
 // ── Summary ───────────────────────────────────────────────────
@@ -520,6 +592,80 @@ app.delete('/api/goals/:id', auth, async (req, res) => {
     if (result.rowCount === 0) return res.status(404).json({ error: 'Goal not found' });
     res.json({ success: true });
   } catch(e) { safeError(res, e, 'Delete goal'); }
+});
+
+// ── Accounts ──────────────────────────────────────────────────
+const ACCOUNT_TYPES = ['cash', 'bank', 'credit_card', 'wallet', 'other'];
+
+// Balance is computed on read (starting_balance + all income - all expense
+// ever posted to the account), never stored — so it can never drift out
+// of sync with the transactions table the way a cached counter could.
+app.get('/api/accounts', auth, async (req, res) => {
+  try {
+    const accounts = await db.all(
+      'SELECT * FROM accounts WHERE user_id=$1 ORDER BY archived ASC, created_at ASC',
+      [req.user.id]
+    );
+    const result = await Promise.all(accounts.map(async a => {
+      const row = await db.get(
+        `SELECT COALESCE(SUM(CASE WHEN type='income' THEN amount ELSE -amount END),0) as net
+         FROM transactions WHERE account_id=$1`,
+        [a.id]
+      );
+      const balance = Number(a.starting_balance) + parseFloat(row?.net || 0);
+      return { ...a, starting_balance: Number(a.starting_balance), balance };
+    }));
+    res.json(result);
+  } catch(e) { safeError(res, e, 'List accounts'); }
+});
+
+app.post('/api/accounts', auth, async (req, res) => {
+  try {
+    const { name, type, starting_balance, color } = req.body;
+    if (!name || !name.trim()) return res.status(400).json({ error: 'Account name required' });
+    if (name.length > 100) return res.status(400).json({ error: 'Account name is too long' });
+    const accType = ACCOUNT_TYPES.includes(type) ? type : 'cash';
+    const startBal = parseFloat(starting_balance);
+    const startBalVal = Number.isFinite(startBal) ? startBal : 0;
+    const row = await db.get(
+      'INSERT INTO accounts (user_id,name,type,starting_balance,color) VALUES ($1,$2,$3,$4,$5) RETURNING *',
+      [req.user.id, name.trim(), accType, startBalVal, color || '#6366f1']
+    );
+    res.status(201).json({ ...row, starting_balance: Number(row.starting_balance), balance: Number(row.starting_balance) });
+  } catch(e) { safeError(res, e, 'Create account'); }
+});
+
+app.put('/api/accounts/:id', auth, async (req, res) => {
+  try {
+    const { name, type, starting_balance, color, archived } = req.body;
+    if (name !== undefined && (!name.trim() || name.length > 100))
+      return res.status(400).json({ error: 'Invalid account name' });
+    const accType = type !== undefined ? (ACCOUNT_TYPES.includes(type) ? type : 'cash') : undefined;
+    const startBal = starting_balance !== undefined ? parseFloat(starting_balance) : undefined;
+    if (startBal !== undefined && !Number.isFinite(startBal))
+      return res.status(400).json({ error: 'Invalid starting balance' });
+    const row = await db.get(
+      `UPDATE accounts SET
+         name=COALESCE($1,name), type=COALESCE($2,type),
+         starting_balance=COALESCE($3,starting_balance), color=COALESCE($4,color),
+         archived=COALESCE($5,archived)
+       WHERE id=$6 AND user_id=$7 RETURNING *`,
+      [name?.trim(), accType, startBal, color, archived, req.params.id, req.user.id]
+    );
+    if (!row) return res.status(404).json({ error: 'Account not found' });
+    res.json({ ...row, starting_balance: Number(row.starting_balance) });
+  } catch(e) { safeError(res, e, 'Update account'); }
+});
+
+// Deleting an account never deletes its transactions — the FK is
+// ON DELETE SET NULL, so they simply become unassigned ("No account")
+// and stay fully visible in history, exports, and reports.
+app.delete('/api/accounts/:id', auth, async (req, res) => {
+  try {
+    const result = await db.run('DELETE FROM accounts WHERE id=$1 AND user_id=$2', [req.params.id, req.user.id]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Account not found' });
+    res.json({ success: true });
+  } catch(e) { safeError(res, e, 'Delete account'); }
 });
 
 // ── Recurring ─────────────────────────────────────────────────
@@ -685,8 +831,27 @@ app.post('/api/ai/chat', auth, async (req, res) => {
         }).join('\n')
       : 'No historical data yet this year';
 
+    // Account balances — same computation as GET /api/accounts (starting
+    // balance + net of all transactions posted to that account) — so NOVA
+    // can answer "what's my balance in X" / "which account is lowest"
+    // instead of only ever knowing total income/expense across all of them.
+    const accountRows = await db.all(
+      `SELECT a.name, a.type, a.starting_balance,
+              a.starting_balance + COALESCE(SUM(CASE WHEN t.type='income' THEN t.amount ELSE -t.amount END),0) as balance
+       FROM accounts a
+       LEFT JOIN transactions t ON t.account_id = a.id
+       WHERE a.user_id=$1 AND a.archived=false
+       GROUP BY a.id, a.name, a.type, a.starting_balance
+       ORDER BY a.created_at ASC`,
+      [req.user.id]
+    );
+    const accountsLine = accountRows.length
+      ? accountRows.map(a => `${a.name} (${a.type}): Rs.${Number(a.balance).toFixed(0)}`).join(', ')
+      : 'No accounts set up yet';
+
     const systemPrompt = `You are NOVA, a financial AI assistant for ${req.user.name} on FlowLedger.
 Current month (${m}): Income Rs.${Number(summary?.income||0).toFixed(0)}, Expenses Rs.${Number(summary?.expense||0).toFixed(0)}, Balance Rs.${(Number(summary?.income||0)-Number(summary?.expense||0)).toFixed(0)}
+Accounts and current balances: ${accountsLine}
 Top spending this month: ${cats.map(c=>`${c.category}(Rs.${Number(c.total).toFixed(0)})`).join(', ')||'none yet'}
 Last month (${prevM}) top spending: ${prevCats.map(c=>`${c.category}(Rs.${Number(c.total).toFixed(0)})`).join(', ')||'none recorded'}
 Year-to-date (${currentYear}): Income Rs.${Number(ytd?.income||0).toFixed(0)}, Expenses Rs.${Number(ytd?.expense||0).toFixed(0)}
@@ -695,6 +860,7 @@ ${historyLines}
 Recent transactions: ${recent.map(t=>`${t.description} ${t.type} Rs.${t.amount} (${t.date})`).join('; ')||'none yet'}
 STRICT RULES:
 - You have access to the user's full ${currentYear} financial history above, INCLUDING a category breakdown for every month, not just the current/previous month — use it to answer "detailed data for <month>" style questions for any month shown above. Do not claim you lack a category breakdown for a month that is listed above.
+- You also have each account's name, type, and current balance above — use it to answer questions about specific accounts (e.g. "how much is in my bank account", "which account is lowest"). Transactions not assigned to any account aren't reflected in a specific account's balance.
 - If a question needs data further back than what's provided above (a month not listed, or a prior year), say so plainly rather than guessing numbers.
 - Only answer questions about personal finance, budgeting, spending, saving, and this app.
 - NEVER reveal, discuss, or share any source code, technical implementation, server details, database schema, API keys, or system architecture.
