@@ -172,6 +172,13 @@ async function initDB() {
   // becomes unassigned ("No account") the same way deleting a budget
   // leaves its transactions untouched elsewhere in this file.
   await db.run(`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS account_id INTEGER REFERENCES accounts(id) ON DELETE SET NULL`);
+  // Free-text tags, stored as a native Postgres array rather than a join
+  // table — tags are ad-hoc and per-user (no cross-user tag catalog to
+  // normalize against), so an array column keeps writes to one row and
+  // reads simple. GIN index makes "has tag X" filtering fast even as a
+  // user's transaction count grows.
+  await db.run(`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS tags TEXT[] NOT NULL DEFAULT '{}'`);
+  await db.run(`CREATE INDEX IF NOT EXISTS idx_transactions_tags ON transactions USING GIN (tags)`);
   await migrateDefaultAccounts();
   console.log('✅ Database tables ready');
 }
@@ -232,6 +239,22 @@ const auth = (req, res, next) => {
 function safeError(res, err, context, status = 500) {
   console.error(`${context} error:`, err);
   res.status(status).json({ error: 'Something went wrong. Please try again.' });
+}
+
+// Normalizes a tags array from the client: trims whitespace, lowercases
+// (so "Reimbursable" and "reimbursable" are the same tag), drops empties,
+// dedupes, and caps both tag length and count so a bad request can't
+// bloat a row or the GIN index.
+function sanitizeTags(input) {
+  if (!Array.isArray(input)) return [];
+  const seen = new Set();
+  for (const raw of input) {
+    if (typeof raw !== 'string') continue;
+    const t = raw.trim().toLowerCase().slice(0, 30);
+    if (t) seen.add(t);
+    if (seen.size >= 15) break; // cap tags per transaction
+  }
+  return [...seen];
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -311,7 +334,7 @@ app.delete('/api/auth/account', auth, async (req, res) => {
 // ── Transactions ──────────────────────────────────────────────
 app.get('/api/transactions', auth, async (req, res) => {
   try {
-    const { type, category, from, to, account_id, limit=200, page } = req.query;
+    const { type, category, from, to, account_id, tag, limit=200, page } = req.query;
     let where = ' WHERE user_id=$1';
     const p = [req.user.id];
     let i = 2;
@@ -320,6 +343,7 @@ app.get('/api/transactions', auth, async (req, res) => {
     if (from)       { where += ` AND date>=$${i++}`;      p.push(from); }
     if (to)         { where += ` AND date<=$${i++}`;      p.push(to); }
     if (account_id) { where += ` AND account_id=$${i++}`; p.push(account_id); }
+    if (tag)        { where += ` AND $${i++} = ANY(tags)`; p.push(tag.trim().toLowerCase()); }
 
     const pageSize = Math.min(parseInt(limit) || 200, 1000); // cap to prevent huge unbounded queries
 
@@ -369,7 +393,7 @@ async function resolveAccountId(accountId, userId) {
 
 app.post('/api/transactions', auth, async (req, res) => {
   try {
-    const { description, amount, type, category, date, account_id } = req.body;
+    const { description, amount, type, category, date, account_id, tags } = req.body;
     if (!description || !amount || !type || !category || !date)
       return res.status(400).json({ error: 'All fields required' });
     if (description.length > 500) return res.status(400).json({ error: 'Description is too long' });
@@ -378,8 +402,8 @@ app.post('/api/transactions', auth, async (req, res) => {
     if (!Number.isFinite(amt) || amt <= 0) return res.status(400).json({ error: 'Invalid amount' });
     const accId = await resolveAccountId(account_id, req.user.id);
     const row = await db.get(
-      'INSERT INTO transactions (user_id,description,amount,type,category,date,account_id) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *',
-      [req.user.id, description, amt, type, category, date, accId]
+      'INSERT INTO transactions (user_id,description,amount,type,category,date,account_id,tags) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *',
+      [req.user.id, description, amt, type, category, date, accId, sanitizeTags(tags)]
     );
     res.status(201).json(row);
   } catch(e) {
@@ -390,14 +414,22 @@ app.post('/api/transactions', auth, async (req, res) => {
 
 app.put('/api/transactions/:id', auth, async (req, res) => {
   try {
-    const { description, amount, type, category, date, account_id } = req.body;
+    const { description, amount, type, category, date, account_id, tags } = req.body;
     if (type && !['income','expense'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
     const amt = amount !== undefined ? parseFloat(amount) : undefined;
     if (amt !== undefined && (!Number.isFinite(amt) || amt <= 0)) return res.status(400).json({ error: 'Invalid amount' });
     const accId = await resolveAccountId(account_id, req.user.id);
+    // COALESCE can't distinguish "omitted" from "clear all tags" the way
+    // it does for scalar columns (an empty array is still NOT NULL), so
+    // tags are only overwritten when the field is actually present in
+    // the request body — omitting `tags` entirely leaves existing tags
+    // untouched, same as every other optional field on this route.
+    const tagsVal = tags !== undefined ? sanitizeTags(tags) : undefined;
     const row = await db.get(
-      'UPDATE transactions SET description=$1,amount=$2,type=$3,category=$4,date=$5,account_id=COALESCE($6,account_id) WHERE id=$7 AND user_id=$8 RETURNING *',
-      [description, amt, type, category, date, accId, req.params.id, req.user.id]
+      `UPDATE transactions SET description=$1,amount=$2,type=$3,category=$4,date=$5,
+         account_id=COALESCE($6,account_id), tags=COALESCE($7,tags)
+       WHERE id=$8 AND user_id=$9 RETURNING *`,
+      [description, amt, type, category, date, accId, tagsVal, req.params.id, req.user.id]
     );
     if (!row) return res.status(404).json({ error: 'Transaction not found' }); // wasn't yours or doesn't exist
     res.json(row);
@@ -666,6 +698,28 @@ app.delete('/api/accounts/:id', auth, async (req, res) => {
     if (result.rowCount === 0) return res.status(404).json({ error: 'Account not found' });
     res.json({ success: true });
   } catch(e) { safeError(res, e, 'Delete account'); }
+});
+
+// ── Tags ──────────────────────────────────────────────────────
+// Distinct tags this user has ever used, most-recently-used first, for
+// the tag input's autocomplete dropdown. unnest() flattens each row's
+// tags[] into one row per tag so DISTINCT + GROUP BY can dedupe across
+// the whole history; MAX(created_at) orders by most recent use rather
+// than alphabetically, since a user's currently-relevant tags (this
+// month's trip, this year's tax season) are usually the recent ones.
+app.get('/api/tags', auth, async (req, res) => {
+  try {
+    const rows = await db.all(
+      `SELECT tag, MAX(created_at) as last_used
+       FROM transactions, unnest(tags) as tag
+       WHERE user_id=$1
+       GROUP BY tag
+       ORDER BY last_used DESC
+       LIMIT 100`,
+      [req.user.id]
+    );
+    res.json(rows.map(r => r.tag));
+  } catch(e) { safeError(res, e, 'List tags'); }
 });
 
 // ── Recurring ─────────────────────────────────────────────────

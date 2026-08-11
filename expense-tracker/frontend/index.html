@@ -143,6 +143,22 @@
         🔮 Next month: <span id="forecastAmt">₹0</span>
       </div>
 
+      <div class="notif-wrap" id="notifWrap">
+        <button class="notif-bell" id="notifBellBtn" title="Notifications" aria-label="Open notifications" aria-haspopup="true" aria-expanded="false" aria-controls="notifDropdown">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+          <span class="notif-dot" id="notifDot" style="display:none"></span>
+        </button>
+        <div class="notif-dropdown" id="notifDropdown" role="menu">
+          <div class="notif-head">
+            <span>Notifications</span>
+            <button class="notif-clear" id="notifClearBtn">Clear all</button>
+          </div>
+          <div class="notif-list" id="notifList">
+            <div class="notif-empty">You're all caught up 🎉</div>
+          </div>
+        </div>
+      </div>
+
       <div class="avatar-wrap" id="avatarWrap">
         <button class="topbar-avatar" id="topbarProfileBtn" title="Menu" aria-label="Open account menu" aria-haspopup="true" aria-expanded="false" aria-controls="avatarDropdown">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -286,6 +302,7 @@
         <select class="filter-select" id="filterType" aria-label="Filter by type"><option value="">All Types</option><option value="income">Income</option><option value="expense">Expense</option></select>
         <select class="filter-select" id="filterCategory" aria-label="Filter by category"><option value="">All Categories</option><option>Food</option><option>Transport</option><option>Shopping</option><option>Entertainment</option><option>Health</option><option>Bills</option><option>Salary</option><option>Freelance</option><option>Investment</option><option>Other</option></select>
         <select class="filter-select" id="filterAccount" aria-label="Filter by account"><option value="">All Accounts</option></select>
+        <select class="filter-select" id="filterTag" aria-label="Filter by tag"><option value="">All Tags</option></select>
         <div class="date-range">
           <input class="filter-input" type="date" id="filterFrom" aria-label="From date" />
           <span class="date-sep">→</span>
@@ -533,6 +550,14 @@
       <div class="form-group span2">
         <label>Account</label>
         <select id="txnAccount"></select>
+      </div>
+      <div class="form-group span2">
+        <label>Tags</label>
+        <div class="tag-input-wrap" id="tagInputWrap">
+          <div class="tag-pills" id="tagPills"></div>
+          <input type="text" id="tagInput" placeholder="Type a tag and press Enter" autocomplete="off" />
+          <div class="tag-suggestions" id="tagSuggestions"></div>
+        </div>
       </div>
     </div>
     <input type="hidden" id="editTxnId" />

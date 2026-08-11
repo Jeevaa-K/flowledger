@@ -56,6 +56,7 @@ const UI = {
     this.buildCatPicker(txn ? txn.type : 'income', txn ? txn.category : null);
     const accSel = document.getElementById('txnAccount');
     if (accSel && txn?.account_id) accSel.value = txn.account_id;
+    Tags.setPills(txn?.tags || []);
     document.getElementById('addModal')?.classList.add('open');
     setTimeout(() => document.getElementById('txnDesc')?.focus(), 100);
   },
@@ -63,6 +64,7 @@ const UI = {
   closeAddModal() {
     document.getElementById('addModal')?.classList.remove('open');
     this.editId = null;
+    Tags.setPills([]);
   },
 
   openBudgetModal() {
@@ -217,12 +219,16 @@ const UI = {
     }
     el.innerHTML = list.map(t => {
       const color = CAT_COLORS[t.category] || '#A79C8C';
+      const tagsHtml = (t.tags && t.tags.length)
+        ? `<div class="txn-tags">${t.tags.map(g => `<span class="txn-tag-chip">#${g}</span>`).join('')}</div>`
+        : '';
       return `<div class="txn-item">
         <div class="txn-name-wrap">
           <div class="txn-dot" style="background:${color}"></div>
           <div class="txn-meta-col">
             <div class="txn-name">${t.description}</div>
             <div class="txn-date">${t.category} · ${t.date}</div>
+            ${tagsHtml}
           </div>
         </div>
         <div class="txn-cat-badge">${CAT_EMOJIS[t.category]||''} ${t.category}</div>

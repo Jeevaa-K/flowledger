@@ -32,6 +32,8 @@ const App = {
     this.bindMobile();
     this.bindSearch();
     this.updateNavCount();
+    Notifications.init();
+    Tags.init();
     await this.loadAccounts();
     await this.loadDashboard();
   },
@@ -168,31 +170,27 @@ const App = {
     set('aiStatSav', fmt((summary.income || 0) - (summary.expense || 0)));
   },
 
-  // Shows a dashboard banner when any budget is over 100%, or nearing
-  // it (>=80%) — otherwise a budget only surfaces its status on the
-  // Budgets page, so a user could go the whole month without noticing
-  // they're close to (or already past) a limit.
+  // Feeds the notification bell (topbar, visible on every page) when any
+  // budget is over 100%, or nearing it (>=80%) — a budget's status used to
+  // only ever show up on the Budgets page itself, so a user could go the
+  // whole month without noticing they're close to (or already past) a
+  // limit unless they happened to open that one page.
   renderBudgetAlert(budgets) {
-    const banner = document.getElementById('budgetAlertBanner');
-    if (!banner) return;
-    if (!budgets || !budgets.length) { banner.style.display = 'none'; return; }
-
-    const over   = budgets.filter(b => b.percent >= 100);
-    const nearing = budgets.filter(b => b.percent >= 80 && b.percent < 100);
-    if (!over.length && !nearing.length) { banner.style.display = 'none'; return; }
-
-    const title = document.getElementById('budgetAlertTitle');
-    const sub   = document.getElementById('budgetAlertSub');
-    if (over.length) {
-      const names = over.map(b => b.category).join(', ');
-      if (title) title.textContent = over.length === 1 ? 'Over Budget' : `Over Budget in ${over.length} Categories`;
-      if (sub)   sub.textContent = `You've gone over your limit for ${names}. Check the Budgets page for details.`;
-    } else {
-      const names = nearing.map(b => b.category).join(', ');
-      if (title) title.textContent = nearing.length === 1 ? 'Approaching Budget Limit' : `Approaching Limits in ${nearing.length} Categories`;
-      if (sub)   sub.textContent = `You're at 80%+ of your budget for ${names}.`;
-    }
-    banner.style.display = 'flex';
+    const over    = (budgets || []).filter(b => b.percent >= 100);
+    const nearing = (budgets || []).filter(b => b.percent >= 80 && b.percent < 100);
+    const items = [
+      ...over.map(b => ({
+        icon: '🚨', level: '',
+        title: `Over budget: ${b.category}`,
+        sub: `Spent ${fmt(b.spent)} of ${fmt(b.monthly_limit)} limit (${b.percent}%)`
+      })),
+      ...nearing.map(b => ({
+        icon: '⚠️', level: 'warn',
+        title: `Approaching limit: ${b.category}`,
+        sub: `Spent ${fmt(b.spent)} of ${fmt(b.monthly_limit)} limit (${b.percent}%)`
+      }))
+    ];
+    Notifications.setBudgetAlerts(items);
   },
 
   async updateNavCount() {
@@ -228,6 +226,7 @@ const App = {
       if (filters.from)       qs.set('from',       filters.from);
       if (filters.to)         qs.set('to',         filters.to);
       if (filters.account_id) qs.set('account_id', filters.account_id);
+      if (filters.tag)        qs.set('tag',        filters.tag);
       qs.set('limit', State.txnPageSize);
       qs.set('page',  State.txnPage);
       const { data: txns, total } = await API.getWithCount('/transactions?' + qs);
@@ -264,6 +263,7 @@ const App = {
     const category   = catEl.value;
     const type       = UI.currentType;
     const account_id = accEl?.value || null;
+    const tags       = Tags.getPills();
     if (!desc || !amount || !date || !category) { UI.toast('⚠ Fill in all fields', 'error'); return; }
     if (amount <= 0) { UI.toast('⚠ Amount must be greater than 0', 'error'); return; }
 
@@ -272,10 +272,10 @@ const App = {
     try {
       let budgetToastShown = false;
       if (UI.editId) {
-        await API.put(`/transactions/${UI.editId}`, { description:desc, amount, type, category, date, account_id });
+        await API.put(`/transactions/${UI.editId}`, { description:desc, amount, type, category, date, account_id, tags });
         UI.toast('✓ Transaction updated', 'success');
       } else {
-        await API.post('/transactions', { description:desc, amount, type, category, date, account_id });
+        await API.post('/transactions', { description:desc, amount, type, category, date, account_id, tags });
         // Only worth checking for a fresh expense in the current month —
         // that's the only case /api/budgets' spend total actually covers,
         // and only expenses count against a budget in the first place.
@@ -287,6 +287,7 @@ const App = {
       }
       UI.closeAddModal();
       this.updateNavCount();
+      Tags.populateFilterSelect();
       // A transaction changes account balances, so refresh accounts too —
       // cheap call, keeps the dashboard strip and Accounts page correct
       // without waiting for the user to navigate away and back.
@@ -775,6 +776,10 @@ const App = {
       else if (a === 'toggle-recurring')  Recurring.toggle(id, parseInt(t.dataset.active));
       else if (a === 'del-recurring')     Recurring.delete(id);
       else if (a === 'goto-transactions') App.navigate('transactions');
+      else if (a === 'goto-budgets') {
+        document.getElementById('notifDropdown')?.classList.remove('show');
+        App.navigate('budgets');
+      }
       else if (a === 'chart-doughnut') {
         document.querySelectorAll('[data-action^="chart-"]').forEach(b => b.classList.remove('active'));
         t.classList.add('active'); Charts.renderDoughnut(window._lastCatData, 'doughnut');
@@ -799,20 +804,22 @@ const App = {
       const typeEl = document.getElementById('filterType');
       const catEl  = document.getElementById('filterCategory');
       const accEl  = document.getElementById('filterAccount');
+      const tagEl  = document.getElementById('filterTag');
       const fromEl = document.getElementById('filterFrom');
       const toEl   = document.getElementById('filterTo');
       this.loadTransactions({
         type:       typeEl ? typeEl.value : '',
         category:   catEl  ? catEl.value  : '',
         account_id: accEl  ? accEl.value  : '',
+        tag:        tagEl  ? tagEl.value  : '',
         from:       fromEl ? fromEl.value : '',
         to:         toEl   ? toEl.value   : ''
       });
     };
-    ['filterType','filterCategory','filterAccount','filterFrom','filterTo'].forEach(id =>
+    ['filterType','filterCategory','filterAccount','filterTag','filterFrom','filterTo'].forEach(id =>
       document.getElementById(id)?.addEventListener('change', go));
     this.on('clearFilters', 'click', () => {
-      ['filterType','filterCategory','filterAccount'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      ['filterType','filterCategory','filterAccount','filterTag'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
       ['filterFrom','filterTo'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
       this.loadTransactions();
     });
@@ -871,6 +878,207 @@ const App = {
     });
     ov?.addEventListener('click', () => { sb?.classList.remove('open'); ov?.classList.remove('show'); });
   }
+};
+
+// ── Notifications ──────────────────────────────────────────────
+// Topbar bell, visible on every page (unlike the old dashboard-only
+// budget banner). Budget alerts are recomputed each time the dashboard
+// loads (see App.renderBudgetAlert) and merged in here; "cleared" ones
+// are remembered per-category so they don't reappear until the alert
+// condition changes again (e.g. percent moves from 82% to 95%).
+const Notifications = {
+  items: [],       // current alert objects: {icon, level, title, sub, key}
+  clearedKeys: new Set(JSON.parse(localStorage.getItem('fl_notif_cleared') || '[]')),
+
+  init() {
+    document.addEventListener('click', e => {
+      const bellBtn = e.target.closest('#notifBellBtn');
+      if (bellBtn) {
+        e.stopPropagation();
+        const dd = document.getElementById('notifDropdown');
+        const open = dd?.classList.toggle('show');
+        bellBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        return;
+      }
+      const wrap = e.target.closest('#notifWrap');
+      if (!wrap) {
+        document.getElementById('notifDropdown')?.classList.remove('show');
+        document.getElementById('notifBellBtn')?.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    document.getElementById('notifClearBtn')?.addEventListener('click', () => {
+      this.items.forEach(i => this.clearedKeys.add(i.key));
+      this.persist();
+      this.render();
+    });
+  },
+
+  persist() {
+    localStorage.setItem('fl_notif_cleared', JSON.stringify([...this.clearedKeys]));
+  },
+
+  // Called from App.renderBudgetAlert with freshly computed alert objects.
+  // Each gets a stable `key` (title text) so a dismissed alert stays
+  // dismissed across dashboard reloads unless its underlying condition
+  // actually changes (a re-crossed threshold produces a new title/percent,
+  // which is a different key, so it resurfaces — as it should).
+  setBudgetAlerts(rawItems) {
+    this.items = rawItems.map(i => ({ ...i, key: i.title }));
+    // Prune cleared-keys that no longer correspond to an active alert,
+    // so localStorage doesn't grow forever with stale entries.
+    const activeKeys = new Set(this.items.map(i => i.key));
+    this.clearedKeys = new Set([...this.clearedKeys].filter(k => activeKeys.has(k)));
+    this.persist();
+    this.render();
+  },
+
+  render() {
+    const visible = this.items.filter(i => !this.clearedKeys.has(i.key));
+    const list = document.getElementById('notifList');
+    const dot  = document.getElementById('notifDot');
+    if (dot) dot.style.display = visible.length ? 'block' : 'none';
+    if (!list) return;
+
+    if (!visible.length) {
+      list.innerHTML = `<div class="notif-empty">You're all caught up 🎉</div>`;
+      return;
+    }
+    list.innerHTML = visible.map(i => `
+      <div class="notif-item" data-action="goto-budgets">
+        <div class="notif-icon ${i.level}">${i.icon}</div>
+        <div class="notif-body">
+          <div class="notif-title">${i.title}</div>
+          <div class="notif-sub">${i.sub}</div>
+        </div>
+      </div>`).join('');
+  }
+};
+
+// ── Tags ────────────────────────────────────────────────────────
+// Free-text tags with autocomplete from the user's own tag history —
+// no predefined/managed list, since forcing someone to register a tag
+// before using it defeats the point of ad-hoc labeling. Typing shows
+// matching past tags; Enter (or picking a suggestion) commits the
+// current input as a pill. The transaction modal reads the current
+// pills via getPills() at save time.
+const Tags = {
+  pills: [],
+  known: [],       // all tags this user has ever used (for autocomplete)
+  activeSuggestion: -1,
+
+  async init() {
+    try { this.known = await API.get('/tags'); } catch { this.known = []; }
+    this.populateFilterSelect();
+
+    const input = document.getElementById('tagInput');
+    const box   = document.getElementById('tagSuggestions');
+    if (!input) return;
+
+    input.addEventListener('input', () => this.showSuggestions(input.value));
+    input.addEventListener('keydown', e => {
+      const items = box ? [...box.querySelectorAll('.tag-suggestion-item')] : [];
+      if (e.key === 'ArrowDown' && items.length) {
+        e.preventDefault();
+        this.activeSuggestion = Math.min(this.activeSuggestion + 1, items.length - 1);
+        this.highlightSuggestion(items);
+      } else if (e.key === 'ArrowUp' && items.length) {
+        e.preventDefault();
+        this.activeSuggestion = Math.max(this.activeSuggestion - 1, 0);
+        this.highlightSuggestion(items);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (this.activeSuggestion >= 0 && items[this.activeSuggestion]) {
+          this.addPill(items[this.activeSuggestion].textContent);
+        } else if (input.value.trim()) {
+          this.addPill(input.value);
+        }
+      } else if (e.key === 'Escape') {
+        this.hideSuggestions();
+      } else if (e.key === 'Backspace' && !input.value && this.pills.length) {
+        // Backspace on an empty input deletes the last pill — mirrors
+        // how tag/chip inputs behave in most mail and shipping-label UIs.
+        this.removePill(this.pills.length - 1);
+      }
+    });
+
+    document.addEventListener('click', e => {
+      if (!e.target.closest('#tagInputWrap')) this.hideSuggestions();
+    });
+  },
+
+  populateFilterSelect() {
+    const sel = document.getElementById('filterTag');
+    if (!sel) return;
+    const current = sel.value;
+    sel.innerHTML = '<option value="">All Tags</option>' +
+      this.known.map(t => `<option value="${t}">#${t}</option>`).join('');
+    sel.value = current;
+  },
+
+  showSuggestions(query) {
+    const box = document.getElementById('tagSuggestions');
+    if (!box) return;
+    const q = query.trim().toLowerCase();
+    this.activeSuggestion = -1;
+    const matches = this.known
+      .filter(t => !this.pills.includes(t) && (!q || t.includes(q)))
+      .slice(0, 8);
+    if (!matches.length) { this.hideSuggestions(); return; }
+    box.innerHTML = matches.map(t => `<div class="tag-suggestion-item">${t}</div>`).join('');
+    box.classList.add('show');
+    box.querySelectorAll('.tag-suggestion-item').forEach(el =>
+      el.addEventListener('mousedown', ev => { ev.preventDefault(); this.addPill(el.textContent); }));
+  },
+
+  highlightSuggestion(items) {
+    items.forEach((el, idx) => el.classList.toggle('active', idx === this.activeSuggestion));
+  },
+
+  hideSuggestions() {
+    const box = document.getElementById('tagSuggestions');
+    box?.classList.remove('show');
+    this.activeSuggestion = -1;
+  },
+
+  addPill(raw) {
+    const tag = raw.trim().toLowerCase().slice(0, 30);
+    const input = document.getElementById('tagInput');
+    if (input) input.value = '';
+    this.hideSuggestions();
+    if (!tag || this.pills.includes(tag) || this.pills.length >= 15) return;
+    this.pills.push(tag);
+    if (!this.known.includes(tag)) this.known.push(tag);
+    this.renderPills();
+  },
+
+  removePill(index) {
+    this.pills.splice(index, 1);
+    this.renderPills();
+  },
+
+  renderPills() {
+    const el = document.getElementById('tagPills');
+    if (!el) return;
+    el.innerHTML = this.pills.map((t, idx) => `
+      <span class="tag-pill">#${t}
+        <button type="button" class="tag-pill-remove" data-tag-idx="${idx}" aria-label="Remove tag ${t}">×</button>
+      </span>`).join('');
+    el.querySelectorAll('.tag-pill-remove').forEach(btn =>
+      btn.addEventListener('click', () => this.removePill(parseInt(btn.dataset.tagIdx))));
+  },
+
+  // Called by UI.openAddModal()/closeAddModal() to load an existing
+  // transaction's tags into the modal, or clear the modal on close.
+  setPills(tags) {
+    this.pills = [...(tags || [])];
+    this.renderPills();
+    const input = document.getElementById('tagInput');
+    if (input) input.value = '';
+    this.hideSuggestions();
+  },
+
+  getPills() { return [...this.pills]; }
 };
 
 // App.init() is called by Auth.onLoggedIn() after successful authentication
