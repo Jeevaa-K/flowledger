@@ -929,12 +929,12 @@ STRICT RULES:
     let trace = null, generation = null;
     if (langfuse) {
       trace = langfuse.trace({ name:'nova-chat', input:message, userId:String(req.user.id) });
-      generation = trace.generation({ name:'groq-llama', model:'llama-3.3-70b-versatile', input:[{role:'system',content:systemPrompt},...history.slice(-8)], modelParameters:{max_tokens:180,temperature:0.7} });
+      generation = trace.generation({ name:'groq-llama', model:'openai/gpt-oss-120b', input:[{role:'system',content:systemPrompt},...history.slice(-8)], modelParameters:{max_tokens:180,temperature:0.7} });
     }
 
     const start = Date.now();
     const completion = await groq.chat.completions.create({
-      model:'llama-3.3-70b-versatile',
+      model:'openai/gpt-oss-120b',
       messages:[{role:'system',content:systemPrompt},...history.slice(-8)],
       max_tokens:180, temperature:0.7
     });
