@@ -871,3 +871,193 @@ input, select, button, textarea { font-family: 'Inter', sans-serif; }
 a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {
   outline: 2px solid var(--clay); outline-offset: 2px;
 }
+
+/* ── AI Quick Add Card ─────────────────────────────────────── */
+.ai-quick-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  margin: 16px 0 20px;
+  box-shadow: var(--shadow-sm);
+}
+.ai-quick-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ai-quick-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--clay-dark);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ai-sparkle {
+  font-size: 14px;
+}
+.ai-quick-subtitle {
+  font-size: 12px;
+  color: var(--ink-soft);
+  font-family: 'Inter', sans-serif;
+}
+.ai-quick-input-wrap {
+  display: flex;
+  gap: 8px;
+}
+.ai-quick-input-wrap input {
+  flex: 1;
+  background: var(--surface-sunk);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  font-size: 14px;
+  padding: 10px 14px;
+  outline: none;
+  transition: all 0.15s ease;
+  font-family: 'Inter', sans-serif;
+}
+.ai-quick-input-wrap input:focus {
+  border-color: var(--clay);
+  background: white;
+  box-shadow: 0 0 0 3px var(--clay-tint);
+}
+.ai-quick-input-wrap input::placeholder {
+  color: var(--ink-faint);
+}
+
+/* ── Receipt Dropzone & Modal ──────────────────────────────── */
+.receipt-dropzone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-md);
+  padding: 24px 16px;
+  text-align: center;
+  background: var(--surface-sunk);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+.receipt-dropzone:hover, .receipt-dropzone.dragover {
+  border-color: var(--clay);
+  background: var(--clay-tint);
+}
+.dropzone-icon {
+  font-size: 26px;
+  margin-bottom: 6px;
+}
+.dropzone-text {
+  font-size: 13px;
+  color: var(--ink);
+  margin-bottom: 2px;
+}
+.dropzone-sub {
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+.receipt-preview-wrap {
+  position: relative;
+  max-height: 200px;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--paper-dim);
+}
+.receipt-preview-wrap img {
+  width: 100%;
+  max-height: 200px;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+}
+.scan-laser-line {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--clay);
+  box-shadow: 0 0 8px var(--clay);
+  animation: laserScan 1.6s infinite ease-in-out;
+}
+@keyframes laserScan {
+  0% { top: 0%; }
+  50% { top: 95%; }
+  100% { top: 0%; }
+}
+.ai-scan-loader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--clay-tint);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--clay-dark);
+  font-size: 13px;
+  font-weight: 500;
+}
+.spinner {
+  width: 16px; height: 16px;
+  border: 2px solid var(--clay-tint);
+  border-top-color: var(--clay);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.receipt-result-card {
+  background: var(--paper-dim);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  padding: 14px;
+}
+.res-title {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--clay-dark);
+  margin-bottom: 8px;
+}
+.res-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  font-size: 13px;
+}
+.res-lbl {
+  color: var(--ink-soft);
+  font-size: 11px;
+  display: block;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.res-badge {
+  background: var(--clay-tint);
+  color: var(--clay-dark);
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ── Group Expense Splitting ────────────────────────────────── */
+.groups-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+.group-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--clay);
+}
+.settlement-grid {
+  margin-top: 10px;
+}
+.group-expense-list {
+  display: flex;
+  flex-direction: column;
+}

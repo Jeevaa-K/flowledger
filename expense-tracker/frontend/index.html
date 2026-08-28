@@ -77,7 +77,10 @@
     <button class="nav-item" data-page="ai">
       <div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg></div>
       <span>AI Assistant</span>
-      <div class="nav-pill">AI</div>
+    </button>
+    <button class="nav-item" data-page="groups">
+      <div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+      <span>Group Splits</span>
     </button>
   </nav>
 
@@ -195,7 +198,20 @@
             <span class="month-label" id="monthLabel">June</span>
             <button class="month-btn" id="nextMonth" aria-label="Next month">›</button>
           </div>
+          <button class="btn-ghost" id="btnScanReceipt" type="button">📷 Scan Receipt</button>
           <button class="btn-primary" id="quickAdd">+ Quick Add</button>
+        </div>
+      </div>
+
+      <!-- AI Magic Quick Add Card -->
+      <div class="ai-quick-card" id="aiQuickBar">
+        <div class="ai-quick-header">
+          <div class="ai-quick-title"><span class="ai-sparkle">✨</span> AI Quick Add</div>
+          <span class="ai-quick-subtitle">Type naturally — e.g. "Spent ₹450 on coffee at Starbucks yesterday"</span>
+        </div>
+        <div class="ai-quick-input-wrap">
+          <input type="text" id="aiQuickInput" placeholder="Enter transaction details..." autocomplete="off" />
+          <button class="btn-primary" id="aiQuickSubmitBtn" type="button">✨ Extract</button>
         </div>
       </div>
 
@@ -413,6 +429,52 @@
           <button class="sug-btn" data-prompt="Am I on track with my budget?"> Budget check</button>
           <button class="sug-btn" data-prompt="Predict my expenses for next month"> Forecast</button>
           <button class="sug-btn" data-prompt="What percentage of income am I saving?"> Savings rate</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- GROUP SPLITS -->
+    <section class="page" id="page-groups">
+      <button class="mobile-back-btn" data-action="goto-dashboard">← Back</button>
+      
+      <!-- GROUPS LIST VIEW -->
+      <div id="groupsListView">
+        <div class="page-header">
+          <div><h1 class="page-title">Group Splits</h1><p class="page-sub">Split bills, trips & shared expenses</p></div>
+          <button class="btn-primary" id="openCreateGroupBtn">+ Create Group</button>
+        </div>
+        <div class="groups-grid" id="groupsGrid"></div>
+      </div>
+
+      <!-- GROUP DETAIL VIEW (Hidden by default) -->
+      <div id="groupDetailView" style="display:none">
+        <div class="group-detail-header" style="display:flex;align-items:center;margin-bottom:20px">
+          <button class="btn-ghost" id="backToGroupsBtn" style="padding:7px 14px;font-size:13px">← All Groups</button>
+          <div style="flex:1;margin-left:14px">
+            <h1 class="page-title" id="gdTitle" style="font-size:22px">Group Title</h1>
+            <p class="page-sub" id="gdMembersList">Loading members...</p>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn-ghost" id="openSettleModalBtn">🤝 Settle Up</button>
+            <button class="btn-primary" id="openGroupExpenseModalBtn">+ Add Expense</button>
+          </div>
+        </div>
+
+        <!-- SETTLEMENT SUMMARY CARDS -->
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-header">
+            <div class="card-title">Balance & Settlement Summary</div>
+            <button class="btn-ghost" id="deleteCurrentGroupBtn" style="color:var(--brick);border-color:var(--brick-tint);font-size:12px;padding:4px 10px">Delete Group</button>
+          </div>
+          <div class="settlement-grid" id="settlementGrid"></div>
+        </div>
+
+        <!-- EXPENSE STREAM -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Shared Expense History</div>
+          </div>
+          <div class="group-expense-list" id="groupExpenseList"></div>
         </div>
       </div>
     </section>
@@ -836,12 +898,156 @@
   </div>
 </div>
 
+<!-- RECEIPT SCANNER MODAL -->
+<div class="modal-overlay" id="receiptModal" role="dialog" aria-modal="true" aria-labelledby="receiptModalTitle">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-icon">📷</div>
+      <h2 class="modal-title" id="receiptModalTitle">AI Receipt Scanner</h2>
+      <button class="modal-close" id="closeReceiptModal" type="button">×</button>
+    </div>
+    
+    <p style="color:var(--ink-soft);font-size:13px;margin-bottom:16px;line-height:1.4">
+      Upload or drop a clear photo of your receipt or invoice. FlowLedger AI will extract the merchant, total amount, date, category, and items automatically.
+    </p>
+
+    <div class="receipt-dropzone" id="receiptDropzone">
+      <input type="file" id="receiptFileInput" accept="image/*" style="display:none" />
+      <div class="dropzone-content" id="dropzoneContent">
+        <div class="dropzone-icon">📜</div>
+        <div class="dropzone-text"><strong>Click to upload</strong> or drag & drop receipt</div>
+        <div class="dropzone-sub">Supports PNG, JPG, WebP (Max 5MB)</div>
+      </div>
+      <div class="receipt-preview-wrap" id="receiptPreviewWrap" style="display:none">
+        <img id="receiptPreviewImg" src="" alt="Receipt Preview" />
+        <div class="scan-laser-line" id="scanLaserLine" style="display:none"></div>
+      </div>
+    </div>
+
+    <div id="receiptStatusArea" style="margin-top:16px;display:none">
+      <div class="ai-scan-loader" id="receiptLoader">
+        <span class="spinner"></span> <span>AI reading receipt details...</span>
+      </div>
+      <div class="receipt-result-card" id="receiptResultCard" style="display:none">
+        <div class="res-title">✨ Extracted Receipt Data</div>
+        <div class="res-grid">
+          <div class="res-item"><span class="res-lbl">Merchant</span> <strong id="resMerchant">-</strong></div>
+          <div class="res-item"><span class="res-lbl">Total Amount</span> <strong id="resAmount" class="red">-</strong></div>
+          <div class="res-item"><span class="res-lbl">Category</span> <span id="resCategory" class="res-badge">-</span></div>
+          <div class="res-item"><span class="res-lbl">Date</span> <span id="resDate" style="font-weight:600;color:var(--ink)">-</span></div>
+        </div>
+        <div id="resLineItemsWrap" style="margin-top:10px;font-size:12px;color:var(--ink-soft)"></div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button class="btn-ghost" id="cancelReceiptBtn" type="button" style="flex:1">Cancel</button>
+      <button class="btn-primary" id="useReceiptDataBtn" type="button" style="display:none;flex:2">Use in Form →</button>
+    </div>
+  </div>
+</div>
+
+<!-- CREATE GROUP MODAL -->
+<div class="modal-overlay" id="groupModal" role="dialog" aria-modal="true" aria-labelledby="groupModalTitle">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-icon">👥</div>
+      <h2 class="modal-title" id="groupModalTitle">Create Shared Group</h2>
+      <button class="modal-close" id="closeGroupModal" type="button">×</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group span2">
+        <label>Group Name</label>
+        <input type="text" id="groupNameInput" placeholder="e.g. Goa Trip 2026 or Roommates" />
+      </div>
+      <div class="form-group span2">
+        <label>Description (Optional)</label>
+        <input type="text" id="groupDescInput" placeholder="e.g. Shared house expenses" />
+      </div>
+      <div class="form-group span2">
+        <label>Member Names (Comma Separated)</label>
+        <input type="text" id="groupMembersInput" placeholder="e.g. Rahul, Sneha, Amit" />
+        <span style="font-size:11px;color:var(--ink-soft);margin-top:2px">You will be added automatically as a member.</span>
+      </div>
+    </div>
+    <button class="btn-primary full" id="saveGroupBtn" type="button">Create Group</button>
+  </div>
+</div>
+
+<!-- ADD GROUP EXPENSE MODAL -->
+<div class="modal-overlay" id="groupExpenseModal" role="dialog" aria-modal="true" aria-labelledby="groupExpModalTitle">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-icon">💸</div>
+      <h2 class="modal-title" id="groupExpModalTitle">Add Group Expense</h2>
+      <button class="modal-close" id="closeGroupExpenseModal" type="button">×</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group span2">
+        <label>Description</label>
+        <input type="text" id="gExpDesc" placeholder="e.g. Beach Dinner or Rent" />
+      </div>
+      <div class="form-group">
+        <label>Total Amount (₹)</label>
+        <div class="input-prefix"><span>₹</span><input type="number" id="gExpAmount" placeholder="0.00" min="1" step="0.01" /></div>
+      </div>
+      <div class="form-group">
+        <label>Paid By</label>
+        <select id="gExpPayerSelect"></select>
+      </div>
+      <div class="form-group span2">
+        <label>Category</label>
+        <select id="gExpCategory">
+          <option value="Food & Dining">Food & Dining</option>
+          <option value="Transportation">Transportation</option>
+          <option value="Shopping">Shopping</option>
+          <option value="Entertainment">Entertainment</option>
+          <option value="Housing">Housing</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="form-group span2">
+        <label>Date</label>
+        <input type="date" id="gExpDate" />
+      </div>
+    </div>
+    <button class="btn-primary full" id="saveGroupExpenseBtn" type="button">Save Shared Expense</button>
+  </div>
+</div>
+
+<!-- SETTLE UP MODAL -->
+<div class="modal-overlay" id="settleModal" role="dialog" aria-modal="true" aria-labelledby="settleModalTitle">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-icon">🤝</div>
+      <h2 class="modal-title" id="settleModalTitle">Record Settlement</h2>
+      <button class="modal-close" id="closeSettleModal" type="button">×</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Payer (Who Paid)</label>
+        <select id="settleFromSelect"></select>
+      </div>
+      <div class="form-group">
+        <label>Recipient (Who Received)</label>
+        <select id="settleToSelect"></select>
+      </div>
+      <div class="form-group span2">
+        <label>Settlement Amount (₹)</label>
+        <div class="input-prefix"><span>₹</span><input type="number" id="settleAmount" placeholder="0.00" min="1" step="0.01" /></div>
+      </div>
+    </div>
+    <button class="btn-primary full" id="saveSettleBtn" type="button">Record Settlement</button>
+  </div>
+</div>
+
 <script src="js/api.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/charts.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/recurring.js"></script>
 <script src="js/import.js"></script>
+<script src="js/groups.js"></script>
 <script src="js/app.js"></script>
 <script src="js/sw-cleanup.js"></script>
 </body>

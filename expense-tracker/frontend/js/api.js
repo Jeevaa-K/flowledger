@@ -64,6 +64,22 @@ const API = {
     return { data, total };
   },
 
+  parseNaturalLanguage(text) {
+    return this.post('/ai/parse-text', { text });
+  },
+
+  scanReceipt(image) {
+    return this.post('/ai/scan-receipt', { image });
+  },
+
+  getGroups()                         { return this.get('/groups'); },
+  createGroup(data)                  { return this.post('/groups', data); },
+  getGroupDetails(id)                { return this.get(`/groups/${id}`); },
+  addGroupExpense(groupId, data)     { return this.post(`/groups/${groupId}/expenses`, data); },
+  settleGroup(groupId, data)         { return this.post(`/groups/${groupId}/settle`, data); },
+  deleteGroupExpense(groupId, expId) { return this.del(`/groups/${groupId}/expenses/${expId}`); },
+  deleteGroup(id)                    { return this.del(`/groups/${id}`); },
+
   async exportCSV() {
     try {
       // Token goes in the Authorization header, never the URL — a query

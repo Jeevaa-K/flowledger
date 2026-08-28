@@ -31,6 +31,7 @@ const App = {
     this.bindChat();
     this.bindMobile();
     this.bindSearch();
+    this.bindAISmartTools();
     this.updateNavCount();
     Notifications.init();
     Tags.init();
@@ -85,6 +86,7 @@ const App = {
     else if (page === 'ai')           await this.loadAI();
     else if (page === 'goals')        await this.loadGoals();
     else if (page === 'recurring')    await Recurring.load();
+    else if (page === 'groups')       await Groups.init();
     else if (page === 'import')             Importer.init();
     else if (page === 'reports')            this.initReports();
   },
@@ -730,6 +732,7 @@ const App = {
     this.on('closeRecurringModal', 'click', () => document.getElementById('recurringModal')?.classList.remove('open'));
     this.on('saveRecurringBtn',    'click', () => Recurring.save());
     this.on('recurringModal',      'click', e => { if(e.target.id==='recurringModal') document.getElementById('recurringModal')?.classList.remove('open'); });
+    this.on('receiptModal',        'click', e => { if(e.target.id==='receiptModal') document.getElementById('receiptModal')?.classList.remove('open'); });
 
     // Import
     this.on('importBtn', 'click', () => Importer.importAll());
@@ -877,6 +880,188 @@ const App = {
       hb?.setAttribute('aria-expanded', open ? 'true' : 'false');
     });
     ov?.addEventListener('click', () => { sb?.classList.remove('open'); ov?.classList.remove('show'); });
+  },
+
+  bindAISmartTools() {
+    // 1. Natural Language Quick Add
+    const quickInput = document.getElementById('aiQuickInput');
+    const quickBtn = document.getElementById('aiQuickSubmitBtn');
+    
+    const handleQuickAdd = async () => {
+      const text = quickInput?.value?.trim();
+      if (!text) {
+        UI.toast('Please enter a transaction sentence (e.g. "Spent ₹450 on coffee yesterday")', 'error');
+        return;
+      }
+
+      if (quickBtn) { quickBtn.disabled = true; quickBtn.textContent = '✨ Extracting...'; }
+      try {
+        const res = await API.parseNaturalLanguage(text);
+        if (res && res.result) {
+          const r = res.result;
+          UI.toast('✨ AI extracted transaction details!', 'success');
+          UI.openAddModal({
+            description: r.description || text,
+            amount: r.amount || '',
+            type: r.type || 'expense',
+            category: r.category || 'Other',
+            date: r.date || new Date().toISOString().slice(0, 10),
+            account_id: r.account_id || '',
+            tags: r.tags || []
+          });
+          if (quickInput) quickInput.value = '';
+        }
+      } catch (err) {
+        UI.toast(err.message || 'Failed to parse input', 'error');
+      } finally {
+        if (quickBtn) { quickBtn.disabled = false; quickBtn.textContent = '✨ Extract'; }
+      }
+    };
+
+    if (quickBtn) quickBtn.addEventListener('click', handleQuickAdd);
+    if (quickInput) {
+      quickInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleQuickAdd();
+      });
+    }
+
+    // 2. Receipt Scanner Modal & Drag & Drop Processing
+    const btnScan = document.getElementById('btnScanReceipt');
+    const receiptModal = document.getElementById('receiptModal');
+    const closeReceiptBtn = document.getElementById('closeReceiptModal');
+    const cancelReceiptBtn = document.getElementById('cancelReceiptBtn');
+    const dropzone = document.getElementById('receiptDropzone');
+    const fileInput = document.getElementById('receiptFileInput');
+    const previewWrap = document.getElementById('receiptPreviewWrap');
+    const previewImg = document.getElementById('receiptPreviewImg');
+    const dropContent = document.getElementById('dropzoneContent');
+    const laserLine = document.getElementById('scanLaserLine');
+    const statusArea = document.getElementById('receiptStatusArea');
+    const loader = document.getElementById('receiptLoader');
+    const resultCard = document.getElementById('receiptResultCard');
+    const useBtn = document.getElementById('useReceiptDataBtn');
+
+    let currentExtractedData = null;
+
+    const openReceiptModal = () => {
+      currentExtractedData = null;
+      if (previewWrap) previewWrap.style.display = 'none';
+      if (dropContent) dropContent.style.display = 'block';
+      if (statusArea) statusArea.style.display = 'none';
+      if (resultCard) resultCard.style.display = 'none';
+      if (useBtn) useBtn.style.display = 'none';
+      if (receiptModal) receiptModal.classList.add('open');
+    };
+
+    const closeReceiptModal = () => {
+      if (receiptModal) receiptModal.classList.remove('open');
+    };
+
+    if (btnScan) btnScan.addEventListener('click', openReceiptModal);
+    if (closeReceiptBtn) closeReceiptBtn.addEventListener('click', closeReceiptModal);
+    if (cancelReceiptBtn) cancelReceiptBtn.addEventListener('click', closeReceiptModal);
+
+    if (dropzone) {
+      dropzone.addEventListener('click', (e) => {
+        if (e.target !== fileInput) fileInput.click();
+      });
+      dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('dragover');
+      });
+      dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+      dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+          processReceiptFile(e.dataTransfer.files[0]);
+        }
+      });
+    }
+
+    if (fileInput) {
+      fileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+          processReceiptFile(e.target.files[0]);
+        }
+      });
+    }
+
+    const processReceiptFile = (file) => {
+      if (!file.type.startsWith('image/')) {
+        UI.toast('Please select an image file (PNG, JPG, WebP)', 'error');
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        UI.toast('File size exceeds 5MB limit', 'error');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = async (evt) => {
+        const base64 = evt.target.result;
+        if (previewImg) previewImg.src = base64;
+        if (dropContent) dropContent.style.display = 'none';
+        if (previewWrap) previewWrap.style.display = 'block';
+        if (laserLine) laserLine.style.display = 'block';
+        if (statusArea) statusArea.style.display = 'block';
+        if (loader) loader.style.display = 'flex';
+        if (resultCard) resultCard.style.display = 'none';
+        if (useBtn) useBtn.style.display = 'none';
+
+        try {
+          const res = await API.scanReceipt(base64);
+          if (res && res.result) {
+            currentExtractedData = res.result;
+            if (laserLine) laserLine.style.display = 'none';
+            if (loader) loader.style.display = 'none';
+            if (resultCard) resultCard.style.display = 'block';
+
+            const m = document.getElementById('resMerchant');
+            const a = document.getElementById('resAmount');
+            const c = document.getElementById('resCategory');
+            const d = document.getElementById('resDate');
+
+            if (m) m.textContent = currentExtractedData.merchant || 'Store Receipt';
+            if (a) a.textContent = `₹${currentExtractedData.amount || 0}`;
+            if (c) c.textContent = currentExtractedData.category || 'Other';
+            if (d) d.textContent = currentExtractedData.date || new Date().toISOString().slice(0, 10);
+
+            const itemsWrap = document.getElementById('resLineItemsWrap');
+            if (itemsWrap) {
+              if (currentExtractedData.line_items && currentExtractedData.line_items.length) {
+                itemsWrap.innerHTML = '<strong>Items:</strong> ' + currentExtractedData.line_items.slice(0, 4).join(', ');
+              } else {
+                itemsWrap.innerHTML = '';
+              }
+            }
+
+            if (useBtn) useBtn.style.display = 'inline-block';
+            UI.toast('✨ Receipt scanned successfully!', 'success');
+          }
+        } catch (err) {
+          if (laserLine) laserLine.style.display = 'none';
+          if (loader) loader.style.display = 'none';
+          UI.toast(err.message || 'Failed to scan receipt image', 'error');
+        }
+      };
+      reader.readAsDataURL(file);
+    };
+
+    if (useBtn) {
+      useBtn.addEventListener('click', () => {
+        if (!currentExtractedData) return;
+        closeReceiptModal();
+        UI.openAddModal({
+          description: currentExtractedData.merchant || 'Receipt Expense',
+          amount: currentExtractedData.amount || '',
+          type: 'expense',
+          category: currentExtractedData.category || 'Shopping',
+          date: currentExtractedData.date || new Date().toISOString().slice(0, 10),
+          tags: currentExtractedData.tags || ['receipt']
+        });
+      });
+    }
   }
 };
 
