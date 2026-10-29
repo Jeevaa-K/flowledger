@@ -1,0 +1,1619 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FlowLedger — Smart Expense Tracker</title>
+  <meta name="description" content="Track income and expenses, set budgets, hit savings goals, and get AI-powered financial insights with FlowLedger — a fast, privacy-respecting expense tracker." />
+  <meta name="color-scheme" content="light" />
+
+  <!-- Open Graph / social preview -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="FlowLedger — Smart Expense Tracker" />
+  <meta property="og:description" content="Track income and expenses, set budgets, hit savings goals, and get AI-powered financial insights." />
+  <meta property="og:image" content="/favicon-192.png" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="FlowLedger — Smart Expense Tracker" />
+  <meta name="twitter:description" content="Track income and expenses, set budgets, hit savings goals, and get AI-powered financial insights." />
+
+  <!-- Favicons -->
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png" />
+  <link rel="icon" href="favicon-16.png" sizes="16x16" type="image/png" />
+  <link rel="apple-touch-icon" href="favicon-192.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#6366F1" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <script src="js/chart.min.js"></script>
+
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-icon">
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M12 2L2 7l10 5 10-5-10-5z" fill="white" opacity="0.9"/>
+        <path d="M2 17l10 5 10-5" stroke="white" stroke-width="2" stroke-linecap="round"/>
+        <path d="M2 12l10 5 10-5" stroke="white" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="brand-text">
+      <span class="brand-name">FlowLedger</span>
+      <span class="brand-tagline">Smart Finance</span>
+    </div>
+    <button class="sidebar-collapse-btn" id="sidebarCollapseBtn" type="button" title="Collapse sidebar" aria-label="Toggle compact sidebar">
+      <svg class="icon-collapse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
+      <svg class="icon-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
+    </button>
+  </div>
+
+  <div class="sidebar-section-label">MAIN MENU</div>
+  <nav class="sidebar-nav">
+    <button class="nav-item active" data-page="dashboard" data-tooltip="Dashboard" title="Dashboard">
+      <div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div>
+      <span>Dashboard</span>
+      <div class="nav-badge"></div>
+    </button>
+    <button class="nav-item" data-page="transactions" data-tooltip="Transactions" title="Transactions">
+      <div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg></div>
+      <span>Transactions</span>
+      <div class="nav-count" id="txn-count">0</div>
+    </button>
+    <button class="nav-item" data-page="accounts" data-tooltip="Accounts" title="Accounts">
+      <div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div>
+      <span>Accounts</span>
+    </button>
+    <button class="nav-item" data-page="budgets" data-tooltip="Budgets" title="Budgets">
+      <div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+      <span>Budgets</span>
+    </button>
+    <button class="nav-item" data-page="analytics" data-tooltip="Analytics" title="Analytics">
+      <div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+      <span>Analytics</span>
+    </button>
+    <button class="nav-item" data-page="ai" data-tooltip="AI Assistant" title="AI Assistant">
+      <div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg></div>
+      <span>AI Assistant</span>
+    </button>
+    <button class="nav-item" data-page="groups" data-tooltip="Group Splits" title="Group Splits">
+      <div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+      <span>Group Splits</span>
+    </button>
+  </nav>
+
+  <div class="sidebar-section-label">TOOLS</div>
+  <nav class="sidebar-nav">
+    <button class="nav-item" data-page="goals" data-tooltip="Goals" title="Goals">
+      <div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
+      <span>Goals</span>
+    </button>
+    <button class="nav-item" data-page="recurring" data-tooltip="Subscriptions" title="Subscriptions & Bills">
+      <div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg></div>
+      <span>Subscriptions</span>
+    </button>
+    <button class="nav-item" data-page="import" data-tooltip="Import CSV" title="Import CSV">
+      <div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+      <span>Import CSV</span>
+    </button>
+    <button class="nav-item" data-page="reports" data-tooltip="Financial Audit" title="Financial Audit">
+      <div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+      <span>Financial Audit</span>
+    </button>
+    <button class="nav-item" id="exportBtn" data-tooltip="Export CSV" title="Export CSV">
+      <div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+      <span>Export CSV</span>
+    </button>
+  </nav>
+
+  <div class="sidebar-user" id="sidebarUser">
+    <div class="user-avatar" id="userAvatar">J</div>
+    <div class="user-info">
+      <div class="user-name" id="userName">Loading...</div>
+      <div class="user-email" id="userEmail"></div>
+    </div>
+    <button class="user-menu-btn" id="openProfileModal" title="Profile" aria-label="Open profile settings">⚙</button>
+  </div>
+  <div class="sidebar-footer">
+    <div class="balance-widget">
+      <div class="bw-label">Net Balance</div>
+      <div class="bw-amount" id="sidebarBalance">₹0</div>
+      <div class="bw-bar-bg"><div class="bw-bar-fill" id="sidebarBarFill" style="width:0%"></div></div>
+      <div class="bw-sub">
+        <span id="sidebarInc">↑ ₹0</span>
+        <span id="sidebarExp">↓ ₹0</span>
+      </div>
+    </div>
+
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main-wrapper">
+  <header class="topbar">
+    <button class="hamburger" id="hamburger" aria-label="Toggle sidebar menu" aria-expanded="false" aria-controls="sidebar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div class="topbar-search" style="position:relative">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input type="text" id="globalSearch" placeholder="Search transactions (Ctrl+K)..." />
+      <span class="search-kbd-hint">Ctrl K</span>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-date" id="topbarDate"></div>
+      <div class="forecast-badge" id="forecastBadge" style="display:none">
+        🔮 Next month: <span id="forecastAmt">₹0</span>
+      </div>
+
+      <button class="privacy-toggle-btn" id="privacyModeBtn" title="Privacy Mode (Shift+P) — Hide sensitive amounts" aria-label="Toggle privacy mode">
+        <svg class="eye-open-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        <svg class="eye-closed-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+      </button>
+
+      <button class="theme-toggle-btn" id="themeToggleBtn" title="Toggle Light / Dark mode" aria-label="Toggle theme">
+        <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+
+      <div class="notif-wrap" id="notifWrap">
+        <button class="notif-bell" id="notifBellBtn" title="Notifications" aria-label="Open notifications" aria-haspopup="true" aria-expanded="false" aria-controls="notifDropdown">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+          <span class="notif-dot" id="notifDot" style="display:none"></span>
+        </button>
+        <div class="notif-dropdown" id="notifDropdown" role="menu">
+          <div class="notif-head">
+            <span>Notifications</span>
+            <button class="notif-clear" id="notifClearBtn">Clear all</button>
+          </div>
+          <div class="notif-list" id="notifList">
+            <div class="notif-empty">You're all caught up 🎉</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="avatar-wrap" id="avatarWrap">
+        <button class="topbar-avatar" id="topbarProfileBtn" title="Menu" aria-label="Open account menu" aria-haspopup="true" aria-expanded="false" aria-controls="avatarDropdown">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </button>
+        <div class="avatar-dropdown" id="avatarDropdown" role="menu">
+          <div class="av-user">
+            <div class="av-avatar" id="avAvatar">U</div>
+            <div>
+              <div class="av-name" id="avName">User</div>
+              <div class="av-email" id="avEmail"></div>
+            </div>
+          </div>
+          <div class="av-divider"></div>
+          <button class="av-item" id="avProfile">My Profile</button>
+          <div class="av-divider"></div>
+          <button class="av-item av-logout" id="avLogout">🚪 Logout</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <section class="page active" id="page-dashboard">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Good <span id="greeting">Day</span> 👋</h1>
+          <p class="page-sub" id="currentMonthLabel">Loading...</p>
+        </div>
+        <div class="header-actions">
+          <div class="month-nav">
+            <button class="month-btn" id="prevMonth" aria-label="Previous month">‹</button>
+            <span class="month-label" id="monthLabel">June</span>
+            <button class="month-btn" id="nextMonth" aria-label="Next month">›</button>
+          </div>
+          <button class="btn-ghost" id="btnScanReceipt" type="button">📷 Scan Receipt</button>
+          <button class="btn-primary" id="quickAdd">+ Quick Add</button>
+        </div>
+      </div>
+
+      <!-- AI Magic Quick Add Card -->
+      <div class="ai-quick-card" id="aiQuickBar">
+        <div class="ai-quick-header">
+          <div class="ai-quick-title"><span class="ai-sparkle">✨</span> AI Quick Add</div>
+          <span class="ai-quick-subtitle">Type naturally — e.g. "Spent ₹450 on coffee at Starbucks yesterday"</span>
+        </div>
+        <div class="ai-quick-input-wrap">
+          <input type="text" id="aiQuickInput" placeholder="Enter transaction details..." autocomplete="off" />
+          <button class="voice-mic-btn" id="voiceQuickBtn" type="button" title="Voice Dictation (click to speak)" aria-label="Voice input">
+            <svg class="mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+              <line x1="12" y1="19" x2="12" y2="23"/>
+              <line x1="8" y1="23" x2="16" y2="23"/>
+            </svg>
+            <span class="mic-ripple"></span>
+          </button>
+          <button class="btn-primary" id="aiQuickSubmitBtn" type="button">✨ Extract</button>
+        </div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card kpi-balance">
+          <div class="kpi-top">
+            <div class="kpi-icon kpi-icon-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+            <div class="kpi-badge" id="balanceBadge">0%</div>
+          </div>
+          <div class="kpi-value" id="kpiBalance">₹0</div>
+          <div class="kpi-label">Net Balance</div>
+        </div>
+        <div class="kpi-card kpi-income">
+          <div class="kpi-top"><div class="kpi-icon kpi-icon-positive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div></div>
+          <div class="kpi-value green" id="kpiIncome">₹0</div>
+          <div class="kpi-label">Total Income</div>
+          <div class="kpi-sub" id="incomeCount">0 transactions</div>
+        </div>
+        <div class="kpi-card kpi-expense">
+          <div class="kpi-top"><div class="kpi-icon kpi-icon-negative"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg></div></div>
+          <div class="kpi-value red" id="kpiExpense">₹0</div>
+          <div class="kpi-label">Total Expenses</div>
+          <div class="kpi-sub" id="expenseCount">0 transactions</div>
+        </div>
+        <div class="kpi-card kpi-savings">
+          <div class="kpi-top"><div class="kpi-icon kpi-icon-highlight"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0016.5 3c-1.76 0-3.332.83-4.5 2.05C10.832 3.83 9.26 3 7.5 3A5.5 5.5 0 002 8.5c0 2.3 1.5 4.05 3 5.5l7 7 7-7z"/></svg></div></div>
+          <div class="kpi-value purple" id="kpiSavings">0%</div>
+          <div class="kpi-label">Savings Rate</div>
+          <div class="kpi-sub" id="savingsStatus">Keep it up!</div>
+        </div>
+      </div>
+
+      <!-- Financial Health Score Card -->
+      <div class="card health-score-card" id="healthScoreCard">
+        <div class="health-score-header">
+          <div class="health-score-title-group">
+            <div class="health-score-icon-wrap">🛡️</div>
+            <div>
+              <div class="card-title">Financial Health Score</div>
+              <div class="card-subtitle">AI-computed 360° personal finance assessment</div>
+            </div>
+          </div>
+          <div class="health-score-badge" id="healthScoreBadge">Calculating...</div>
+        </div>
+        <div class="health-score-body">
+          <div class="health-gauge-box">
+            <div class="health-gauge-ring">
+              <svg viewBox="0 0 140 140" class="gauge-svg">
+                <circle class="gauge-track" cx="70" cy="70" r="54"></circle>
+                <circle class="gauge-bar" id="healthGaugeBar" cx="70" cy="70" r="54"></circle>
+              </svg>
+              <div class="gauge-text">
+                <span class="gauge-number" id="healthScoreVal">--</span>
+                <span class="gauge-denom">/100</span>
+              </div>
+            </div>
+            <div class="gauge-label" id="healthGradeLabel">Personal Score</div>
+          </div>
+          <div class="health-breakdown-list">
+            <div class="health-metric-item">
+              <div class="hm-header">
+                <div class="hm-name">
+                  <span class="hm-dot dot-savings"></span>
+                  <span>Savings Rate</span>
+                </div>
+                <span class="hm-score" id="healthMetricSavings">-- / 40 pts</span>
+              </div>
+              <div class="hm-bar-track">
+                <div class="hm-bar-fill fill-savings" id="healthBarSavings" style="width: 0%"></div>
+              </div>
+              <div class="hm-sub" id="healthDescSavings">Based on income vs expenditure ratio</div>
+            </div>
+
+            <div class="health-metric-item">
+              <div class="hm-header">
+                <div class="hm-name">
+                  <span class="hm-dot dot-budget"></span>
+                  <span>Budget Discipline</span>
+                </div>
+                <span class="hm-score" id="healthMetricBudget">-- / 30 pts</span>
+              </div>
+              <div class="hm-bar-track">
+                <div class="hm-bar-fill fill-budget" id="healthBarBudget" style="width: 0%"></div>
+              </div>
+              <div class="hm-sub" id="healthDescBudget">Spending within planned category limits</div>
+            </div>
+
+            <div class="health-metric-item">
+              <div class="hm-header">
+                <div class="hm-name">
+                  <span class="hm-dot dot-cushion"></span>
+                  <span>Emergency Cushion</span>
+                </div>
+                <span class="hm-score" id="healthMetricCushion">-- / 30 pts</span>
+              </div>
+              <div class="hm-bar-track">
+                <div class="hm-bar-fill fill-cushion" id="healthBarCushion" style="width: 0%"></div>
+              </div>
+              <div class="hm-sub" id="healthDescCushion">Liquid reserves relative to monthly burn rate</div>
+            </div>
+          </div>
+        </div>
+        <div class="health-score-footer">
+          <span class="health-tip-bulb">💡</span>
+          <div class="health-tip-content">
+            <strong class="health-tip-label">AI Health Insight:</strong>
+            <span id="healthScoreTip">Analyzing your spending flows...</span>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- Burn Rate / Spending Velocity Card -->
+      <div class="card burn-rate-card" id="burnRateCard" style="display:none">
+        <div class="card-header">
+          <div class="card-title">&#128293; Spending Velocity</div>
+          <span class="burn-pace-badge" id="burnPaceBadge"></span>
+        </div>
+        <div class="burn-rate-body">
+          <div class="burn-stat-row">
+            <div class="burn-stat">
+              <div class="burn-stat-value" id="burnDailyRate">&#8212;</div>
+              <div class="burn-stat-label">Daily Spend Rate</div>
+            </div>
+            <div class="burn-stat">
+              <div class="burn-stat-value" id="burnProjected">&#8212;</div>
+              <div class="burn-stat-label">Projected Month-End Spend</div>
+            </div>
+            <div class="burn-stat">
+              <div class="burn-stat-value" id="burnSafeDaily">&#8212;</div>
+              <div class="burn-stat-label">Safe Spend / Day Left</div>
+            </div>
+          </div>
+          <div class="burn-bar-wrap">
+            <div class="burn-bar-labels">
+              <span id="burnBarSpent">Spent so far</span>
+              <span id="burnBarIncome">Income</span>
+            </div>
+            <div class="burn-bar-track">
+              <div class="burn-bar-actual"  id="burnBarActual"  style="width:0%"></div>
+              <div class="burn-bar-project" id="burnBarProject" style="width:0%"></div>
+            </div>
+            <div class="burn-bar-legend">
+              <span class="burn-legend-dot actual"></span><span>Actual</span>
+              <span class="burn-legend-dot project"></span><span>Projected</span>
+            </div>
+          </div>
+          <div class="burn-warning" id="burnWarning" style="display:none"></div>
+        </div>
+      </div>
+      <!-- By Account -->
+      <div class="card" id="dashAccountsCard" style="margin-top:20px;display:none">
+        <div class="card-header">
+          <div class="card-title">By Account</div>
+          <button class="pill-btn" data-action="goto-accounts">Manage</button>
+        </div>
+        <div id="dashAccountStrip" style="display:flex;gap:12px;flex-wrap:wrap"></div>
+      </div>
+
+      <!-- Forecast Banner -->
+      <div class="forecast-banner" id="forecastBanner" style="display:none">
+        <div class="fb-icon">🔮</div>
+        <div class="fb-text">
+          <div class="fb-title">Spending Forecast</div>
+          <div class="fb-sub">Based on your last 3 months, you'll likely spend <strong id="forecastBannerAmt">₹0</strong> next month</div>
+        </div>
+      </div>
+
+      <div class="dash-grid">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Spending by Category</div>
+            <div class="card-actions">
+              <button class="pill-btn active" data-action="chart-doughnut">Donut</button>
+              <button class="pill-btn" data-action="chart-pie">Pie</button>
+            </div>
+          </div>
+          <div class="chart-wrap"><canvas id="doughnutChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">6-Month Overview</div>
+            <div class="card-actions">
+              <button class="pill-btn active" data-action="bar-bar">Bar</button>
+              <button class="pill-btn" data-action="bar-line">Line</button>
+            </div>
+          </div>
+          <div class="chart-wrap"><canvas id="barChart"></canvas></div>
+        </div>
+      </div>
+
+      <div class="dash-bottom">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Recent Transactions</div>
+            <button class="link-btn" data-action="goto-transactions">View All →</button>
+          </div>
+          <div class="txn-list" id="recentTxns"></div>
+        </div>
+        <div class="side-cards">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Top Categories</div></div>
+            <div class="top-cats" id="topCats"></div>
+          </div>
+          <div class="card tip-card">
+            <div class="tip-header"><div class="tip-icon">✨</div><div class="tip-title">AI Insight</div></div>
+            <div class="tip-text" id="aiTip">Click below to get a financial insight from NOVA...</div>
+            <button class="tip-btn" id="getTipBtn">Get Insight</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TRANSACTIONS -->
+    <section class="page" id="page-transactions">
+      <button class="mobile-back-btn" data-action="goto-dashboard">&#8592; Back</button>
+      <div class="page-header">
+        <div><h1 class="page-title">Transactions</h1><p class="page-sub">Manage, search &amp; filter all your income and expenses</p></div>
+        <div class="header-actions">
+          <button class="btn-ghost" id="exportTxnCsvBtn" type="button" title="Download filtered transactions as CSV">&#11015; Export CSV</button>
+          <button class="btn-primary" id="openAddModal">+ Add New</button>
+        </div>
+      </div>
+
+      <!-- Search & Smart Filter Suite -->
+      <div class="card txn-search-suite-card">
+        <!-- Live Search Input + Sort + Filter Toggle -->
+        <div class="txn-suite-top">
+          <div class="txn-search-wrap">
+            <span class="txn-search-icon">&#128269;</span>
+            <input type="text" id="txnLiveSearch" class="txn-search-input" placeholder="Search by description, merchant, note, or category..." autocomplete="off" />
+            <button class="txn-search-clear-btn" id="txnClearSearch" style="display:none" title="Clear search">&#10005;</button>
+          </div>
+          <div class="txn-suite-controls">
+            <select class="filter-select" id="txnSortSelect" aria-label="Sort order">
+              <option value="date_desc">&#128197; Newest First</option>
+              <option value="date_asc">&#128197; Oldest First</option>
+              <option value="amount_desc">&#128176; Highest Amount</option>
+              <option value="amount_asc">&#127991;&#65039; Lowest Amount</option>
+            </select>
+            <button class="btn-ghost" id="toggleAdvFiltersBtn" type="button">
+              <span>&#9881;&#65039; Filters</span>
+              <span class="adv-badge" id="advFilterBadge" style="display:none">0</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick Filter Preset Chips -->
+        <div class="txn-quick-chips" id="txnQuickChips">
+          <button class="quick-chip active" data-preset="all">All</button>
+          <button class="quick-chip" data-preset="this_month">&#128197; This Month</button>
+          <button class="quick-chip" data-preset="expense">&#128184; Expenses</button>
+          <button class="quick-chip" data-preset="income">&#128176; Income</button>
+          <button class="quick-chip" data-preset="high_value">&#128293; &gt; &#8377;2,000</button>
+          <button class="quick-chip" data-preset="food">&#127828; Food</button>
+          <button class="quick-chip" data-preset="shopping">&#128717;&#65039; Shopping</button>
+          <button class="quick-chip" data-preset="bills">&#9889; Bills</button>
+        </div>
+
+        <!-- Advanced Filter Drawer (Collapsible) -->
+        <div class="txn-advanced-drawer" id="txnAdvancedDrawer" style="display:none">
+          <div class="adv-filter-grid">
+            <div class="adv-field">
+              <label>Type</label>
+              <select class="filter-select" id="filterType" aria-label="Filter by type">
+                <option value="">All Types</option>
+                <option value="income">Income</option>
+                <option value="expense">Expense</option>
+              </select>
+            </div>
+            <div class="adv-field">
+              <label>Category</label>
+              <select class="filter-select" id="filterCategory" aria-label="Filter by category">
+                <option value="">All Categories</option>
+                <option>Food</option>
+                <option>Transport</option>
+                <option>Shopping</option>
+                <option>Entertainment</option>
+                <option>Health</option>
+                <option>Bills</option>
+                <option>Salary</option>
+                <option>Freelance</option>
+                <option>Investment</option>
+                <option>Other</option>
+              </select>
+            </div>
+            <div class="adv-field">
+              <label>Account</label>
+              <select class="filter-select" id="filterAccount" aria-label="Filter by account">
+                <option value="">All Accounts</option>
+              </select>
+            </div>
+            <div class="adv-field">
+              <label>Tag</label>
+              <select class="filter-select" id="filterTag" aria-label="Filter by tag">
+                <option value="">All Tags</option>
+              </select>
+            </div>
+            <div class="adv-field">
+              <label>Date Range</label>
+              <div class="adv-range-inputs">
+                <input class="filter-input" type="date" id="filterFrom" aria-label="From date" />
+                <span class="range-sep">to</span>
+                <input class="filter-input" type="date" id="filterTo" aria-label="To date" />
+              </div>
+            </div>
+            <div class="adv-field">
+              <label>Amount Range (&#8377;)</label>
+              <div class="adv-range-inputs">
+                <input class="filter-input" type="number" id="filterMinAmount" placeholder="Min" min="0" />
+                <span class="range-sep">-</span>
+                <input class="filter-input" type="number" id="filterMaxAmount" placeholder="Max" min="0" />
+              </div>
+            </div>
+          </div>
+          <div class="adv-drawer-actions">
+            <button class="btn-ghost btn-sm" id="clearFilters" type="button">&#10005; Reset Filters</button>
+            <button class="btn-primary btn-sm" id="applyAdvFilters" type="button">Apply Filters</button>
+          </div>
+        </div>
+
+        <!-- Filter Results Summary Banner -->
+        <div class="txn-results-bar" id="txnResultsBar" style="display:none">
+          <div class="results-info" id="txnResultsInfo">Showing all transactions</div>
+          <button class="btn-link" id="resetResultsBtn" type="button">Clear filters</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="txn-table-header"><span>Description</span><span>Category</span><span>Date</span><span>Amount</span><span></span></div>
+        <div class="txn-list table-mode" id="allTxns"></div>
+        <div class="txn-pagination" id="txnPagination" style="display:flex;align-items:center;justify-content:center;gap:12px;padding:16px 0 4px">
+          <button class="btn-ghost" id="txnPrevPage" aria-label="Previous page">&#8592; Prev</button>
+          <span id="txnPageLabel" style="font-size:13px;color:#7C7266"></span>
+          <button class="btn-ghost" id="txnNextPage" aria-label="Next page">Next &#8594;</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ACCOUNTS -->
+    <section class="page" id="page-accounts">
+      <button class="mobile-back-btn" data-action="goto-dashboard">← Back</button>
+      <div class="page-header">
+        <div><h1 class="page-title">Accounts</h1><p class="page-sub">Track balances across cash, bank &amp; cards</p></div>
+        <button class="btn-primary" id="openAccountModal">+ Add Account</button>
+      </div>
+      <div class="budget-summary" id="accountSummary"></div>
+      <div class="budget-grid" id="accountGrid"></div>
+    </section>
+
+    <!-- BUDGETS -->
+    <section class="page" id="page-budgets">
+      <button class="mobile-back-btn" data-action="goto-dashboard">Back</button>
+      <div class="page-header">
+        <div><h1 class="page-title">Budgets</h1><p class="page-sub">Set and track monthly spending limits</p></div>
+        <div class="header-actions">
+          <button class="btn-ghost" id="openAutoBudgetBtn" type="button">&#10024; AI Auto-Suggest</button>
+          <button class="btn-primary" id="openBudgetModal">+ Set Budget</button>
+        </div>
+      </div>
+
+      <!-- AI Budget Suggestion Panel -->
+      <div class="card auto-budget-panel" id="autoBudgetPanel" style="display:none">
+        <div class="card-header">
+          <div class="auto-budget-title-wrap">
+            <div class="card-title">&#10024; AI Budget Planner &amp; Auto-Suggestions</div>
+            <p class="auto-budget-sub">Personalized limits based on your past spending velocity with built-in safety margins</p>
+          </div>
+          <div class="auto-budget-header-actions">
+            <button class="btn-ghost btn-sm" id="refreshAutoBudgetBtn" type="button">&#128260; Re-analyze</button>
+            <button class="btn-ghost btn-sm" id="closeAutoBudgetBtn" type="button">&#10005;</button>
+          </div>
+        </div>
+
+        <div class="auto-budget-body">
+          <div class="auto-budget-banner" id="autoBudgetBanner">
+            <div class="ab-ai-icon">&#129302;</div>
+            <div class="ab-ai-text" id="autoBudgetAiText">Analyzing category spending velocity...</div>
+          </div>
+
+          <div class="auto-budget-stats" id="autoBudgetStats">
+            <div class="ab-stat-card">
+              <div class="ab-stat-num" id="abStatCategories">0</div>
+              <div class="ab-stat-lbl">Categories Analyzed</div>
+            </div>
+            <div class="ab-stat-card">
+              <div class="ab-stat-num" id="abStatCurrent">&#8377;0</div>
+              <div class="ab-stat-lbl">Current Active Budgets</div>
+            </div>
+            <div class="ab-stat-card highlight">
+              <div class="ab-stat-num" id="abStatSuggested">&#8377;0</div>
+              <div class="ab-stat-lbl">AI Suggested Monthly Cap</div>
+            </div>
+          </div>
+
+          <div class="auto-budget-toolbar">
+            <label class="ab-select-all">
+              <input type="checkbox" id="abSelectAll" checked />
+              <span>Select all suggestions</span>
+            </label>
+            <span class="ab-hint">&#128161; Tweak any suggested limit before applying</span>
+          </div>
+
+          <div class="auto-budget-list" id="autoBudgetList">
+            <!-- Dynamic rows -->
+          </div>
+
+          <div class="auto-budget-footer">
+            <div class="ab-footer-info" id="abFooterInfo">
+              Selected: <strong id="abSelectedCount">0</strong> categories (Total: <strong id="abSelectedTotal">&#8377;0</strong>)
+            </div>
+            <div class="ab-footer-btns">
+              <button class="btn-ghost" id="cancelAutoBudgetBtn" type="button">Close</button>
+              <button class="btn-primary" id="applyAutoBudgetsBtn" type="button">&#9889; Apply Selected Budgets</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="budget-summary" id="budgetSummary"></div>
+      <div class="budget-grid" id="budgetGrid"></div>
+    </section>
+
+    <!-- ANALYTICS -->
+    <section class="page" id="page-analytics">
+      <button class="mobile-back-btn" data-action="goto-dashboard">← Back</button>
+      <div class="page-header"><h1 class="page-title">Analytics</h1><p class="page-sub">Deep dive into your financial patterns</p></div>
+      <div class="analytics-grid">
+        <div class="card card-full">
+          <div class="card-header"><div class="card-title">Income vs Expenses Trend</div></div>
+          <div class="chart-wrap-tall"><canvas id="lineChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Category Breakdown</div></div>
+          <div class="cat-breakdown" id="catBreakdown"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Top Spending Days</div></div>
+          <div class="cat-breakdown" id="topDays"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- GOALS -->
+    <section class="page" id="page-goals">
+      <button class="mobile-back-btn" data-action="goto-dashboard">← Back</button>
+      <div class="page-header">
+        <div><h1 class="page-title">Financial Goals</h1><p class="page-sub">Track your savings goals</p></div>
+        <button class="btn-primary" id="openGoalModal">+ Add Goal</button>
+      </div>
+      <div class="goals-grid" id="goalsGrid"></div>
+    </section>
+
+    <!-- AI -->
+    <section class="page" id="page-ai">
+      <button class="mobile-back-btn" data-action="goto-dashboard">← Back</button>
+      <div class="page-header ai-header-wrap">
+        <div>
+          <h1 class="page-title">AI Financial Advisor</h1>
+          <p class="page-sub">Multi-model intelligence: ChatGPT, Claude & Groq</p>
+        </div>
+        <div class="ai-header-controls">
+          <!-- Model Selector Pill -->
+          <div class="ai-model-selector" id="aiModelSelector">
+            <button type="button" class="ai-model-btn active" data-model="chatgpt" title="OpenAI GPT-4o style: Wealth strategy, opportunities & cash flow compounding">
+              <span class="model-icon">🟢</span>
+              <span class="model-name">ChatGPT (GPT-4o)</span>
+            </button>
+            <button type="button" class="ai-model-btn" data-model="claude" title="Anthropic Claude style: Analytical audits, budget scrutiny & structured advice">
+              <span class="model-icon">🟣</span>
+              <span class="model-name">Claude 3.5 Sonnet</span>
+            </button>
+            <button type="button" class="ai-model-btn" data-model="fast" title="Ultra-Fast: Instant numerical calculations & quick queries">
+              <span class="model-icon">⚡</span>
+              <span class="model-name">Groq Fast</span>
+            </button>
+          </div>
+          <button class="btn-primary btn-sm" id="newChatBtn" title="Start a fresh conversation">+ New Chat</button>
+          <button class="btn-ghost btn-sm" id="clearChat" title="Clear messages in this conversation">Clear</button>
+        </div>
+      </div>
+
+      <div class="ai-layout">
+        <!-- Sessions / History Sidebar -->
+        <aside class="ai-history-panel" id="aiHistoryPanel">
+          <div class="ai-history-head">
+            <span class="ai-history-title">Chat History</span>
+            <span class="ai-history-badge" id="aiSessionCount">0</span>
+          </div>
+          <div class="ai-session-list" id="aiSessionList">
+            <div class="ai-session-empty">No saved chats yet.</div>
+          </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <div class="chat-container">
+          <div class="chat-model-banner" id="chatModelBanner">
+            <div class="banner-left">
+              <span class="banner-dot"></span>
+              <span class="banner-text" id="chatModelLabel">ChatGPT (GPT-4o) Mode</span>
+            </div>
+            <div class="banner-right" id="chatSessionTitle">New Conversation</div>
+          </div>
+          <div class="chat-messages" id="chatMessages">
+            <div class="chat-msg assistant">
+              <div class="msg-avatar">AI</div>
+              <div class="msg-content">
+                <div class="msg-bubble">
+                  <strong>Welcome to your AI Financial Advisor!</strong><br><br>
+                  I have full context of your financial transactions, accounts, and group splits. Choose your preferred AI engine above:
+                  <ul style="margin: 8px 0 0 18px; line-height: 1.6;">
+                    <li><strong>ChatGPT (GPT-4o)</strong>: Proactive wealth strategies, income compounding, and practical advice.</li>
+                    <li><strong>Claude 3.5 Sonnet</strong>: Methodical budget scrutiny, expense audits, and structured plans.</li>
+                    <li><strong>Groq Fast</strong>: Instant, rapid queries and balance math.</li>
+                  </ul>
+                </div>
+                <div class="msg-time">Just now</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="chat-input-bar">
+            <input type="text" class="chat-input" id="chatInput" placeholder="Ask about your budget, spending trends, or savings strategy..." />
+            <button class="chat-send" id="chatSend" title="Send message (Enter)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Financial Pulse & Shortcuts -->
+        <div class="ai-sidebar">
+          <div class="ai-stats-card">
+            <div class="as-title">Active Financial Snapshot</div>
+            <div class="as-row"><span>This Month Income</span><span class="green" id="aiStatInc">₹0</span></div>
+            <div class="as-row"><span>This Month Expenses</span><span class="red" id="aiStatExp">₹0</span></div>
+            <div class="as-row"><span>Net Savings</span><span class="purple" id="aiStatSav">₹0</span></div>
+          </div>
+          <div class="sug-title">One-Click Prompts</div>
+          <button class="sug-btn" data-prompt="Analyze my spending this month and identify where I am leaking money.">🔍 Audit my overspending</button>
+          <button class="sug-btn" data-prompt="Give me 3 practical ways I can save an extra ₹5,000 this month based on my habits.">💡 3 high-impact savings tips</button>
+          <button class="sug-btn" data-prompt="What is my current savings rate percentage, and is it financially healthy?">📊 Calculate my savings rate</button>
+          <button class="sug-btn" data-prompt="Review all my account balances and tell me which one needs attention.">🏦 Account balance check</button>
+          <button class="sug-btn" data-prompt="Based on my past spending, forecast my total expenses for next month.">🔮 Predict next month's burn</button>
+          <button class="sug-btn" data-prompt="Do I have any pending debts or unsettled balances from my group expenses?">👥 Review shared group splits</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- GROUP SPLITS -->
+    <section class="page" id="page-groups">
+      <button class="mobile-back-btn" data-action="goto-dashboard">← Back</button>
+      
+      <!-- GROUPS LIST VIEW -->
+      <div id="groupsListView">
+        <div class="page-header">
+          <div><h1 class="page-title">Group Splits</h1><p class="page-sub">Split bills, trips & shared expenses</p></div>
+          <button class="btn-primary" id="openCreateGroupBtn">+ Create Group</button>
+        </div>
+        <div class="groups-grid" id="groupsGrid"></div>
+      </div>
+
+      <!-- GROUP DETAIL VIEW (Hidden by default) -->
+      <div id="groupDetailView" style="display:none">
+        <div class="group-detail-header" style="display:flex;align-items:center;margin-bottom:20px">
+          <button class="btn-ghost" id="backToGroupsBtn" style="padding:7px 14px;font-size:13px">← All Groups</button>
+          <div style="flex:1;margin-left:14px">
+            <h1 class="page-title" id="gdTitle" style="font-size:22px">Group Title</h1>
+            <p class="page-sub" id="gdMembersList">Loading members...</p>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn-ghost" id="openSettleModalBtn">🤝 Settle Up</button>
+            <button class="btn-primary" id="openGroupExpenseModalBtn">+ Add Expense</button>
+          </div>
+        </div>
+
+        <!-- SETTLEMENT SUMMARY CARDS -->
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-header">
+            <div class="card-title">Balance & Settlement Summary</div>
+            <button class="btn-ghost" id="deleteCurrentGroupBtn" style="color:var(--brick);border-color:var(--brick-tint);font-size:12px;padding:4px 10px">Delete Group</button>
+          </div>
+          <div class="settlement-grid" id="settlementGrid"></div>
+        </div>
+
+        <!-- EXPENSE STREAM -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Shared Expense History</div>
+          </div>
+          <div class="group-expense-list" id="groupExpenseList"></div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- RECURRING / SUBSCRIPTIONS -->
+    <section class="page" id="page-recurring">
+      <button class="mobile-back-btn" data-action="goto-dashboard">← Back</button>
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Subscriptions & Bills</h1>
+          <p class="page-sub">Track auto-debits, recurring subscriptions & upcoming renewal dates</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn-ghost" id="detectSubsBtn" type="button">✨ Auto-Detect</button>
+          <button class="btn-primary" id="openRecurringModal">+ Add Subscription</button>
+        </div>
+      </div>
+
+      <!-- Subscription Overview KPI Cards -->
+      <div class="sub-kpi-grid">
+        <div class="kpi-card sub-kpi">
+          <div class="kpi-top">
+            <div class="kpi-icon sub-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+            <div class="sub-kpi-tag" id="subActiveCountTag">0 Active</div>
+          </div>
+          <div class="kpi-value" id="subMonthlyTotal">₹0</div>
+          <div class="kpi-label">Monthly Commitments</div>
+        </div>
+
+        <div class="kpi-card sub-kpi">
+          <div class="kpi-top">
+            <div class="kpi-icon sub-kpi-icon sub-icon-yearly"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+            <div class="sub-kpi-tag">12 Months</div>
+          </div>
+          <div class="kpi-value" id="subYearlyTotal">₹0</div>
+          <div class="kpi-label">Annualized Run Rate</div>
+        </div>
+
+        <div class="kpi-card sub-kpi">
+          <div class="kpi-top">
+            <div class="kpi-icon sub-kpi-icon sub-icon-next"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+            <div class="sub-kpi-tag" id="subNextCountdown">Upcoming</div>
+          </div>
+          <div class="kpi-value" id="subNextService">None</div>
+          <div class="kpi-label" id="subNextDetail">Next Due Renewal</div>
+        </div>
+      </div>
+
+      <!-- Auto-Detect Banner -->
+      <div class="sub-detect-banner" id="subDetectBanner" style="display:none">
+        <div class="sub-detect-left">
+          <span class="sub-detect-icon">✨</span>
+          <div>
+            <div class="sub-detect-title" id="subDetectTitle">AI found potential recurring subscriptions</div>
+            <div class="sub-detect-sub" id="subDetectSub">Review detected recurring expenses to track auto-debits and renewal dates.</div>
+          </div>
+        </div>
+        <div class="sub-detect-actions">
+          <button class="pill-btn active" id="viewDetectedSubsBtn" type="button">Review (0)</button>
+          <button class="pill-btn" id="dismissDetectedSubsBtn" type="button">✕</button>
+        </div>
+      </div>
+
+      <!-- Detected Subscriptions Drawer/Grid -->
+      <div class="card sub-detected-card" id="subDetectedCard" style="display:none">
+        <div class="card-header">
+          <div class="card-title">✨ Detected Subscriptions from Spending History</div>
+          <button class="pill-btn" id="closeDetectedCardBtn" type="button">Close</button>
+        </div>
+        <div class="sub-detected-grid" id="subDetectedGrid"></div>
+      </div>
+
+      <!-- Upcoming Renewals Timeline Carousel -->
+      <div class="card sub-timeline-card">
+        <div class="card-header">
+          <div class="card-title">Upcoming Renewals</div>
+          <span class="card-sub-hint">Sorted by next auto-renewal date</span>
+        </div>
+        <div class="sub-renewals-strip" id="subRenewalsStrip">
+          <div class="sub-empty-hint">No subscriptions due soon</div>
+        </div>
+      </div>
+
+      <!-- Main Subscription List -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">All Subscriptions & Recurring</div>
+          <div class="card-actions">
+            <button class="pill-btn active" data-sub-filter="all">All</button>
+            <button class="pill-btn" data-sub-filter="expense">Subscriptions</button>
+            <button class="pill-btn" data-sub-filter="income">Income / Salary</button>
+            <button class="pill-btn" data-sub-filter="paused">Paused</button>
+          </div>
+        </div>
+        <div class="txn-list" id="recurringList"></div>
+      </div>
+    </section>
+
+    <!-- IMPORT -->
+    <section class="page" id="page-import">
+      <button class="mobile-back-btn" data-action="goto-dashboard">← Back</button>
+      <div class="page-header">
+        <div><h1 class="page-title">Import CSV</h1><p class="page-sub">Import transactions from your bank statement</p></div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><div class="card-title">Upload CSV File</div></div>
+        <div class="csv-dropzone" id="csvDropzone">
+          <div class="dropzone-icon">📂</div>
+          <div class="dropzone-text">Drag & drop your CSV file here, or click to browse</div>
+          <div class="dropzone-sub">Supports: date, description, amount, type, category columns</div>
+        </div>
+        <input type="file" id="csvFileInput" accept=".csv" style="display:none" />
+        <div class="form-group" style="margin-top:14px">
+          <label>Import into account</label>
+          <select id="importAccount"></select>
+        </div>
+        <div style="margin-top:14px;padding:12px;background:#F5F0E6;border-radius:8px;font-size:12px;color:#7C7266">
+          <strong>Expected CSV format:</strong><br/>
+          <code>date,description,amount,type,category</code><br/>
+          <code>2026-06-01,Salary,50000,income,Salary</code><br/>
+          <code>2026-06-02,Grocery Shopping,1500,expense,Food</code>
+        </div>
+      </div>
+      <div id="importPreviewSection" style="display:none">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Preview</div>
+            <button class="btn-primary" id="importBtn" disabled>Import All</button>
+          </div>
+          <div id="dateFormatWarning" style="display:none;margin-bottom:12px;padding:10px 12px;background:#FBEFD9;border-radius:8px;font-size:12px;color:#7A5A20">
+            ⚠ Some dates in this file are ambiguous (day and month both ≤ 12, e.g. 03/04/2025). Pick the format your file uses so dates aren't misread:
+            <div style="margin-top:8px">
+              <label style="margin-right:14px"><input type="radio" name="dateFormat" value="auto" checked /> Auto (day-first, e.g. 03/04 = 3 Apr)</label>
+              <label style="margin-right:14px"><input type="radio" name="dateFormat" value="dmy" /> Day/Month/Year</label>
+              <label><input type="radio" name="dateFormat" value="mdy" /> Month/Day/Year (US)</label>
+            </div>
+          </div>
+          <div id="csvPreview"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- REPORTS / FINANCIAL AUDIT -->
+    <section class="page" id="page-reports">
+      <button class="mobile-back-btn" data-action="goto-dashboard">&#8592; Back</button>
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Financial Audit</h1>
+          <p class="page-sub">AI-generated monthly financial statement &amp; spending diagnosis</p>
+        </div>
+        <div class="header-actions">
+          <div class="month-nav">
+            <button class="month-btn" id="auditPrevMonth">&#8249;</button>
+            <span class="month-label" id="auditMonthLabel">October</span>
+            <button class="month-btn" id="auditNextMonth">&#8250;</button>
+          </div>
+          <button class="btn-ghost" id="downloadAuditCsvBtn" type="button">&#11015; CSV</button>
+          <button class="btn-primary" id="generateAuditBtn" type="button">&#10024; Generate Audit</button>
+        </div>
+      </div>
+
+      <!-- Audit KPI Row -->
+      <div class="audit-kpi-row" id="auditKpiRow" style="display:none"></div>
+
+      <!-- AI CFO Analysis Card -->
+      <div class="card audit-ai-card" id="auditAiCard" style="display:none">
+        <div class="card-header">
+          <div class="card-title">&#129302; AI CFO Monthly Diagnosis</div>
+          <span class="audit-ai-period" id="auditAiPeriod"></span>
+        </div>
+        <div class="audit-ai-body" id="auditAiBody"></div>
+      </div>
+
+      <!-- Two-column: Category + Top Expenses -->
+      <div class="audit-grid" id="auditGrid" style="display:none">
+        <div class="card">
+          <div class="card-header"><div class="card-title">&#128202; Category Breakdown</div></div>
+          <div id="auditCatList"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">&#128293; Top 5 Largest Expenses</div></div>
+          <div id="auditTopMerchants"></div>
+        </div>
+      </div>
+
+      <!-- Export Actions -->
+      <div class="card" id="auditDownloadCard" style="display:none">
+        <div class="card-header"><div class="card-title">&#128193; Export Statement</div></div>
+        <div class="audit-export-row">
+          <button class="btn-ghost" id="downloadPdfBtn" type="button">&#128196; Download PDF</button>
+          <button class="btn-ghost" id="downloadAuditCsvBtn2" type="button">&#128202; Download Excel/CSV</button>
+        </div>
+      </div>
+
+      <!-- Empty state (before generation) -->
+      <div class="audit-empty" id="auditEmptyState">
+        <div class="audit-empty-icon">&#128209;</div>
+        <div class="audit-empty-title">Generate Your Monthly Financial Audit</div>
+        <div class="audit-empty-sub">Select a month using the arrows above and click "Generate Audit" for an AI-powered CFO review of your finances.</div>
+        <button class="btn-primary" id="auditEmptyGenBtn" type="button">&#10024; Generate Audit for This Month</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ADD TRANSACTION MODAL -->
+<div class="modal-overlay" id="addModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-icon">💳</div>
+      <h2 class="modal-title" id="modalTitle">Add Transaction</h2>
+      <button class="modal-close" id="closeAddModal">×</button>
+    </div>
+    <div class="type-toggle">
+      <button class="type-btn active-income" id="typeIncome" data-action="type-income">↑ Income</button>
+      <button class="type-btn" id="typeExpense" data-action="type-expense">↓ Expense</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group span2">
+        <label>Description</label>
+        <input type="text" id="txnDesc" placeholder="e.g. Monthly salary" />
+      </div>
+      <div class="form-group">
+        <label>Amount (₹)</label>
+        <div class="input-prefix"><span>₹</span><input type="number" id="txnAmount" placeholder="0.00" min="0" step="0.01" /></div>
+      </div>
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="txnDate" />
+      </div>
+      <div class="form-group span2">
+        <label>Category</label>
+        <div class="cat-picker" id="catPicker"></div>
+        <select id="txnCategory" style="display:none"></select>
+      </div>
+      <div class="form-group span2">
+        <label>Account</label>
+        <select id="txnAccount"></select>
+      </div>
+      <div class="form-group span2">
+        <label>Tags</label>
+        <div class="tag-input-wrap" id="tagInputWrap">
+          <div class="tag-pills" id="tagPills"></div>
+          <input type="text" id="tagInput" placeholder="Type a tag and press Enter" autocomplete="off" />
+          <div class="tag-suggestions" id="tagSuggestions"></div>
+        </div>
+      </div>
+    </div>
+    <input type="hidden" id="editTxnId" />
+    <button class="btn-primary full" id="saveTxnBtn">Save Transaction</button>
+  </div>
+</div>
+
+<!-- ACCOUNT MODAL -->
+<div class="modal-overlay" id="accountModal" role="dialog" aria-modal="true" aria-labelledby="accountModalTitle">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-icon"></div>
+      <h2 class="modal-title" id="accountModalTitle">Add Account</h2>
+      <button class="modal-close" id="closeAccountModal">×</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group span2">
+        <label>Account Name</label>
+        <input type="text" id="accountName" placeholder="e.g. HDFC Savings" />
+      </div>
+      <div class="form-group">
+        <label>Type</label>
+        <select id="accountType">
+          <option value="cash">Cash</option>
+          <option value="bank">Bank</option>
+          <option value="credit_card">Credit Card</option>
+          <option value="wallet">Wallet</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Starting Balance (₹)</label>
+        <div class="input-prefix"><span>₹</span><input type="number" id="accountStartingBalance" placeholder="0.00" step="0.01" /></div>
+      </div>
+    </div>
+    <input type="hidden" id="editAccountId" />
+    <button class="btn-primary full" id="saveAccountBtn">Save Account</button>
+  </div>
+</div>
+
+<!-- BUDGET MODAL -->
+<div class="modal-overlay" id="budgetModal" role="dialog" aria-modal="true" aria-labelledby="budgetModalTitle">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-icon"></div>
+      <h2 class="modal-title" id="budgetModalTitle">Set Monthly Budget</h2>
+      <button class="modal-close" id="closeBudgetModal">×</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group span2">
+        <label>Category</label>
+        <select id="budgetCategory"><option>Food</option><option>Transport</option><option>Shopping</option><option>Entertainment</option><option>Health</option><option>Bills</option><option>Other</option></select>
+      </div>
+      <div class="form-group span2">
+        <label>Monthly Limit (₹)</label>
+        <div class="input-prefix"><span>₹</span><input type="number" id="budgetLimit" placeholder="5000" min="1" /></div>
+      </div>
+    </div>
+    <button class="btn-primary full" id="saveBudgetBtn">Save Budget</button>
+  </div>
+</div>
+
+<!-- GOAL MODAL -->
+<div class="modal-overlay" id="goalModal" role="dialog" aria-modal="true" aria-labelledby="goalModalTitle">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-icon"></div>
+      <h2 class="modal-title" id="goalModalTitle">Add Financial Goal</h2>
+      <button class="modal-close" id="closeGoalModal">×</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group span2">
+        <label>Goal Name</label>
+        <input type="text" id="goalName" placeholder="e.g. Emergency Fund" />
+      </div>
+      <div class="form-group">
+        <label>Target Amount (₹)</label>
+        <div class="input-prefix"><span>₹</span><input type="number" id="goalTarget" placeholder="50000" /></div>
+      </div>
+      <div class="form-group">
+        <label>Saved So Far (₹)</label>
+        <div class="input-prefix"><span>₹</span><input type="number" id="goalSaved" placeholder="0" /></div>
+      </div>
+      <div class="form-group span2">
+        <label>Target Date</label>
+        <input type="date" id="goalDate" />
+      </div>
+    </div>
+    <input type="hidden" id="goalEditId" />
+    <button class="btn-primary full" id="saveGoalBtn">Save Goal</button>
+  </div>
+</div>
+
+
+<!-- RECURRING MODAL -->
+<div class="modal-overlay" id="recurringModal" role="dialog" aria-modal="true" aria-labelledby="recurringModalTitle">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-icon"></div>
+      <h2 class="modal-title" id="recurringModalTitle">Add Subscription / Recurring</h2>
+      <button class="modal-close" id="closeRecurringModal">×</button>
+    </div>
+    <div class="type-toggle">
+      <button class="type-btn active-expense" id="recTypeExpense" data-action="rec-type-expense">↓ Expense</button>
+      <button class="type-btn"                id="recTypeIncome"  data-action="rec-type-income">↑ Income</button>
+    </div>
+    <select id="recType" style="display:none"><option value="expense" selected>expense</option><option value="income">income</option></select>
+    <div class="form-grid">
+      <div class="form-group span2">
+        <label>Service / Description</label>
+        <input type="text" id="recDesc" placeholder="e.g. Netflix, Spotify, Gym, Rent" />
+      </div>
+      <div class="form-group">
+        <label>Amount (₹)</label>
+        <div class="input-prefix"><span>₹</span><input type="number" id="recAmount" placeholder="0.00" min="0" /></div>
+      </div>
+      <div class="form-group">
+        <label>Frequency</label>
+        <select id="recFrequency">
+          <option value="daily">Daily</option>
+          <option value="weekly">Weekly</option>
+          <option value="monthly" selected>Monthly</option>
+          <option value="yearly">Yearly</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <select id="recCategory">
+          <option>Food</option><option>Transport</option><option>Shopping</option>
+          <option>Entertainment</option><option>Health</option><option>Bills</option>
+          <option>Salary</option><option>Freelance</option><option>Investment</option><option>Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>First Date</label>
+        <input type="date" id="recNextDate" />
+      </div>
+    </div>
+    <button class="btn-primary full" id="saveRecurringBtn">Save Recurring</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+
+<!-- ── AUTH SCREENS ─────────────────────────────────────────── -->
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="brand-icon" style="width:48px;height:48px;margin:0 auto 12px">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5z" fill="white" opacity="0.9"/><path d="M2 17l10 5 10-5" stroke="white" stroke-width="2" stroke-linecap="round"/><path d="M2 12l10 5 10-5" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+      <div class="auth-brand-name">FlowLedger</div>
+      <div class="auth-brand-sub">Smart Finance</div>
+    </div>
+
+    <!-- Tab Toggle -->
+    <div class="auth-tabs" role="tablist" aria-label="Login or register">
+      <button class="auth-tab active" id="tabLogin" role="tab" aria-selected="true" aria-controls="formLogin" data-action="auth-tab-login">Login</button>
+      <button class="auth-tab" id="tabRegister" role="tab" aria-selected="false" aria-controls="formRegister" data-action="auth-tab-register">Register</button>
+    </div>
+
+    <!-- Login Form -->
+    <div id="formLogin" role="tabpanel" aria-labelledby="tabLogin">
+      <div class="auth-form-group">
+        <label for="loginEmail">Email</label>
+        <input type="email" id="loginEmail" placeholder="you@example.com" autocomplete="email" />
+      </div>
+      <div class="auth-form-group">
+        <label for="loginPassword">Password</label>
+        <div style="position:relative">
+          <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password" />
+          <button class="eye-btn" type="button" data-action="toggle-pwd" data-target="loginPassword" aria-label="Show password">👁</button>
+        </div>
+      </div>
+      <div class="auth-remember">
+        <label><input type="checkbox" id="rememberMe" /> Remember me</label>
+      </div>
+      <div class="auth-error" id="loginError" role="alert"></div>
+      <button class="auth-btn" id="loginBtn">Login →</button>
+      <div class="auth-demo">
+        <button class="demo-btn" type="button" data-action="try-demo">Try Demo (no account needed)</button>
+      </div>
+    </div>
+
+    <!-- Register Form -->
+    <div id="formRegister" role="tabpanel" aria-labelledby="tabRegister" style="display:none">
+      <div class="auth-form-group">
+        <label for="regName">Full Name</label>
+        <input type="text" id="regName" placeholder="John Doe" autocomplete="name" />
+      </div>
+      <div class="auth-form-group">
+        <label for="regEmail">Email</label>
+        <input type="email" id="regEmail" placeholder="you@example.com" autocomplete="email" />
+      </div>
+      <div class="auth-form-group">
+        <label for="regPassword">Password <span style="color:#A79C8C;font-size:11px">(min 6 chars)</span></label>
+        <div style="position:relative">
+          <input type="password" id="regPassword" placeholder="••••••••" autocomplete="new-password" />
+          <button class="eye-btn" type="button" data-action="toggle-pwd" data-target="regPassword" aria-label="Show password">👁</button>
+        </div>
+      </div>
+      <div class="auth-form-group">
+        <label for="regConfirm">Confirm Password</label>
+        <input type="password" id="regConfirm" placeholder="••••••••" autocomplete="new-password" />
+      </div>
+      <div class="auth-error" id="registerError" role="alert"></div>
+      <button class="auth-btn" id="registerBtn">Create Account →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── PROFILE MODAL ─────────────────────────────────────────── -->
+<div class="modal-overlay" id="profileModal" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-icon">👤</div>
+      <h2 class="modal-title" id="profileModalTitle">My Profile</h2>
+      <button class="modal-close" id="closeProfileModal">×</button>
+    </div>
+    <div class="profile-tabs" role="tablist" aria-label="Profile settings">
+      <button class="profile-tab active" role="tab" aria-selected="true" aria-controls="ptab-info" data-ptab="info">Profile</button>
+      <button class="profile-tab" role="tab" aria-selected="false" aria-controls="ptab-password" data-ptab="password">Password</button>
+      <button class="profile-tab" role="tab" aria-selected="false" aria-controls="ptab-danger" data-ptab="danger">Account</button>
+    </div>
+    <!-- Info Tab -->
+    <div class="profile-panel" id="ptab-info" role="tabpanel">
+      <div class="form-grid">
+        <div class="form-group span2">
+          <label>Full Name</label>
+          <input type="text" id="profileName" />
+        </div>
+        <div class="form-group span2">
+          <label>Email</label>
+          <input type="email" id="profileEmail" disabled style="opacity:0.5" />
+        </div>
+        <div class="form-group span2">
+          <label>Currency Symbol</label>
+          <select id="profileCurrency">
+            <option value="₹">₹ Indian Rupee</option>
+            <option value="$">$ US Dollar</option>
+            <option value="€">€ Euro</option>
+            <option value="£">£ British Pound</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn-primary full" id="saveProfileBtn">Save Changes</button>
+    </div>
+    <!-- Password Tab -->
+    <div class="profile-panel" id="ptab-password" role="tabpanel" style="display:none">
+      <div class="form-grid">
+        <div class="form-group span2">
+          <label>Current Password</label>
+          <input type="password" id="currentPwd" placeholder="••••••••" />
+        </div>
+        <div class="form-group span2">
+          <label>New Password</label>
+          <input type="password" id="newPwd" placeholder="••••••••" />
+        </div>
+        <div class="form-group span2">
+          <label>Confirm New Password</label>
+          <input type="password" id="confirmPwd" placeholder="••••••••" />
+        </div>
+      </div>
+      <button class="btn-primary full" id="changePasswordBtn">Change Password</button>
+    </div>
+    <!-- Danger Tab -->
+    <div class="profile-panel" id="ptab-danger" role="tabpanel" style="display:none">
+      <div class="delete-warning-box" style="margin-top:0;margin-bottom:18px">
+        <div class="dw-heading">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;flex-shrink:0"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <span>Danger Zone: Account Deletion</span>
+        </div>
+        <div style="font-size:13px;color:var(--text-secondary);line-height:1.5">
+          Permanently delete your profile, financial accounts, budgets, goals, and history. This process is irreversible.
+        </div>
+      </div>
+      <button class="btn-danger full" id="deleteAccountBtn" type="button">Delete My Account</button>
+    </div>
+  </div>
+</div>
+
+<!-- ACCOUNT DELETION VERIFICATION MODAL -->
+<div class="modal-overlay" id="deleteAccountModal" role="dialog" aria-modal="true" aria-labelledby="delModalTitle">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <div class="modal-icon" style="background:var(--expense-tint);color:var(--expense);border-color:var(--expense-border)">🚨</div>
+      <div>
+        <h2 class="modal-title" id="delModalTitle" style="color:var(--expense)">Delete Account Verification</h2>
+        <p style="font-size:12px;color:var(--text-tertiary);margin-top:2px">Security confirmation required</p>
+      </div>
+      <button class="modal-close" id="closeDeleteAccountModal" type="button">×</button>
+    </div>
+
+    <div class="delete-warning-box">
+      <div class="dw-heading">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span>Irreversible action</span>
+      </div>
+      <p class="dw-text">
+        Once confirmed, the following data associated with your account will be permanently wiped immediately:
+      </p>
+      <ul class="dw-list">
+        <li>All income & expense transactions and analytics history</li>
+        <li>Linked bank, cash, and card account balances</li>
+        <li>Monthly budgets, savings goals & recurring schedules</li>
+        <li>Shared group expenses and AI conversation sessions</li>
+      </ul>
+    </div>
+
+    <div class="form-grid" style="margin-top:16px">
+      <div class="form-group span2">
+        <label style="display:flex;justify-content:space-between">
+          <span>Type <strong style="color:var(--expense)">DELETE</strong> to confirm</span>
+          <span id="delMatchBadge" style="font-size:11px;font-weight:700;color:var(--text-tertiary)">REQUIRED</span>
+        </label>
+        <input type="text" id="confirmDeletePhrase" placeholder="Type DELETE" autocomplete="off" />
+      </div>
+
+      <div class="form-group span2">
+        <label>Enter your account password</label>
+        <input type="password" id="confirmDeletePassword" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+    </div>
+
+    <div class="modal-footer" style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button type="button" class="btn-ghost" id="cancelDeleteAccountBtn">Cancel</button>
+      <button type="button" class="btn-danger" id="finalDeleteAccountBtn" disabled>
+        <span id="finalDeleteAccountText">Permanently Delete Account</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- RECEIPT SCANNER MODAL -->
+<div class="modal-overlay" id="receiptModal" role="dialog" aria-modal="true" aria-labelledby="receiptModalTitle">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-icon">📷</div>
+      <h2 class="modal-title" id="receiptModalTitle">AI Receipt Scanner</h2>
+      <button class="modal-close" id="closeReceiptModal" type="button">×</button>
+    </div>
+    
+    <p style="color:var(--ink-soft);font-size:13px;margin-bottom:16px;line-height:1.4">
+      Upload or drop a clear photo of your receipt or invoice. FlowLedger AI will extract the merchant, total amount, date, category, and items automatically.
+    </p>
+
+    <div class="receipt-dropzone" id="receiptDropzone">
+      <input type="file" id="receiptFileInput" accept="image/*" style="display:none" />
+      <div class="dropzone-content" id="dropzoneContent">
+        <div class="dropzone-icon">📜</div>
+        <div class="dropzone-text"><strong>Click to upload</strong> or drag & drop receipt</div>
+        <div class="dropzone-sub">Supports PNG, JPG, WebP (Max 5MB)</div>
+      </div>
+      <div class="receipt-preview-wrap" id="receiptPreviewWrap" style="display:none">
+        <img id="receiptPreviewImg" src="" alt="Receipt Preview" />
+        <div class="scan-laser-line" id="scanLaserLine" style="display:none"></div>
+      </div>
+    </div>
+
+    <div id="receiptStatusArea" style="margin-top:16px;display:none">
+      <div class="ai-scan-loader" id="receiptLoader">
+        <span class="spinner"></span> <span>AI reading receipt details...</span>
+      </div>
+      <div class="receipt-result-card" id="receiptResultCard" style="display:none">
+        <div class="res-title">✨ Extracted Receipt Data</div>
+        <div class="res-grid">
+          <div class="res-item"><span class="res-lbl">Merchant</span> <strong id="resMerchant">-</strong></div>
+          <div class="res-item"><span class="res-lbl">Total Amount</span> <strong id="resAmount" class="red">-</strong></div>
+          <div class="res-item"><span class="res-lbl">Category</span> <span id="resCategory" class="res-badge">-</span></div>
+          <div class="res-item"><span class="res-lbl">Date</span> <span id="resDate" style="font-weight:600;color:var(--ink)">-</span></div>
+        </div>
+        <div id="resLineItemsWrap" style="margin-top:10px;font-size:12px;color:var(--ink-soft)"></div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button class="btn-ghost" id="cancelReceiptBtn" type="button" style="flex:1">Cancel</button>
+      <button class="btn-ghost" id="rescanReceiptBtn" type="button" style="display:none;flex:1">↻ Scan Another</button>
+      <button class="btn-primary" id="useReceiptDataBtn" type="button" style="display:none;flex:2">Use in Form →</button>
+    </div>
+  </div>
+</div>
+
+<!-- CREATE GROUP MODAL -->
+<div class="modal-overlay" id="groupModal" role="dialog" aria-modal="true" aria-labelledby="groupModalTitle">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-icon">👥</div>
+      <h2 class="modal-title" id="groupModalTitle">Create Shared Group</h2>
+      <button class="modal-close" id="closeGroupModal" type="button">×</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group span2">
+        <label>Group Name</label>
+        <input type="text" id="groupNameInput" placeholder="e.g. Goa Trip 2026 or Roommates" />
+      </div>
+      <div class="form-group span2">
+        <label>Description (Optional)</label>
+        <input type="text" id="groupDescInput" placeholder="e.g. Shared house expenses" />
+      </div>
+      <div class="form-group span2">
+        <label>Member Names (Comma Separated)</label>
+        <input type="text" id="groupMembersInput" placeholder="e.g. Rahul, Sneha, Amit" />
+        <span style="font-size:11px;color:var(--ink-soft);margin-top:2px">You will be added automatically as a member.</span>
+      </div>
+    </div>
+    <button class="btn-primary full" id="saveGroupBtn" type="button">Create Group</button>
+  </div>
+</div>
+
+<!-- ADD GROUP EXPENSE MODAL -->
+<div class="modal-overlay" id="groupExpenseModal" role="dialog" aria-modal="true" aria-labelledby="groupExpModalTitle">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-icon">💸</div>
+      <h2 class="modal-title" id="groupExpModalTitle">Add Group Expense</h2>
+      <button class="modal-close" id="closeGroupExpenseModal" type="button">×</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group span2">
+        <label>Description</label>
+        <input type="text" id="gExpDesc" placeholder="e.g. Beach Dinner or Rent" />
+      </div>
+      <div class="form-group">
+        <label>Total Amount (₹)</label>
+        <div class="input-prefix"><span>₹</span><input type="number" id="gExpAmount" placeholder="0.00" min="1" step="0.01" /></div>
+      </div>
+      <div class="form-group">
+        <label>Paid By</label>
+        <select id="gExpPayerSelect"></select>
+      </div>
+      <div class="form-group span2">
+        <label>Category</label>
+        <select id="gExpCategory">
+          <option value="Food & Dining">Food & Dining</option>
+          <option value="Transportation">Transportation</option>
+          <option value="Shopping">Shopping</option>
+          <option value="Entertainment">Entertainment</option>
+          <option value="Housing">Housing</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="form-group span2">
+        <label>Date</label>
+        <input type="date" id="gExpDate" />
+      </div>
+    </div>
+    <button class="btn-primary full" id="saveGroupExpenseBtn" type="button">Save Shared Expense</button>
+  </div>
+</div>
+
+<!-- SETTLE UP MODAL -->
+<div class="modal-overlay" id="settleModal" role="dialog" aria-modal="true" aria-labelledby="settleModalTitle">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-icon">🤝</div>
+      <h2 class="modal-title" id="settleModalTitle">Record Settlement</h2>
+      <button class="modal-close" id="closeSettleModal" type="button">×</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Payer (Who Paid)</label>
+        <select id="settleFromSelect"></select>
+      </div>
+      <div class="form-group">
+        <label>Recipient (Who Received)</label>
+        <select id="settleToSelect"></select>
+      </div>
+      <div class="form-group span2">
+        <label>Settlement Amount (₹)</label>
+        <div class="input-prefix"><span>₹</span><input type="number" id="settleAmount" placeholder="0.00" min="1" step="0.01" /></div>
+      </div>
+    </div>
+    <button class="btn-primary full" id="saveSettleBtn" type="button">Record Settlement</button>
+  </div>
+</div>
+
+<!-- SETTLEMENT SCAN & PAY QR MODAL -->
+<div class="modal-overlay" id="settleQrModal" role="dialog" aria-modal="true" aria-labelledby="settleQrModalTitle">
+  <div class="modal settle-qr-modal">
+    <div class="modal-header">
+      <div class="modal-icon">📱</div>
+      <h2 class="modal-title" id="settleQrModalTitle">Scan & Pay to Settle</h2>
+      <button class="modal-close" id="closeSettleQrModal" type="button">✕</button>
+    </div>
+
+    <div class="qr-pay-recipient-card">
+      <div class="qr-pay-from-to">
+        <span class="qr-member-pill" id="qrFromMember">Payer</span>
+        <span class="qr-arrow">➔ pays ➔</span>
+        <span class="qr-member-pill qr-to" id="qrToMember">Recipient</span>
+      </div>
+      <div class="qr-pay-amount" id="qrAmountDisplay">₹0</div>
+      <div class="qr-pay-sub" id="qrGroupNote">Settlement for Shared Expenses</div>
+    </div>
+
+    <!-- QR Code Container -->
+    <div class="qr-canvas-wrapper">
+      <div class="qr-frame-corners">
+        <div id="settleQrCodeContainer" class="qr-code-box"></div>
+      </div>
+      <div class="qr-scan-hint">
+        <span>Scan with <strong>Google Pay</strong>, <strong>PhonePe</strong>, <strong>Paytm</strong> or any UPI / banking app</span>
+      </div>
+    </div>
+
+    <!-- UPI Handle Configuration & Actions -->
+    <div class="qr-config-section">
+      <div class="form-group" style="margin-bottom:12px">
+        <label style="display:flex;justify-content:space-between;align-items:center">
+          <span>Recipient UPI ID / VPA</span>
+          <span style="font-size:11px;color:var(--text-tertiary)" id="upiSaveStatus">Auto-saved</span>
+        </label>
+        <div class="input-prefix">
+          <span>@</span>
+          <input type="text" id="qrUpiInput" placeholder="recipient@okaxis or recipient@upi" />
+        </div>
+      </div>
+      <div class="qr-action-buttons">
+        <a class="btn-ghost full" id="qrDeepLinkBtn" href="#" target="_blank" style="text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px">
+          <span>📲</span> Open in UPI App
+        </a>
+        <button class="btn-primary full" id="qrMarkSettledBtn" type="button" style="display:flex;align-items:center;justify-content:center;gap:6px">
+          <span>✓</span> Mark as Settled
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/recurring.js"></script>
+<script src="js/import.js"></script>
+<script src="js/qrcode.min.js"></script>
+<script src="js/groups.js"></script>
+<script src="js/app.js"></script>
+<script src="js/sw-cleanup.js"></script>
+</body>
+</html>
