@@ -795,7 +795,7 @@ const App = {
 
     const hideResults = () => {
       document.getElementById('auditEmptyState').style.display = 'flex';
-      ['auditKpiRow','auditAiCard','auditGrid','auditDownloadCard'].forEach(id => {
+      ['auditKpiRow','auditScoreRow','auditAiCard','auditGrid','auditDownloadCard'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
       });
@@ -886,11 +886,13 @@ const App = {
   },
 
   renderAudit(data) {
-    const { summary, byCategory, topMerchants, aiAnalysis, periodName } = data;
+    const { summary, byCategory, topMerchants, aiAnalysis, periodName,
+            healthScore, healthLabel, healthColor, spendTrend } = data;
 
     // Switch visibility
     document.getElementById('auditEmptyState').style.display = 'none';
     document.getElementById('auditKpiRow').style.display     = 'grid';
+    document.getElementById('auditScoreRow').style.display   = '';
     document.getElementById('auditAiCard').style.display     = '';
     document.getElementById('auditGrid').style.display       = 'grid';
     document.getElementById('auditDownloadCard').style.display = '';
@@ -901,7 +903,7 @@ const App = {
         <div class="kpi-top"><div class="kpi-icon kpi-icon-positive">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
         </div></div>
-        <div class="kpi-value green">${fmt(summary.income)}</div>
+        <div class="kpi-value green audit-num">${fmt(summary.income)}</div>
         <div class="kpi-label">Total Income</div>
       </div>
       <div class="kpi-card">
@@ -909,20 +911,81 @@ const App = {
           <div class="kpi-icon kpi-icon-negative"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg></div>
           ${summary.momChange !== 0 ? `<span class="audit-mom-badge ${summary.momChange > 0 ? 'up' : 'down'}">${summary.momChange > 0 ? '↑' : '↓'} ${Math.abs(summary.momChange)}% MoM</span>` : ''}
         </div>
-        <div class="kpi-value red">${fmt(summary.expense)}</div>
+        <div class="kpi-value red audit-num">${fmt(summary.expense)}</div>
         <div class="kpi-label">Total Expenses</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-top"><div class="kpi-icon kpi-icon-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div></div>
-        <div class="kpi-value ${summary.netSavings >= 0 ? 'green' : 'red'}">${fmt(summary.netSavings)}</div>
+        <div class="kpi-value ${summary.netSavings >= 0 ? 'green' : 'red'} audit-num">${fmt(summary.netSavings)}</div>
         <div class="kpi-label">Net Savings</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-top"><div class="kpi-icon kpi-icon-highlight"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0016.5 3c-1.76 0-3.332.83-4.5 2.05C10.832 3.83 9.26 3 7.5 3A5.5 5.5 0 002 8.5c0 2.3 1.5 4.05 3 5.5l7 7 7-7z"/></svg></div></div>
-        <div class="kpi-value purple">${summary.savingsRate}%</div>
+        <div class="kpi-value purple audit-num">${summary.savingsRate}%</div>
         <div class="kpi-label">Savings Rate</div>
         <div class="kpi-sub">${summary.txnCount} transactions</div>
       </div>`;
+
+    // ── Health Score ring ──
+    const score   = healthScore ?? 50;
+    const color   = healthColor ?? '#6366F1';
+    const label   = healthLabel ?? 'Fair';
+    const circ    = 314; // 2π × 50
+    const offset  = circ - (circ * score / 100);
+    const ringFill = document.getElementById('auditRingFill');
+    if (ringFill) {
+      ringFill.style.stroke = color;
+      ringFill.style.strokeDashoffset = circ; // start at 0
+      requestAnimationFrame(() => {
+        ringFill.style.transition = 'stroke-dashoffset 1.1s cubic-bezier(.4,0,.2,1)';
+        ringFill.style.strokeDashoffset = offset;
+      });
+    }
+    const numEl = document.getElementById('auditScoreNum');
+    if (numEl) { numEl.textContent = score; numEl.style.color = color; }
+    const lblEl = document.getElementById('auditScoreLabel');
+    if (lblEl) { lblEl.textContent = label; lblEl.style.color = color; }
+
+    const breakdownEl = document.getElementById('auditScoreBreakdown');
+    if (breakdownEl) {
+      const rows = [
+        { k: 'Savings Rate', v: summary.savingsRate + '%', ok: summary.savingsRate >= 20 },
+        { k: 'MoM Trend',    v: summary.momChange > 0 ? '↑ ' + summary.momChange + '% more' : summary.momChange < 0 ? '↓ ' + Math.abs(summary.momChange) + '% less' : 'No change', ok: summary.momChange <= 0 },
+        { k: 'Transactions', v: summary.txnCount + ' this month', ok: summary.txnCount >= 5 },
+      ];
+      breakdownEl.innerHTML = rows.map(r =>
+        `<div class="audit-score-row-item">
+          <span class="audit-score-pill ${r.ok ? 'ok' : 'bad'}">${r.ok ? '✓' : '!'}</span>
+          <span class="audit-score-key">${r.k}</span>
+          <span class="audit-score-val">${r.v}</span>
+        </div>`
+      ).join('');
+    }
+
+    // ── 6-month spending trend ──
+    const trendEl = document.getElementById('auditTrendBody');
+    if (trendEl && spendTrend && spendTrend.length) {
+      const maxVal = Math.max(...spendTrend.map(d => Math.max(d.expense, d.income)), 1);
+      trendEl.innerHTML = `
+        <div class="audit-trend-chart">
+          ${spendTrend.map(d => {
+            const expH = Math.round((d.expense / maxVal) * 100);
+            const incH = Math.round((d.income  / maxVal) * 100);
+            const isCur = (d.mo === (data.period || ''));
+            return `<div class="audit-trend-col ${isCur ? 'current' : ''}">
+              <div class="audit-trend-bars">
+                <div class="audit-trend-bar income-bar"  style="height:${incH}%" title="Income: ${fmt(d.income)}"></div>
+                <div class="audit-trend-bar expense-bar" style="height:${expH}%" title="Expense: ${fmt(d.expense)}"></div>
+              </div>
+              <div class="audit-trend-label">${d.label}</div>
+            </div>`;
+          }).join('')}
+        </div>
+        <div class="audit-trend-legend">
+          <span class="audit-trend-dot income-dot"></span> Income
+          <span class="audit-trend-dot expense-dot" style="margin-left:12px"></span> Expense
+        </div>`;
+    }
 
     // Period label
     const periodEl = document.getElementById('auditAiPeriod');
@@ -948,7 +1011,7 @@ const App = {
           <div class="audit-cat-row">
             <div style="width:10px;height:10px;border-radius:50%;background:${catColors[i % catColors.length]};flex-shrink:0"></div>
             <div style="flex:1;font-size:13px;font-weight:600;color:var(--text-primary)">${c.category}</div>
-            <div style="font-size:12px;color:var(--text-secondary);min-width:60px;text-align:right">${fmt(c.total)}</div>
+            <div class="audit-num" style="font-size:12px;color:var(--text-secondary);min-width:60px;text-align:right">${fmt(c.total)}</div>
             <div class="audit-cat-bar-track" style="width:80px">
               <div class="audit-cat-bar-fill" style="width:${c.percent}%;background:${catColors[i % catColors.length]}"></div>
             </div>
@@ -967,7 +1030,7 @@ const App = {
                 <div style="font-size:11px;color:var(--text-tertiary)">${t.category} · ${t.date}</div>
               </div>
             </div>
-            <div class="red" style="font-weight:700">${fmt(t.amount)}</div>
+            <div class="red audit-num" style="font-weight:700">${fmt(t.amount)}</div>
           </div>`).join('')
       : '<div style="padding:20px;text-align:center;color:var(--text-tertiary)">No transactions this month</div>';
   },

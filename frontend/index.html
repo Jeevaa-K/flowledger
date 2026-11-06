@@ -1253,6 +1253,42 @@
       <!-- Audit KPI Row -->
       <div class="audit-kpi-row" id="auditKpiRow" style="display:none"></div>
 
+      <!-- Health Score + Spend Trend row -->
+      <div class="audit-score-row" id="auditScoreRow" style="display:none">
+        <!-- Financial Health Score -->
+        <div class="card audit-score-card">
+          <div class="card-header">
+            <div class="card-title">&#127919; Financial Health Score</div>
+          </div>
+          <div class="audit-score-body">
+            <div class="audit-score-ring-wrap">
+              <svg class="audit-score-ring" viewBox="0 0 120 120" width="120" height="120">
+                <circle class="ring-track" cx="60" cy="60" r="50" fill="none" stroke-width="10"/>
+                <circle class="ring-fill" id="auditRingFill" cx="60" cy="60" r="50" fill="none" stroke-width="10"
+                  stroke-dasharray="314" stroke-dashoffset="314" stroke-linecap="round"
+                  transform="rotate(-90 60 60)"/>
+              </svg>
+              <div class="audit-score-num-wrap">
+                <div class="audit-score-num audit-num" id="auditScoreNum">--</div>
+                <div class="audit-score-num-sub">/100</div>
+              </div>
+            </div>
+            <div class="audit-score-info">
+              <div class="audit-score-label" id="auditScoreLabel">—</div>
+              <div class="audit-score-breakdown" id="auditScoreBreakdown"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6-Month Spending Trend -->
+        <div class="card audit-trend-card">
+          <div class="card-header">
+            <div class="card-title">&#128200; 6-Month Spending Trend</div>
+          </div>
+          <div class="audit-trend-body" id="auditTrendBody"></div>
+        </div>
+      </div>
+
       <!-- AI CFO Analysis Card -->
       <div class="card audit-ai-card" id="auditAiCard" style="display:none">
         <div class="card-header">

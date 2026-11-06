@@ -2491,6 +2491,150 @@ body.dark .sub-detect-banner {
 
 /* Privacy mode: blur audit KPI values too */
 body.privacy-mode .audit-kpi-row .kpi-value { filter: blur(6px); user-select: none; }
+body.privacy-mode .audit-num { filter: blur(6px); user-select: none; }
+body.privacy-mode .audit-num:hover { filter: none; }
+body.privacy-mode .audit-score-num { filter: blur(6px); user-select: none; }
+body.privacy-mode .audit-score-num:hover { filter: none; }
+
+/* ─── Audit: Health Score + Trend Row ───────────────────────────────────── */
+.audit-score-row {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 18px;
+  margin-bottom: 22px;
+}
+.audit-score-card, .audit-trend-card { margin-bottom: 0 !important; }
+
+/* Score ring */
+.audit-score-body {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 8px 0 4px;
+}
+.audit-score-ring-wrap {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  flex-shrink: 0;
+}
+.audit-score-ring { overflow: visible; }
+.ring-track { stroke: var(--border-soft, var(--border)); }
+.ring-fill   { stroke: var(--brand); }
+.audit-score-num-wrap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.audit-score-num {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--brand);
+}
+.audit-score-num-sub {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-weight: 600;
+}
+.audit-score-info {
+  flex: 1;
+  min-width: 0;
+}
+.audit-score-label {
+  font-size: 20px;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+.audit-score-row-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 7px;
+  font-size: 12.5px;
+}
+.audit-score-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.audit-score-pill.ok  { background: rgba(16,185,129,.15); color: #10B981; }
+.audit-score-pill.bad { background: rgba(239,68,68,.12);  color: #EF4444; }
+.audit-score-key { color: var(--text-secondary); flex: 1; }
+.audit-score-val { color: var(--text-primary); font-weight: 700; }
+
+/* Trend chart */
+.audit-trend-body { padding: 6px 0 2px; }
+.audit-trend-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 110px;
+  padding: 0 4px 4px;
+}
+.audit-trend-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+}
+.audit-trend-col.current .audit-trend-label {
+  color: var(--brand);
+  font-weight: 800;
+}
+.audit-trend-bars {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  width: 100%;
+  justify-content: center;
+}
+.audit-trend-bar {
+  width: 10px;
+  border-radius: 3px 3px 0 0;
+  min-height: 2px;
+  transition: height 0.7s cubic-bezier(.4,0,.2,1);
+}
+.income-bar  { background: rgba(99,102,241,.55); }
+.expense-bar { background: rgba(239,68,68,.55);  }
+.audit-trend-label {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.audit-trend-legend {
+  display: flex;
+  align-items: center;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  padding: 8px 4px 0;
+}
+.audit-trend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 4px;
+}
+.audit-trend-dot.income-dot  { background: rgba(99,102,241,.8); }
+.audit-trend-dot.expense-dot { background: rgba(239,68,68,.8); }
+
+@media (max-width: 860px) {
+  .audit-score-row { grid-template-columns: 1fr; }
+}
 
 @media (max-width: 860px) {
   .audit-kpi-row  { grid-template-columns: repeat(2, 1fr); }

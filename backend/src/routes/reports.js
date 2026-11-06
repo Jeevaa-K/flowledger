@@ -90,14 +90,30 @@ router.get('/reports/audit', auth, async (req, res) => {
     prevDate.setMonth(prevDate.getMonth() - 1);
     const prevM = prevDate.toISOString().slice(0, 7);
 
+    // Build last-6-months strings for spend trend
+    const trendMonths = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(mDate);
+      d.setMonth(d.getMonth() - i);
+      trendMonths.push(d.toISOString().slice(0, 7));
+    }
+
     // Queries
-    const [incRow, expRow, prevExpRow, cats, topTxns, totalCountRow] = await Promise.all([
+    const [incRow, expRow, prevExpRow, cats, topTxns, totalCountRow, trendRows] = await Promise.all([
       db.get(`SELECT COALESCE(SUM(amount),0) as t FROM transactions WHERE user_id=$1 AND type='income' AND TO_CHAR(date,'YYYY-MM')=$2`, [user.id, m]),
       db.get(`SELECT COALESCE(SUM(amount),0) as t FROM transactions WHERE user_id=$1 AND type='expense' AND TO_CHAR(date,'YYYY-MM')=$2`, [user.id, m]),
       db.get(`SELECT COALESCE(SUM(amount),0) as t FROM transactions WHERE user_id=$1 AND type='expense' AND TO_CHAR(date,'YYYY-MM')=$2`, [user.id, prevM]),
       db.all(`SELECT category, SUM(amount) as total, COUNT(*) as count FROM transactions WHERE user_id=$1 AND type='expense' AND TO_CHAR(date,'YYYY-MM')=$2 GROUP BY category ORDER BY total DESC`, [user.id, m]),
       db.all(`SELECT description, amount, category, date FROM transactions WHERE user_id=$1 AND type='expense' AND TO_CHAR(date,'YYYY-MM')=$2 ORDER BY amount DESC LIMIT 5`, [user.id, m]),
-      db.get(`SELECT COUNT(*) as c FROM transactions WHERE user_id=$1 AND TO_CHAR(date,'YYYY-MM')=$2`, [user.id, m])
+      db.get(`SELECT COUNT(*) as c FROM transactions WHERE user_id=$1 AND TO_CHAR(date,'YYYY-MM')=$2`, [user.id, m]),
+      db.all(
+        `SELECT TO_CHAR(date,'YYYY-MM') as mo,
+                COALESCE(SUM(CASE WHEN type='expense' THEN amount ELSE 0 END),0) as expense,
+                COALESCE(SUM(CASE WHEN type='income'  THEN amount ELSE 0 END),0) as income
+         FROM transactions WHERE user_id=$1 AND TO_CHAR(date,'YYYY-MM') = ANY($2)
+         GROUP BY mo ORDER BY mo ASC`,
+        [user.id, trendMonths]
+      )
     ]);
 
     const income = parseFloat(incRow?.t || 0);
@@ -167,6 +183,34 @@ For ${mName}, your cash flow yielded a net savings of Rs.${netSavings.toLocaleSt
 • **Automate Goal Reserves**: Transfer at least 15% of total income into liquid emergency savings immediately on payday.`;
     }
 
+    // Build trend array filling missing months with 0
+    const trendMap = {};
+    (trendRows || []).forEach(r => { trendMap[r.mo] = { expense: parseFloat(r.expense), income: parseFloat(r.income) }; });
+    const spendTrend = trendMonths.map(mo => {
+      const d = new Date(`${mo}-01T00:00:00Z`);
+      return {
+        label: d.toLocaleString('default', { month: 'short' }),
+        mo,
+        expense: trendMap[mo]?.expense || 0,
+        income: trendMap[mo]?.income || 0
+      };
+    });
+
+    // Financial health score (0–100)
+    let healthScore = 50;
+    if (income > 0) {
+      let s = 0;
+      s += Math.min(savingsRate, 30) * (100 / 30) * 0.35;        // savings rate weight 35%
+      s += (momChange < 0 ? 15 : momChange === 0 ? 10 : Math.max(0, 10 - momChange / 2)) * 0.20; // MoM trend 20%
+      const catConcentration = cats.length > 0 && expense > 0 ? (cats[0].total / expense) : 0;
+      s += (1 - catConcentration) * 100 * 0.15;                  // diversification 15%
+      s += Math.min(parseInt(totalCountRow?.c || 0), 30) / 30 * 100 * 0.10; // activity 10%
+      s += Math.min(savingsRate >= 20 ? 20 : savingsRate, 20) * 1 * 0.20;   // savings rate binary 20%
+      healthScore = Math.round(Math.min(100, Math.max(0, s)));
+    }
+    const healthLabel = healthScore >= 80 ? 'Excellent' : healthScore >= 65 ? 'Good' : healthScore >= 45 ? 'Fair' : 'Needs Work';
+    const healthColor = healthScore >= 80 ? '#10B981' : healthScore >= 65 ? '#6366F1' : healthScore >= 45 ? '#F59E0B' : '#EF4444';
+
     res.json({
       period: m,
       periodName: mName,
@@ -179,6 +223,10 @@ For ${mName}, your cash flow yielded a net savings of Rs.${netSavings.toLocaleSt
         prevExpense,
         momChange
       },
+      healthScore,
+      healthLabel,
+      healthColor,
+      spendTrend,
       byCategory: cats.map(c => ({
         category: c.category,
         total: parseFloat(c.total),
