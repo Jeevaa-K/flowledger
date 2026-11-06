@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -99,7 +99,24 @@
       <span>Subscriptions</span>
     </button>
     <button class="nav-item" data-page="import" data-tooltip="Import CSV" title="Import CSV">
-      <div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+      <div class="nav-icon">
+        <svg viewBox="0 0 512 512" fill="none" stroke="currentColor" stroke-width="32" stroke-linecap="round" stroke-linejoin="round">
+          <!-- page outline -->
+          <path d="M222 40 H92 Q68 40 68 64 V448 Q68 472 92 472 H358 Q376 472 376 454 V446"/>
+          <!-- folded corner -->
+          <path d="M254 44 L378 160 H276 Q254 160 254 138 Z"/>
+          <!-- connector -->
+          <path d="M378 160 V252"/>
+          <!-- label box -->
+          <rect x="156" y="254" width="290" height="160" rx="30"/>
+          <!-- C -->
+          <path d="M247 307 Q239 294 222 294 Q196 294 196 318 V352 Q196 376 222 376 Q239 376 247 363"/>
+          <!-- S -->
+          <path d="M331 308 Q322 294 303 294 Q280 294 280 312 Q280 328 304 334 Q332 340 332 358 Q332 376 306 376 Q287 376 278 362"/>
+          <!-- V -->
+          <path d="M352 294 L382 376 L412 294"/>
+        </svg>
+      </div>
       <span>Import CSV</span>
     </button>
     <button class="nav-item" data-page="reports" data-tooltip="Financial Audit" title="Financial Audit">
@@ -204,7 +221,7 @@
     <section class="page active" id="page-dashboard">
       <div class="page-header">
         <div>
-          <h1 class="page-title">Good <span id="greeting">Day</span> 👋</h1>
+          <h1 class="page-title">Good <span id="greeting">Day</span>, <span id="greetName"></span> 👋</h1>
           <p class="page-sub" id="currentMonthLabel">Loading...</p>
         </div>
         <div class="header-actions">
@@ -222,10 +239,17 @@
       <div class="ai-quick-card" id="aiQuickBar">
         <div class="ai-quick-header">
           <div class="ai-quick-title"><span class="ai-sparkle">✨</span> AI Quick Add</div>
-          <span class="ai-quick-subtitle">Type naturally — e.g. "Spent ₹450 on coffee at Starbucks yesterday"</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <button class="btn-ghost btn-sm" id="btnOpenSmsModal" type="button" title="Paste Bank SMS or UPI payment notification">
+              <span>📱 Paste Bank SMS</span>
+            </button>
+          </div>
+        </div>
+        <div class="ai-quick-subtitle-wrap">
+          <span class="ai-quick-subtitle">Type naturally or paste bank alert SMS (e.g. "Spent ₹450 on coffee" or bank debit notification)</span>
         </div>
         <div class="ai-quick-input-wrap">
-          <input type="text" id="aiQuickInput" placeholder="Enter transaction details..." autocomplete="off" />
+          <input type="text" id="aiQuickInput" placeholder="Enter transaction details or paste bank alert SMS..." autocomplete="off" />
           <button class="voice-mic-btn" id="voiceQuickBtn" type="button" title="Voice Dictation (click to speak)" aria-label="Voice input">
             <svg class="mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
@@ -455,6 +479,7 @@
       <div class="page-header">
         <div><h1 class="page-title">Transactions</h1><p class="page-sub">Manage, search &amp; filter all your income and expenses</p></div>
         <div class="header-actions">
+          <button class="btn-ghost" id="btnScanReceiptTxn" type="button">📷 Scan Receipt</button>
           <button class="btn-ghost" id="exportTxnCsvBtn" type="button" title="Download filtered transactions as CSV">&#11015; Export CSV</button>
           <button class="btn-primary" id="openAddModal">+ Add New</button>
         </div>
@@ -470,14 +495,108 @@
             <button class="txn-search-clear-btn" id="txnClearSearch" style="display:none" title="Clear search">&#10005;</button>
           </div>
           <div class="txn-suite-controls">
-            <select class="filter-select" id="txnSortSelect" aria-label="Sort order">
-              <option value="date_desc">&#128197; Newest First</option>
-              <option value="date_asc">&#128197; Oldest First</option>
-              <option value="amount_desc">&#128176; Highest Amount</option>
-              <option value="amount_asc">&#127991;&#65039; Lowest Amount</option>
-            </select>
+            <!-- Custom Sort Dropdown -->
+            <div class="sort-dropdown" id="sortDropdownWrap">
+              <button class="sort-dropdown-btn" id="txnSortBtn" type="button" aria-haspopup="listbox" aria-expanded="false" title="Change sort order">
+                <span class="sort-btn-icon">
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                  </svg>
+                </span>
+                <span class="sort-btn-label" id="txnSortLabel">Newest First</span>
+                <svg class="sort-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </button>
+              <div class="sort-dropdown-menu" id="txnSortMenu" role="listbox" aria-label="Sort order" style="display:none">
+                <div class="sort-menu-header">Sort Transactions</div>
+                <div class="sort-menu-group">
+                  <button class="sort-option active" role="option" data-sort="date_desc" data-label="Newest First">
+                    <span class="sort-opt-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                        <line x1="16" y1="2" x2="16" y2="6"/>
+                        <line x1="8" y1="2" x2="8" y2="6"/>
+                        <line x1="3" y1="10" x2="21" y2="10"/>
+                      </svg>
+                    </span>
+                    <span class="sort-opt-text">Newest First</span>
+                    <svg class="sort-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  </button>
+
+                  <button class="sort-option" role="option" data-sort="created_desc" data-label="Recently Added">
+                    <span class="sort-opt-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <polyline points="12 6 12 12 16 14"/>
+                      </svg>
+                    </span>
+                    <span class="sort-opt-text">Recently Added</span>
+                    <svg class="sort-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  </button>
+
+                  <button class="sort-option" role="option" data-sort="date_asc" data-label="Oldest First">
+                    <span class="sort-opt-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                        <path d="M3 3v5h5"/>
+                      </svg>
+                    </span>
+                    <span class="sort-opt-text">Oldest First</span>
+                    <svg class="sort-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  </button>
+                </div>
+
+                <div class="sort-menu-divider"></div>
+
+                <div class="sort-menu-group">
+                  <button class="sort-option" role="option" data-sort="amount_desc" data-label="Highest Amount">
+                    <span class="sort-opt-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="19" x2="12" y2="5"/>
+                        <polyline points="5 12 12 5 19 12"/>
+                      </svg>
+                    </span>
+                    <span class="sort-opt-text">Highest Amount</span>
+                    <svg class="sort-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  </button>
+
+                  <button class="sort-option" role="option" data-sort="amount_asc" data-label="Lowest Amount">
+                    <span class="sort-opt-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <polyline points="19 12 12 19 5 12"/>
+                      </svg>
+                    </span>
+                    <span class="sort-opt-text">Lowest Amount</span>
+                    <svg class="sort-opt-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <!-- Hidden native select kept for JS compatibility (getTxnActiveFilters reads its .value) -->
+              <select id="txnSortSelect" aria-hidden="true" style="display:none">
+                <option value="date_desc">Newest First</option>
+                <option value="created_desc">Recently Added</option>
+                <option value="date_asc">Oldest First</option>
+                <option value="amount_desc">Highest Amount</option>
+                <option value="amount_asc">Lowest Amount</option>
+              </select>
+            </div>
             <button class="btn-ghost" id="toggleAdvFiltersBtn" type="button">
-              <span>&#9881;&#65039; Filters</span>
+              <span>⚙️ Filters</span>
               <span class="adv-badge" id="advFilterBadge" style="display:none">0</span>
             </button>
           </div>
@@ -875,53 +994,157 @@
         </div>
       </div>
 
-      <!-- Auto-Detect Banner -->
-      <div class="sub-detect-banner" id="subDetectBanner" style="display:none">
-        <div class="sub-detect-left">
-          <span class="sub-detect-icon">✨</span>
-          <div>
-            <div class="sub-detect-title" id="subDetectTitle">AI found potential recurring subscriptions</div>
-            <div class="sub-detect-sub" id="subDetectSub">Review detected recurring expenses to track auto-debits and renewal dates.</div>
+      <!-- View Switcher -->
+      <div class="sub-view-switch-bar">
+        <div class="sub-view-tabs">
+          <button class="sub-tab-btn active" id="subTabCalendar" data-tab="calendar" type="button">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <span>Renewal Calendar &amp; Cashflow</span>
+          </button>
+          <button class="sub-tab-btn" id="subTabList" data-tab="list" type="button">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            <span>Subscriptions List &amp; Timeline</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- SECTION 1: CALENDAR & CASHFLOW FORECAST (Sleek Compact Hub) -->
+      <div id="subCalendarSection">
+        <div class="card sub-hub-card">
+          <!-- Hub Header: Month Nav & Real-Time Cashflow Bar -->
+          <div class="sub-hub-header">
+            <div class="sub-cal-nav">
+              <button class="sub-cal-nav-btn" id="subCalPrevMonth" title="Previous Month" type="button">&#8249;</button>
+              <div class="sub-cal-title" id="calMonthYearDisplay">November 2026</div>
+              <button class="sub-cal-nav-btn" id="subCalNextMonth" title="Next Month" type="button">&#8250;</button>
+              <button class="sub-cal-today-btn" id="subCalTodayBtn" type="button">Today</button>
+            </div>
+
+            <!-- Compact Cashflow Snapshot Badges -->
+            <div class="sub-hub-kpis">
+              <div class="hub-kpi-chip" title="Expected Recurring Inflows">
+                <span class="hub-kpi-dot income"></span>
+                <span class="hub-kpi-lbl">Inflow:</span>
+                <strong class="hub-kpi-val income" id="calForecastIncome">₹0</strong>
+              </div>
+              <div class="hub-kpi-chip" title="Committed Subscriptions & Bills">
+                <span class="hub-kpi-dot expense"></span>
+                <span class="hub-kpi-lbl">Committed:</span>
+                <strong class="hub-kpi-val expense" id="calForecastBills">₹0</strong>
+              </div>
+              <div class="hub-kpi-chip" title="Net Monthly Cashflow Buffer">
+                <span class="hub-kpi-dot net"></span>
+                <span class="hub-kpi-lbl">Net:</span>
+                <strong class="hub-kpi-val" id="calForecastNet">₹0</strong>
+              </div>
+              <div class="hub-kpi-chip" title="Pending Bills from Today to Month-end">
+                <span class="hub-kpi-dot pending"></span>
+                <span class="hub-kpi-lbl">Pending:</span>
+                <strong class="hub-kpi-val pending" id="calForecastPending">₹0</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Commitment Runway Progress Bar -->
+          <div class="sub-hub-runway">
+            <div class="sub-runway-header">
+              <span id="calCommitmentLabel">Recurring Commitment Rate</span>
+              <span id="calCommitmentText" style="color:var(--brand);font-weight:700">0% committed</span>
+            </div>
+            <div class="sub-runway-track">
+              <div class="sub-runway-fill" id="calCommitmentBar" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <!-- Modern Split View: Compact Mini-Calendar (Left) + Renewal Action Feed (Right) -->
+          <div class="sub-hub-body">
+            <!-- Left: Mini Month Calendar Picker -->
+            <div class="sub-hub-left">
+              <div class="mini-cal-card">
+                <div class="mini-cal-weekdays">
+                  <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+                </div>
+                <div class="mini-cal-grid" id="subCalendarGrid"></div>
+              </div>
+
+              <div class="mini-cal-footer">
+                <div class="mini-cal-legend">
+                  <span><span class="mini-dot expense"></span> Bill</span>
+                  <span><span class="mini-dot income"></span> Income</span>
+                  <span><span class="mini-dot today"></span> Today</span>
+                </div>
+                <button class="mini-all-btn active" id="subCalShowAllBtn" type="button">All Month</button>
+              </div>
+            </div>
+
+            <!-- Right: Interactive Feed / Selected Day Schedule -->
+            <div class="sub-hub-right">
+              <div class="sub-feed-header">
+                <div>
+                  <div class="sub-feed-title" id="subFeedTitle">November 2026 Commitments</div>
+                  <div class="sub-feed-sub" id="subFeedSub">Showing all scheduled bills &amp; income for this month</div>
+                </div>
+                <span class="sub-feed-badge" id="subFeedCount">0 items</span>
+              </div>
+
+              <div class="sub-feed-list" id="subFeedList">
+                <!-- Dynamically populated with renewal action items -->
+              </div>
+            </div>
           </div>
         </div>
-        <div class="sub-detect-actions">
-          <button class="pill-btn active" id="viewDetectedSubsBtn" type="button">Review (0)</button>
-          <button class="pill-btn" id="dismissDetectedSubsBtn" type="button">✕</button>
-        </div>
       </div>
 
-      <!-- Detected Subscriptions Drawer/Grid -->
-      <div class="card sub-detected-card" id="subDetectedCard" style="display:none">
-        <div class="card-header">
-          <div class="card-title">✨ Detected Subscriptions from Spending History</div>
-          <button class="pill-btn" id="closeDetectedCardBtn" type="button">Close</button>
-        </div>
-        <div class="sub-detected-grid" id="subDetectedGrid"></div>
-      </div>
-
-      <!-- Upcoming Renewals Timeline Carousel -->
-      <div class="card sub-timeline-card">
-        <div class="card-header">
-          <div class="card-title">Upcoming Renewals</div>
-          <span class="card-sub-hint">Sorted by next auto-renewal date</span>
-        </div>
-        <div class="sub-renewals-strip" id="subRenewalsStrip">
-          <div class="sub-empty-hint">No subscriptions due soon</div>
-        </div>
-      </div>
-
-      <!-- Main Subscription List -->
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">All Subscriptions & Recurring</div>
-          <div class="card-actions">
-            <button class="pill-btn active" data-sub-filter="all">All</button>
-            <button class="pill-btn" data-sub-filter="expense">Subscriptions</button>
-            <button class="pill-btn" data-sub-filter="income">Income / Salary</button>
-            <button class="pill-btn" data-sub-filter="paused">Paused</button>
+      <!-- SECTION 2: SUBSCRIPTIONS & TIMELINE LIST -->
+      <div id="subListSection" style="display:none">
+        <!-- Auto-Detect Banner -->
+        <div class="sub-detect-banner" id="subDetectBanner" style="display:none">
+          <div class="sub-detect-left">
+            <span class="sub-detect-icon">✨</span>
+            <div>
+              <div class="sub-detect-title" id="subDetectTitle">AI found potential recurring subscriptions</div>
+              <div class="sub-detect-sub" id="subDetectSub">Review detected recurring expenses to track auto-debits and renewal dates.</div>
+            </div>
+          </div>
+          <div class="sub-detect-actions">
+            <button class="pill-btn active" id="viewDetectedSubsBtn" type="button">Review (0)</button>
+            <button class="pill-btn" id="dismissDetectedSubsBtn" type="button">✕</button>
           </div>
         </div>
-        <div class="txn-list" id="recurringList"></div>
+
+        <!-- Detected Subscriptions Drawer/Grid -->
+        <div class="card sub-detected-card" id="subDetectedCard" style="display:none">
+          <div class="card-header">
+            <div class="card-title">✨ Detected Subscriptions from Spending History</div>
+            <button class="pill-btn" id="closeDetectedCardBtn" type="button">Close</button>
+          </div>
+          <div class="sub-detected-grid" id="subDetectedGrid"></div>
+        </div>
+
+        <!-- Upcoming Renewals Timeline Carousel -->
+        <div class="card sub-timeline-card">
+          <div class="card-header">
+            <div class="card-title">Upcoming Renewals</div>
+            <span class="card-sub-hint">Sorted by next auto-renewal date</span>
+          </div>
+          <div class="sub-renewals-strip" id="subRenewalsStrip">
+            <div class="sub-empty-hint">No subscriptions due soon</div>
+          </div>
+        </div>
+
+        <!-- Main Subscription List -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">All Subscriptions &amp; Recurring</div>
+            <div class="card-actions">
+              <button class="pill-btn active" data-sub-filter="all">All</button>
+              <button class="pill-btn" data-sub-filter="expense">Subscriptions</button>
+              <button class="pill-btn" data-sub-filter="income">Income / Salary</button>
+              <button class="pill-btn" data-sub-filter="paused">Paused</button>
+            </div>
+          </div>
+          <div class="txn-list" id="recurringList"></div>
+        </div>
       </div>
     </section>
 
@@ -929,13 +1152,52 @@
     <section class="page" id="page-import">
       <button class="mobile-back-btn" data-action="goto-dashboard">← Back</button>
       <div class="page-header">
-        <div><h1 class="page-title">Import CSV</h1><p class="page-sub">Import transactions from your bank statement</p></div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <svg viewBox="0 0 512 512" width="34" height="34" style="flex-shrink:0">
+            <defs>
+              <linearGradient id="csvHeadGrad" gradientUnits="userSpaceOnUse" x1="60" y1="40" x2="450" y2="470">
+                <stop offset="0" stop-color="#7a00ff"/>
+                <stop offset="0.55" stop-color="#b800ff"/>
+                <stop offset="1" stop-color="#e400ff"/>
+              </linearGradient>
+            </defs>
+            <g fill="none" stroke="url(#csvHeadGrad)" stroke-width="24" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M222 40 H92 Q68 40 68 64 V448 Q68 472 92 472 H358 Q376 472 376 454 V446"/>
+              <path d="M254 44 L378 160 H276 Q254 160 254 138 Z"/>
+              <path d="M378 160 V252"/>
+              <rect x="156" y="254" width="290" height="160" rx="30"/>
+              <path d="M247 307 Q239 294 222 294 Q196 294 196 318 V352 Q196 376 222 376 Q239 376 247 363"/>
+              <path d="M331 308 Q322 294 303 294 Q280 294 280 312 Q280 328 304 334 Q332 340 332 358 Q332 376 306 376 Q287 376 278 362"/>
+              <path d="M352 294 L382 376 L412 294"/>
+            </g>
+          </svg>
+          <div><h1 class="page-title">Import CSV</h1><p class="page-sub">Import transactions from your bank statement</p></div>
+        </div>
       </div>
       <div class="card" style="margin-bottom:16px">
         <div class="card-header"><div class="card-title">Upload CSV File</div></div>
         <div class="csv-dropzone" id="csvDropzone">
-          <div class="dropzone-icon">📂</div>
-          <div class="dropzone-text">Drag & drop your CSV file here, or click to browse</div>
+          <div class="dropzone-icon" style="display:flex;justify-content:center;margin-bottom:12px">
+            <svg viewBox="0 0 512 512" width="60" height="60" style="display:block">
+              <defs>
+                <linearGradient id="csvDropGrad" gradientUnits="userSpaceOnUse" x1="60" y1="40" x2="450" y2="470">
+                  <stop offset="0" stop-color="#7a00ff"/>
+                  <stop offset="0.55" stop-color="#b800ff"/>
+                  <stop offset="1" stop-color="#e400ff"/>
+                </linearGradient>
+              </defs>
+              <g fill="none" stroke="url(#csvDropGrad)" stroke-width="20" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M222 40 H92 Q68 40 68 64 V448 Q68 472 92 472 H358 Q376 472 376 454 V446"/>
+                <path d="M254 44 L378 160 H276 Q254 160 254 138 Z"/>
+                <path d="M378 160 V252"/>
+                <rect x="156" y="254" width="290" height="160" rx="30"/>
+                <path d="M247 307 Q239 294 222 294 Q196 294 196 318 V352 Q196 376 222 376 Q239 376 247 363"/>
+                <path d="M331 308 Q322 294 303 294 Q280 294 280 312 Q280 328 304 334 Q332 340 332 358 Q332 376 306 376 Q287 376 278 362"/>
+                <path d="M352 294 L382 376 L412 294"/>
+              </g>
+            </svg>
+          </div>
+          <div class="dropzone-text"><strong>Click to upload</strong> or drag & drop your CSV file here</div>
           <div class="dropzone-sub">Supports: date, description, amount, type, category columns</div>
         </div>
         <input type="file" id="csvFileInput" accept=".csv" style="display:none" />
@@ -1057,10 +1319,36 @@
         <label>Date</label>
         <input type="date" id="txnDate" />
       </div>
-      <div class="form-group span2">
+
+      <div class="form-group span2" style="margin-top:-6px;margin-bottom:-2px">
+        <button type="button" class="btn-ghost btn-sm" id="btnToggleSplit" style="display:inline-flex;align-items:center;gap:6px">
+          <span>✂️ Split into Multiple Categories</span>
+        </button>
+      </div>
+
+      <!-- Single Category Picker (Default) -->
+      <div class="form-group span2" id="singleCategorySection">
         <label>Category</label>
         <div class="cat-picker" id="catPicker"></div>
         <select id="txnCategory" style="display:none"></select>
+      </div>
+
+      <!-- Split Category Section (Collapsible) -->
+      <div class="form-group span2" id="splitCategorySection" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <label style="margin-bottom:0">Category Splits</label>
+          <button type="button" class="btn-link" id="btnCancelSplit" style="font-size:12px;color:var(--expense)">✕ Cancel Split</button>
+        </div>
+        <div id="splitRowsContainer" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
+          <!-- Dynamic split rows inserted here -->
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+          <button type="button" class="btn-ghost btn-sm" id="btnAddSplitRow">+ Add Category</button>
+          <div class="split-balance-pill" id="splitBalancePill" style="font-size:12px;font-weight:600;padding:5px 12px;border-radius:var(--r-full);background:var(--surface-sunken);border:1px solid var(--border)">
+            Allocated: <span id="splitAllocatedText">₹0</span> / <span id="splitTotalText">₹0</span>
+            (<span id="splitRemainingText">Remaining: ₹0</span>)
+          </div>
+        </div>
       </div>
       <div class="form-group span2">
         <label>Account</label>
@@ -1166,6 +1454,103 @@
   </div>
 </div>
 
+<!-- ADD SAVINGS TO GOAL MODAL -->
+<div class="modal-overlay" id="addSavingsModal" role="dialog" aria-modal="true" aria-labelledby="addSavingsTitle">
+  <div class="modal" style="max-width: 480px">
+    <div class="modal-header">
+      <div class="modal-icon" style="background:var(--income-tint, rgba(16,185,129,0.12));color:var(--income,#10b981);border:1px solid var(--income-border, rgba(16,185,129,0.3))">💰</div>
+      <div>
+        <h2 class="modal-title" id="addSavingsTitle">Add Savings to Goal</h2>
+        <p style="font-size:12px;color:var(--text-tertiary);margin-top:2px" id="addSavingsSub">Deposit money into your target savings fund</p>
+      </div>
+      <button class="modal-close" id="closeAddSavingsModal" type="button">×</button>
+    </div>
+
+    <!-- Deposit / Withdraw Mode Toggle -->
+    <div class="type-toggle" style="margin-bottom: 14px">
+      <button type="button" class="type-btn active-income" id="asTypeDeposit" data-as-mode="deposit">+ Deposit Savings</button>
+      <button type="button" class="type-btn" id="asTypeWithdraw" data-as-mode="withdraw">- Withdraw Funds</button>
+    </div>
+
+    <!-- Goal Hero Status Card -->
+    <div class="savings-goal-preview" style="background:var(--surface-sunken);border:1px solid var(--border);border-radius:var(--r-md);padding:14px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div style="font-weight:700;font-size:15px;color:var(--text-primary)" id="asGoalName">Goal Name</div>
+        <span class="sub-kpi-tag" id="asGoalPercent">0% reached</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-secondary);margin-bottom:8px">
+        <span>Saved: <strong class="as-val" id="asGoalSaved">₹0</strong></span>
+        <span>Target: <strong class="as-val" id="asGoalTarget">₹0</strong></span>
+      </div>
+      <!-- Mini Progress Track -->
+      <div style="width:100%;height:8px;background:var(--surface);border-radius:var(--r-full);overflow:hidden;border:1px solid var(--border);position:relative">
+        <div id="asProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg, var(--brand) 0%, var(--income) 100%);border-radius:var(--r-full);transition:width 0.3s ease"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:11.5px">
+        <span style="color:var(--text-tertiary)"><span class="as-val" id="asGoalRemaining">₹0</span> to reach goal</span>
+        <span style="color:var(--brand);font-weight:700" id="asProjectedNewPercent"></span>
+      </div>
+    </div>
+
+    <!-- Form Fields -->
+    <div class="form-grid">
+      <!-- Deposit Amount -->
+      <div class="form-group span2">
+        <label id="asAmountLabel">Amount to Add (₹)</label>
+        <div class="input-prefix">
+          <span>₹</span>
+          <input type="number" id="asAmount" placeholder="0.00" min="1" step="any" autofocus />
+        </div>
+      </div>
+
+      <!-- Quick Preset Chips -->
+      <div class="form-group span2" style="margin-top:-6px;margin-bottom:4px">
+        <div style="display:flex;gap:6px;flex-wrap:wrap" id="asQuickChips">
+          <button type="button" class="pill-btn as-chip" data-amt="500">+₹500</button>
+          <button type="button" class="pill-btn as-chip" data-amt="1000">+₹1,000</button>
+          <button type="button" class="pill-btn as-chip" data-amt="5000">+₹5,000</button>
+          <button type="button" class="pill-btn as-chip" id="asFillRemainingBtn">Full Remaining</button>
+        </div>
+      </div>
+
+      <!-- Source Account (Deduct from balance) -->
+      <div class="form-group span2">
+        <label id="asAccountLabel">Deduct From Account</label>
+        <select id="asSourceAccount"></select>
+      </div>
+
+      <!-- Date -->
+      <div class="form-group span2">
+        <label>Contribution Date</label>
+        <input type="date" id="asDate" />
+      </div>
+
+      <!-- Note / Transaction Description -->
+      <div class="form-group span2">
+        <label>Note / Description (Optional)</label>
+        <input type="text" id="asNote" placeholder="e.g. Monthly savings contribution, bonus" />
+      </div>
+
+      <!-- Toggle: Log as Transaction -->
+      <div class="form-group span2" style="margin-top:2px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;color:var(--text-primary);font-weight:500">
+          <input type="checkbox" id="asLogTxn" checked style="width:16px;height:16px;accent-color:var(--brand);cursor:pointer" />
+          <span id="asLogTxnLabel">Record as a "Savings / Investment" expense transaction</span>
+        </label>
+        <p style="font-size:11px;color:var(--text-tertiary);margin:3px 0 0 24px" id="asLogTxnHint">
+          Deducts from the selected account and reflects in your analytics &amp; spending reports.
+        </p>
+      </div>
+    </div>
+
+    <input type="hidden" id="asGoalId" />
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">
+      <button type="button" class="btn-ghost" id="asCancelBtn">Cancel</button>
+      <button type="button" class="btn-primary" id="asSubmitBtn">Deposit Savings</button>
+    </div>
+  </div>
+</div>
+
 
 <!-- RECURRING MODAL -->
 <div class="modal-overlay" id="recurringModal" role="dialog" aria-modal="true" aria-labelledby="recurringModalTitle">
@@ -1212,6 +1597,34 @@
       </div>
     </div>
     <button class="btn-primary full" id="saveRecurringBtn">Save Recurring</button>
+  </div>
+</div>
+
+<!-- DAY BREAKDOWN MODAL -->
+<div class="modal-overlay" id="subDayModal" role="dialog" aria-modal="true" aria-labelledby="subDayModalTitle">
+  <div class="modal" style="max-width: 490px">
+    <div class="modal-header">
+      <div class="modal-icon">📅</div>
+      <div>
+        <h2 class="modal-title" id="subDayModalTitle">Renewals for Date</h2>
+        <p style="font-size:12px;color:var(--text-tertiary);margin-top:2px" id="subDayModalSub">Scheduled recurring events</p>
+      </div>
+      <button class="modal-close" id="closeSubDayModal" type="button">×</button>
+    </div>
+
+    <div style="background:var(--surface-sunken);border:1px solid var(--border);border-radius:var(--r-md);padding:12px 16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center" id="subDaySummaryBox">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase">Net Day Commitments</div>
+        <div style="font-size:18px;font-weight:800;color:var(--text-primary);margin-top:2px" id="subDayTotalAmount">₹0</div>
+      </div>
+      <span class="sub-kpi-tag" id="subDayCountTag">0 renewals</span>
+    </div>
+
+    <div id="subDayItemsList" style="max-height:360px;overflow-y:auto;display:flex;flex-direction:column;gap:10px"></div>
+
+    <div style="margin-top:18px;display:flex;justify-content:flex-end">
+      <button class="btn-ghost" id="subDayCloseBtn" type="button">Close</button>
+    </div>
   </div>
 </div>
 
@@ -1458,7 +1871,70 @@
   </div>
 </div>
 
-<!-- CREATE GROUP MODAL -->
+<!-- BANK SMS & UPI ALERT PARSER MODAL -->
+<div class="modal-overlay" id="smsParserModal" role="dialog" aria-modal="true" aria-labelledby="smsParserModalTitle">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-icon">📱</div>
+      <h2 class="modal-title" id="smsParserModalTitle">Bank SMS &amp; UPI Instant Parser</h2>
+      <button class="modal-close" id="closeSmsModal" type="button">×</button>
+    </div>
+    
+    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:14px;line-height:1.5">
+      Paste any bank debit/credit alert or UPI notification (HDFC, SBI, ICICI, Axis, PhonePe, GPay, Paytm). FlowLedger AI will extract the amount, merchant, matching account, date, and category in seconds.
+    </p>
+
+    <!-- Quick test samples chips -->
+    <div style="margin-bottom:12px">
+      <div style="font-size:11px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Quick Test Samples (Click to test):</div>
+      <div class="sms-sample-chips" id="smsSampleChips" style="display:flex;flex-wrap:wrap;gap:6px">
+        <button type="button" class="quick-chip sms-chip" data-sample="HDFC Bank: Rs 450.00 debited from A/c **1234 on 06-Nov-26 to SWIGGY. Ref: 4312456789. Avl Bal: Rs 14,200.00">🍔 HDFC ₹450 Swiggy</button>
+        <button type="button" class="quick-chip sms-chip" data-sample="Your A/C XXXXXX9876 debited by Rs.1200.00 on 05Nov26 by UPI/345678/Zomato/SBI/pay.">🍕 SBI ₹1,200 Zomato UPI</button>
+        <button type="button" class="quick-chip sms-chip" data-sample="Acct XX567 credited with Rs 50,000.00 on 01-Nov-26 by Salary. Avail Bal INR 85,000.">💰 ICICI ₹50,000 Salary</button>
+        <button type="button" class="quick-chip sms-chip" data-sample="Alert: Your Axis Bank Credit Card ending in 4432 was used for INR 2,499.00 at AMAZON INDIA on 04-Nov-26.">🛍️ Axis ₹2,499 Amazon</button>
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <label for="smsInputText" style="font-size:11.5px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em">Paste SMS / UPI Message</label>
+        <button type="button" class="btn-link" id="btnPasteFromClipboard" style="font-size:12px">📋 Paste from Clipboard</button>
+      </div>
+      <textarea id="smsInputText" rows="4" placeholder="Paste bank SMS here... (e.g. 'Rs 450.00 debited from a/c **1234 on 06-Nov to Swiggy')" style="width:100%;box-sizing:border-box;font-family:inherit;line-height:1.45;resize:vertical"></textarea>
+    </div>
+
+    <!-- Extraction Result Card -->
+    <div id="smsStatusArea" style="margin-bottom:16px;display:none">
+      <div class="ai-scan-loader" id="smsLoader" style="display:none;padding:12px 0">
+        <span class="spinner"></span> <span>AI analyzing bank notification...</span>
+      </div>
+      <div class="receipt-result-card" id="smsResultCard" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div class="res-title" style="margin-bottom:0">✨ Extracted Transaction Data</div>
+          <span id="smsTypeBadge" class="res-badge" style="background:var(--expense-tint);color:var(--expense)">Expense</span>
+        </div>
+        <div class="res-grid">
+          <div class="res-item"><span class="res-lbl">Merchant / Purpose</span> <strong id="smsResMerchant">-</strong></div>
+          <div class="res-item"><span class="res-lbl">Amount</span> <strong id="smsResAmount" class="red">-</strong></div>
+          <div class="res-item"><span class="res-lbl">Category</span> <span id="smsResCategory" class="res-badge">-</span></div>
+          <div class="res-item"><span class="res-lbl">Date</span> <span id="smsResDate" style="font-weight:600;color:var(--text-primary)">-</span></div>
+        </div>
+        <div id="smsExtraMeta" style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--border);display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--text-secondary)">
+          <div id="smsResAccountWrap"><strong>Account:</strong> <span id="smsResAccount">Not detected</span></div>
+          <div id="smsResRefWrap" style="display:none"><strong>Ref No:</strong> <span id="smsResRef">-</span></div>
+          <div id="smsResBalWrap" style="display:none"><strong>Remaining Bal:</strong> <span id="smsResBal">-</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
+      <button class="btn-ghost" id="cancelSmsBtn" type="button" style="flex:1">Cancel</button>
+      <button class="btn-primary" id="btnExtractSms" type="button" style="flex:1">✨ Extract Data</button>
+      <button class="btn-ghost" id="btnOpenSmsInForm" type="button" style="display:none;flex:1">Review in Form →</button>
+      <button class="btn-primary" id="btnSaveSmsDirect" type="button" style="display:none;flex:1">⚡ Save Directly</button>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay" id="groupModal" role="dialog" aria-modal="true" aria-labelledby="groupModalTitle">
   <div class="modal">
     <div class="modal-header">

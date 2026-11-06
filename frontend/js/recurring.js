@@ -4,6 +4,17 @@ const Recurring = {
   detected: [],
   initialized: false,
 
+  // Calendar State
+  calYear: new Date().getFullYear(),
+  calMonth: new Date().getMonth(), // 0-indexed (0=Jan, 11=Dec)
+  selectedDay: null, // null = All Month, or integer 1..31 for specific day
+  activeTab: 'calendar',
+
+  MONTH_NAMES: [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ],
+
   SERVICE_ICONS: {
     'netflix':     { icon: '🎬', color: '#E50914' },
     'spotify':     { icon: '🎵', color: '#1DB954' },
@@ -12,7 +23,7 @@ const Recurring = {
     'youtube':     { icon: '▶️', color: '#FF0000' },
     'hotstar':     { icon: '⭐', color: '#0C111B' },
     'disney':      { icon: '🏰', color: '#113CCF' },
-    'apple':       { icon: '🍎', color: '#A2AAAD' },
+    'apple':       { icon: '🍏', color: '#A2AAAD' },
     'icloud':      { icon: '☁️', color: '#3B82F6' },
     'google':      { icon: '🔍', color: '#4285F4' },
     'gym':         { icon: '💪', color: '#EC4899' },
@@ -45,7 +56,29 @@ const Recurring = {
     if (this.initialized) return;
     this.initialized = true;
 
-    // Filter pills in page-recurring
+    // View tab switching
+    const tabCal = document.getElementById('subTabCalendar');
+    const tabList = document.getElementById('subTabList');
+    tabCal?.addEventListener('click', () => this.switchTab('calendar'));
+    tabList?.addEventListener('click', () => this.switchTab('list'));
+
+    // Calendar navigation
+    document.getElementById('subCalPrevMonth')?.addEventListener('click', () => this.prevMonth());
+    document.getElementById('subCalNextMonth')?.addEventListener('click', () => this.nextMonth());
+    document.getElementById('subCalTodayBtn')?.addEventListener('click', () => this.resetToToday());
+    document.getElementById('subCalShowAllBtn')?.addEventListener('click', () => {
+      this.selectedDay = null;
+      this.renderCalendar();
+    });
+
+    // Day Breakdown Modal close handlers (if used)
+    document.getElementById('closeSubDayModal')?.addEventListener('click', () => this.closeDayModal());
+    document.getElementById('subDayCloseBtn')?.addEventListener('click', () => this.closeDayModal());
+    document.getElementById('subDayModal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'subDayModal') this.closeDayModal();
+    });
+
+    // Filter pills in page-recurring (List view)
     document.querySelectorAll('[data-sub-filter]').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('[data-sub-filter]').forEach(b => b.classList.remove('active'));
@@ -84,11 +117,66 @@ const Recurring = {
     });
   },
 
+  switchTab(tab) {
+    this.activeTab = tab;
+    const tabCal = document.getElementById('subTabCalendar');
+    const tabList = document.getElementById('subTabList');
+    const secCal = document.getElementById('subCalendarSection');
+    const secList = document.getElementById('subListSection');
+
+    if (tab === 'calendar') {
+      tabCal?.classList.add('active');
+      tabList?.classList.remove('active');
+      if (secCal) secCal.style.display = 'block';
+      if (secList) secList.style.display = 'none';
+      this.renderCalendar();
+    } else {
+      tabList?.classList.add('active');
+      tabCal?.classList.remove('active');
+      if (secList) secList.style.display = 'block';
+      if (secCal) secCal.style.display = 'none';
+      this.renderList();
+    }
+  },
+
+  prevMonth() {
+    this.calMonth--;
+    if (this.calMonth < 0) {
+      this.calMonth = 11;
+      this.calYear--;
+    }
+    this.selectedDay = null;
+    this.renderCalendar();
+  },
+
+  nextMonth() {
+    this.calMonth++;
+    if (this.calMonth > 11) {
+      this.calMonth = 0;
+      this.calYear++;
+    }
+    this.selectedDay = null;
+    this.renderCalendar();
+  },
+
+  resetToToday() {
+    const now = new Date();
+    this.calYear = now.getFullYear();
+    this.calMonth = now.getMonth();
+    this.selectedDay = now.getDate();
+    this.renderCalendar();
+  },
+
+  closeDayModal() {
+    document.getElementById('subDayModal')?.classList.remove('open');
+  },
+
   async load() {
     this.init();
     try {
       this.items = await API.get('/recurring');
       this.updateKPIs();
+      this.renderCalendar();
       this.renderTimeline();
       this.renderList();
       // Check detected in the background silently
@@ -149,6 +237,381 @@ const Recurring = {
       set('subNextService', 'None due soon');
       set('subNextCountdown', 'No renewals');
       set('subNextDetail', 'Next Due Renewal');
+    }
+  },
+
+  /* ─── Recurrence Engine for Any Month ─── */
+  calculateMonthOccurrences(year, month) {
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstDayOfWeek = new Date(year, month, 1).getDay(); // 0=Sun .. 6=Sat
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const occurrencesByDay = {};
+    for (let d = 1; d <= daysInMonth; d++) {
+      occurrencesByDay[d] = [];
+    }
+
+    let totalIncome = 0;
+    let totalBills = 0;
+    let totalBillsCount = 0;
+    let pendingDue = 0;
+
+    for (const r of this.items) {
+      const amt = parseFloat(r.amount) || 0;
+      if (!r.next_date || amt <= 0) continue;
+
+      const [ny, nm, nd] = r.next_date.split('-').map(Number);
+      const itemDays = [];
+
+      if (r.frequency === 'monthly') {
+        const targetDay = Math.min(nd, daysInMonth);
+        itemDays.push(targetDay);
+      } else if (r.frequency === 'yearly') {
+        if ((nm - 1) === month) {
+          const targetDay = Math.min(nd, daysInMonth);
+          itemDays.push(targetDay);
+        }
+      } else if (r.frequency === 'weekly') {
+        const dow = new Date(ny, nm - 1, nd).getDay();
+        for (let d = 1; d <= daysInMonth; d++) {
+          if (new Date(year, month, d).getDay() === dow) {
+            itemDays.push(d);
+          }
+        }
+      } else if (r.frequency === 'daily') {
+        for (let d = 1; d <= daysInMonth; d++) {
+          itemDays.push(d);
+        }
+      }
+
+      for (const d of itemDays) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const occDate = new Date(year, month, d);
+        occDate.setHours(0, 0, 0, 0);
+        const diffDays = Math.round((occDate - today) / (1000 * 60 * 60 * 24));
+        const isToday = (diffDays === 0);
+        const isPast = (diffDays < 0);
+        const isDueSoon = (diffDays > 0 && diffDays <= 3);
+
+        occurrencesByDay[d].push({
+          item: r,
+          dateStr,
+          day: d,
+          diffDays,
+          isToday,
+          isPast,
+          isDueSoon
+        });
+
+        if (r.active) {
+          if (r.type === 'income') {
+            totalIncome += amt;
+          } else {
+            totalBills += amt;
+            totalBillsCount++;
+            if (!isPast) {
+              pendingDue += amt;
+            }
+          }
+        }
+      }
+    }
+
+    const netCashflow = totalIncome - totalBills;
+    const commitmentRatio = totalIncome > 0
+      ? Math.min(100, Math.round((totalBills / totalIncome) * 100))
+      : (totalBills > 0 ? 100 : 0);
+
+    return {
+      daysInMonth,
+      firstDayOfWeek,
+      occurrencesByDay,
+      stats: {
+        totalIncome,
+        totalBills,
+        totalBillsCount,
+        netCashflow,
+        pendingDue,
+        commitmentRatio
+      }
+    };
+  },
+
+  /* ─── Render Sleek Mini-Calendar & Dynamic Feed ─── */
+  renderCalendar() {
+    const gridEl = document.getElementById('subCalendarGrid');
+    if (!gridEl) return;
+
+    const { daysInMonth, firstDayOfWeek, occurrencesByDay, stats } = this.calculateMonthOccurrences(this.calYear, this.calMonth);
+
+    // 1. Update Month Header Title
+    const monthTitleEl = document.getElementById('calMonthYearDisplay');
+    if (monthTitleEl) {
+      monthTitleEl.textContent = `${this.MONTH_NAMES[this.calMonth]} ${this.calYear}`;
+    }
+
+    // 2. Update Forecast KPI Badges
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    set('calForecastIncome', `+${fmt(Math.round(stats.totalIncome))}`);
+    set('calForecastBills', `-${fmt(Math.round(stats.totalBills))}`);
+
+    const netEl = document.getElementById('calForecastNet');
+    if (netEl) {
+      const isPositive = stats.netCashflow >= 0;
+      netEl.textContent = `${isPositive ? '+' : ''}${fmt(Math.round(stats.netCashflow))}`;
+      netEl.className = `hub-kpi-val ${isPositive ? 'income' : 'expense'}`;
+    }
+
+    set('calForecastPending', fmt(Math.round(stats.pendingDue)));
+
+    // 3. Update Runway Commitment Bar
+    const barEl = document.getElementById('calCommitmentBar');
+    const textEl = document.getElementById('calCommitmentText');
+    if (barEl) barEl.style.width = `${stats.commitmentRatio}%`;
+    if (textEl) {
+      if (stats.totalIncome > 0) {
+        const badge = stats.commitmentRatio <= 30
+          ? '🟢 Healthy (<30%)'
+          : stats.commitmentRatio <= 50
+          ? '🟡 Moderate'
+          : '⚠️ High ratio (>50%)';
+        textEl.textContent = `${stats.commitmentRatio}% of income committed · ${badge}`;
+      } else {
+        textEl.innerHTML = stats.totalBills > 0 ? `<span class="hub-kpi-val expense">${fmt(stats.totalBills)}</span> monthly commitments` : 'No commitments scheduled';
+      }
+    }
+
+    // 4. Update "All Month" Button Active State
+    const allBtn = document.getElementById('subCalShowAllBtn');
+    if (allBtn) {
+      if (this.selectedDay === null) allBtn.classList.add('active');
+      else allBtn.classList.remove('active');
+    }
+
+    // 5. Build Mini Calendar Grid (7 columns x 5-6 rows of compact 36px cells)
+    const today = new Date();
+    const isCurrentViewingMonth = (today.getFullYear() === this.calYear && today.getMonth() === this.calMonth);
+    const todayDateNum = today.getDate();
+
+    let cellsHtml = '';
+
+    // Trailing days from previous month
+    const prevMonthDays = new Date(this.calYear, this.calMonth, 0).getDate();
+    for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+      const prevD = prevMonthDays - i;
+      cellsHtml += `<div class="mini-day-cell other-month">${prevD}</div>`;
+    }
+
+    // Days of current month
+    for (let d = 1; d <= daysInMonth; d++) {
+      const occurrences = occurrencesByDay[d] || [];
+      const hasExpense = occurrences.some(o => o.item.type === 'expense');
+      const hasIncome = occurrences.some(o => o.item.type === 'income');
+      const isToday = isCurrentViewingMonth && (d === todayDateNum);
+      const isSelected = (this.selectedDay === d);
+
+      let dotsHtml = '';
+      if (hasExpense || hasIncome) {
+        dotsHtml = '<div class="mini-day-dots">';
+        if (hasExpense) dotsHtml += '<span class="mini-dot expense"></span>';
+        if (hasIncome) dotsHtml += '<span class="mini-dot income"></span>';
+        dotsHtml += '</div>';
+      }
+
+      cellsHtml += `
+        <div class="mini-day-cell ${isToday ? 'is-today' : ''} ${isSelected ? 'selected' : ''}"
+             data-mini-day="${d}"
+             title="${occurrences.length ? `${occurrences.length} renewal(s) on ${d} ${this.MONTH_NAMES[this.calMonth]}` : `${d} ${this.MONTH_NAMES[this.calMonth]}`}">
+          <span>${d}</span>
+          ${dotsHtml}
+        </div>
+      `;
+    }
+
+    // Leading days from next month
+    const totalRendered = firstDayOfWeek + daysInMonth;
+    const nextDaysNeeded = (totalRendered % 7 === 0) ? 0 : 7 - (totalRendered % 7);
+    for (let n = 1; n <= nextDaysNeeded; n++) {
+      cellsHtml += `<div class="mini-day-cell other-month">${n}</div>`;
+    }
+
+    gridEl.innerHTML = cellsHtml;
+
+    // Bind click events on mini calendar days
+    gridEl.querySelectorAll('.mini-day-cell[data-mini-day]').forEach(cell => {
+      const d = parseInt(cell.dataset.miniDay);
+      cell.addEventListener('click', () => {
+        if (this.selectedDay === d) {
+          this.selectedDay = null; // Toggle back to all month
+        } else {
+          this.selectedDay = d;
+        }
+        this.renderCalendar();
+      });
+    });
+
+    // 6. Render Dynamic Feed in Right Panel
+    this.renderFeed(occurrencesByDay, stats);
+  },
+
+  /* ─── Render Dynamic Action Feed in Right Panel ─── */
+  renderFeed(occurrencesByDay, stats) {
+    const listEl = document.getElementById('subFeedList');
+    const titleEl = document.getElementById('subFeedTitle');
+    const subEl = document.getElementById('subFeedSub');
+    const countEl = document.getElementById('subFeedCount');
+    if (!listEl) return;
+
+    let itemsToDisplay = [];
+    const monthName = this.MONTH_NAMES[this.calMonth];
+
+    if (this.selectedDay !== null) {
+      // Filtered to single selected date
+      itemsToDisplay = occurrencesByDay[this.selectedDay] || [];
+      const dateObj = new Date(this.calYear, this.calMonth, this.selectedDay);
+      const weekdayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+
+      if (titleEl) titleEl.innerHTML = `📍 <span>${weekdayName}, ${this.selectedDay} ${monthName}</span>`;
+      if (subEl) subEl.textContent = `${itemsToDisplay.length} commitment${itemsToDisplay.length !== 1 ? 's' : ''} on this date`;
+      if (countEl) countEl.textContent = `${itemsToDisplay.length} on ${this.selectedDay}th`;
+    } else {
+      // All month view: collect all items across all days in order
+      for (let d = 1; d <= 31; d++) {
+        if (occurrencesByDay[d] && occurrencesByDay[d].length > 0) {
+          itemsToDisplay.push(...occurrencesByDay[d]);
+        }
+      }
+      if (titleEl) titleEl.innerHTML = `📅 <span>${monthName} ${this.calYear} Commitments</span>`;
+      if (subEl) subEl.textContent = `Showing all scheduled renewals sorted chronologically`;
+      if (countEl) countEl.textContent = `${itemsToDisplay.length} items`;
+    }
+
+    if (!itemsToDisplay.length) {
+      const emptyMsg = (this.selectedDay !== null)
+        ? `No subscriptions or bills due on <strong>${this.selectedDay} ${monthName}</strong>.`
+        : `No subscriptions or bills scheduled for <strong>${monthName} ${this.calYear}</strong>.`;
+
+      const targetDateStr = this.selectedDay
+        ? `${this.calYear}-${String(this.calMonth + 1).padStart(2, '0')}-${String(this.selectedDay).padStart(2, '0')}`
+        : '';
+
+      listEl.innerHTML = `
+        <div class="sub-feed-empty">
+          <div class="sub-feed-empty-icon">📅</div>
+          <div>${emptyMsg}</div>
+          <button class="sub-feed-btn primary" style="margin-top:6px" onclick="Recurring.openAddForDate('${targetDateStr}')">
+            + Add Subscription
+          </button>
+        </div>
+      `;
+      return;
+    }
+
+    listEl.innerHTML = itemsToDisplay.map(o => {
+      const item = o.item;
+      const meta = this.getServiceMeta(item.description, item.category);
+      const isExp = item.type === 'expense';
+      const isPaused = !item.active;
+      const dateStr = o.dateStr;
+
+      const statusBadge = o.isToday
+        ? '<span style="font-size:10.5px;font-weight:700;color:var(--expense);background:rgba(239,68,68,0.12);padding:1px 6px;border-radius:8px">🚨 Today</span>'
+        : o.isDueSoon
+        ? `<span style="font-size:10.5px;font-weight:700;color:#f59e0b;background:rgba(245,158,11,0.12);padding:1px 6px;border-radius:8px">⚠️ In ${o.diffDays}d</span>`
+        : o.isPast
+        ? '<span style="font-size:10.5px;font-weight:500;color:var(--text-tertiary)">✓ Past</span>'
+        : `<span style="font-size:10.5px;font-weight:500;color:var(--text-secondary)">In ${o.diffDays}d</span>`;
+
+      return `
+        <div class="sub-feed-item ${isPaused ? 'inactive' : ''}">
+          <div class="sub-feed-item-left">
+            <div class="sub-feed-icon">${meta.icon}</div>
+            <div class="sub-feed-info">
+              <div class="sub-feed-name" style="${isPaused ? 'text-decoration:line-through;opacity:0.6' : ''}">
+                ${item.description}
+                ${isPaused ? '<span style="font-size:10px;color:var(--text-tertiary);margin-left:4px">(Paused)</span>' : ''}
+              </div>
+              <div class="sub-feed-meta">
+                <span class="sub-feed-day-tag">${monthName.slice(0, 3)} ${o.day}</span>
+                <span>${item.category}</span>
+                <span>·</span>
+                ${statusBadge}
+              </div>
+            </div>
+          </div>
+
+          <div class="sub-feed-item-right">
+            <div class="sub-feed-amt ${isExp ? 'expense' : 'income'}">
+              ${isExp ? '-' : '+'}${fmt(item.amount)}
+            </div>
+            <div class="sub-feed-actions">
+              <button class="sub-feed-btn primary" title="Instant Log to Transactions" onclick="Recurring.quickLogTxn(${item.id}, '${dateStr}')">
+                ⚡ Log
+              </button>
+              <button class="sub-feed-btn" title="Review in Form" onclick="Recurring.openInTxnModal(${item.id}, '${dateStr}')">
+                ✏️ Edit
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  },
+
+  openAddForDate(dateStr) {
+    this.closeDayModal();
+    const dateInput = document.getElementById('recNextDate');
+    if (dateInput && dateStr) dateInput.value = dateStr;
+    document.getElementById('recurringModal')?.classList.add('open');
+  },
+
+  /* ─── Instant One-Click Payment / Transaction Logger ─── */
+  async quickLogTxn(itemId, dateStr) {
+    const item = this.items.find(r => r.id === itemId);
+    if (!item) return;
+
+    try {
+      const defaultAcc = (typeof State !== 'undefined' && Array.isArray(State.accounts) && State.accounts[0])
+        ? State.accounts[0].id
+        : null;
+
+      await API.post('/transactions', {
+        description: item.description,
+        amount: parseFloat(item.amount),
+        type: item.type || 'expense',
+        category: item.category || 'Bills',
+        date: dateStr,
+        account_id: defaultAcc
+      });
+
+      UI.toast(`✓ Logged ${item.description} (${fmt(item.amount)}) to Transactions!`, 'success');
+      this.closeDayModal();
+
+      // Refresh app data in background
+      if (typeof App !== 'undefined') {
+        if (typeof App.loadTransactions === 'function') App.loadTransactions();
+        if (typeof App.loadDashboard === 'function') App.loadDashboard();
+      }
+    } catch (err) {
+      UI.toast('Failed to log payment: ' + (err.message || 'Unknown error'), 'error');
+    }
+  },
+
+  openInTxnModal(itemId, dateStr) {
+    const item = this.items.find(r => r.id === itemId);
+    if (!item) return;
+    this.closeDayModal();
+
+    if (typeof UI !== 'undefined' && UI.openAddModal) {
+      UI.openAddModal({
+        description: item.description,
+        amount: item.amount,
+        type: item.type || 'expense',
+        category: item.category || 'Bills',
+        date: dateStr
+      });
     }
   },
 
@@ -370,7 +833,7 @@ const Recurring = {
     const freqEl = document.getElementById('recFrequency');
     const dateEl = document.getElementById('recNextDate');
     if (!descEl || !amtEl || !typeEl || !catEl || !freqEl || !dateEl) {
-      UI.toast('⚠ Something went wrong loading the form', 'error'); return;
+      UI.toast('⚠️ Something went wrong loading the form', 'error'); return;
     }
 
     const description = descEl.value.trim();
@@ -380,8 +843,8 @@ const Recurring = {
     const frequency   = freqEl.value;
     const next_date   = dateEl.value;
 
-    if (!description || !amount || !next_date) { UI.toast('⚠ Fill in all fields', 'error'); return; }
-    if (amount <= 0) { UI.toast('⚠ Amount must be greater than 0', 'error'); return; }
+    if (!description || !amount || !next_date) { UI.toast('⚠️ Fill in all fields', 'error'); return; }
+    if (amount <= 0) { UI.toast('⚠️ Amount must be greater than 0', 'error'); return; }
 
     const btn = document.getElementById('saveRecurringBtn');
     if (btn) { btn.disabled = true; btn.dataset.origText = btn.textContent; btn.textContent = 'Saving...'; }

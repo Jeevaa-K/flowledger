@@ -1,5 +1,6 @@
 node_modules/
 backend/.env
+.env
 backend/expenses.db
 .DS_Store
 *.log
@@ -7,3 +8,4 @@ backend/expenses.db
 *.db
 *.db-shm
 *.db-wal
+coverage/

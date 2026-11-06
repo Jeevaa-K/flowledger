@@ -1,9 +1,13 @@
 const Auth = {
   init() {
-    const token = localStorage.getItem('fl_token');
-    const user  = JSON.parse(localStorage.getItem('fl_user') || 'null');
+    // Older versions kept the JWT in localStorage; remove any leftover copy.
+    localStorage.removeItem('fl_token');
+    const user = JSON.parse(localStorage.getItem('fl_user') || 'null');
 
-    if (token && user) {
+    // The real session is an httpOnly cookie. fl_user is only a cached profile
+    // for instant rendering; if the cookie has expired, the first API call
+    // returns 401 and API.handleUnauthorized() shows the login screen.
+    if (user) {
       // Already logged in — show app directly
       this.onLoggedIn(user);
     } else {
@@ -207,8 +211,7 @@ const Auth = {
   },
 
   storeSession(data, remember) {
-    localStorage.setItem('fl_token', data.token);
-    localStorage.setItem('fl_user',  JSON.stringify(data.user));
+    localStorage.setItem('fl_user', JSON.stringify(data.user));
     if (remember) localStorage.setItem('fl_remember', '1');
   },
 
@@ -231,8 +234,10 @@ const Auth = {
     }
   },
 
-  logout() {
+  async logout() {
     if (!confirm('Log out of FlowLedger?')) return;
+    // Ask the server to clear the httpOnly session cookie.
+    try { await fetch('/api/auth/logout', { method: 'POST', headers: API.headers() }); } catch {}
     localStorage.removeItem('fl_token');
     localStorage.removeItem('fl_user');
     localStorage.removeItem('fl_remember');

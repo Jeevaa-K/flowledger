@@ -20,6 +20,136 @@ const fmt = n => {
 const UI = {
   currentType: 'income',
   editId: null,
+  isSplitMode: false,
+  splitRows: [],
+
+  setSplitMode(active) {
+    this.isSplitMode = Boolean(active);
+    const toggleBtn = document.getElementById('btnToggleSplit');
+    const singleSection = document.getElementById('singleCategorySection');
+    const splitSection = document.getElementById('splitCategorySection');
+    if (!toggleBtn || !singleSection || !splitSection) return;
+
+    if (this.isSplitMode) {
+      toggleBtn.style.display = 'none';
+      singleSection.style.display = 'none';
+      splitSection.style.display = 'block';
+
+      if (!this.splitRows || this.splitRows.length < 2) {
+        const total = parseFloat(document.getElementById('txnAmount')?.value) || 0;
+        const half1 = total > 0 ? Math.round((total / 2) * 100) / 100 : '';
+        const half2 = total > 0 ? Math.round((total - (parseFloat(half1) || 0)) * 100) / 100 : '';
+        this.splitRows = [
+          { category: 'Food', amount: half1, note: '' },
+          { category: 'Shopping', amount: half2, note: '' }
+        ];
+      }
+      this.renderSplitRows();
+    } else {
+      toggleBtn.style.display = 'inline-flex';
+      toggleBtn.textContent = '✂️ Split into Multiple Categories';
+      singleSection.style.display = 'block';
+      splitSection.style.display = 'none';
+      this.splitRows = [];
+    }
+    this.updateSplitCalculator();
+  },
+
+  renderSplitRows() {
+    const container = document.getElementById('splitRowsContainer');
+    if (!container) return;
+    const cats = ['Food','Transport','Shopping','Entertainment','Health','Bills','Salary','Freelance','Investment','Other'];
+
+    container.innerHTML = this.splitRows.map((r, i) => `
+      <div class="split-row" data-index="${i}">
+        <select class="split-cat-select" data-index="${i}">
+          ${cats.map(c => `<option value="${c}" ${c === r.category ? 'selected' : ''}>${c}</option>`).join('')}
+        </select>
+        <div class="input-prefix" style="max-width:140px">
+          <span>₹</span>
+          <input type="number" class="split-amt-input" data-index="${i}" placeholder="0.00" min="0" step="0.01" value="${r.amount !== '' && r.amount !== undefined ? r.amount : ''}" />
+        </div>
+        <input type="text" class="split-note-input" data-index="${i}" placeholder="Detail/Note (optional)" value="${r.note || ''}" style="flex:1" />
+        <button type="button" class="btn-ghost split-del-btn" data-index="${i}" title="Remove part" ${this.splitRows.length <= 2 ? 'disabled style="opacity:0.35;cursor:not-allowed"' : ''}>✕</button>
+      </div>
+    `).join('');
+
+    container.querySelectorAll('.split-cat-select').forEach(sel => {
+      sel.addEventListener('change', e => {
+        const idx = parseInt(e.target.dataset.index, 10);
+        if (this.splitRows[idx]) this.splitRows[idx].category = e.target.value;
+      });
+    });
+
+    container.querySelectorAll('.split-amt-input').forEach(inp => {
+      inp.addEventListener('input', e => {
+        const idx = parseInt(e.target.dataset.index, 10);
+        const val = parseFloat(e.target.value);
+        if (this.splitRows[idx]) this.splitRows[idx].amount = isNaN(val) ? '' : val;
+        this.updateSplitCalculator();
+      });
+    });
+
+    container.querySelectorAll('.split-note-input').forEach(inp => {
+      inp.addEventListener('input', e => {
+        const idx = parseInt(e.target.dataset.index, 10);
+        if (this.splitRows[idx]) this.splitRows[idx].note = e.target.value;
+      });
+    });
+
+    container.querySelectorAll('.split-del-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        const idx = parseInt(e.currentTarget.dataset.index, 10);
+        if (this.splitRows.length > 2) {
+          this.splitRows.splice(idx, 1);
+          this.renderSplitRows();
+          this.updateSplitCalculator();
+        }
+      });
+    });
+
+    this.updateSplitCalculator();
+  },
+
+  addSplitRow(category = 'Other', amount = '', note = '') {
+    this.splitRows.push({ category, amount, note });
+    this.renderSplitRows();
+    this.updateSplitCalculator();
+  },
+
+  updateSplitCalculator() {
+    const totalEl = document.getElementById('txnAmount');
+    const total = parseFloat(totalEl?.value) || 0;
+    const allocated = this.splitRows.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
+    const remaining = Math.round((total - allocated) * 100) / 100;
+
+    const allocSpan = document.getElementById('splitAllocatedText');
+    const totalSpan = document.getElementById('splitTotalText');
+    const remSpan = document.getElementById('splitRemainingText');
+    const pill = document.getElementById('splitBalancePill');
+
+    if (allocSpan) allocSpan.textContent = typeof fmt === 'function' ? fmt(allocated) : `₹${allocated.toFixed(0)}`;
+    if (totalSpan) totalSpan.textContent = typeof fmt === 'function' ? fmt(total) : `₹${total.toFixed(0)}`;
+
+    if (remSpan && pill) {
+      if (Math.abs(remaining) < 0.01 && total > 0) {
+        remSpan.textContent = '✓ Balanced (₹0.00 left)';
+        pill.style.background = 'var(--income-tint)';
+        pill.style.borderColor = 'var(--income-border)';
+        pill.style.color = 'var(--income)';
+      } else if (remaining > 0) {
+        remSpan.textContent = `₹${remaining.toFixed(2)} left to allocate`;
+        pill.style.background = 'var(--warning-tint)';
+        pill.style.borderColor = 'var(--warning-border)';
+        pill.style.color = 'var(--warning-dark)';
+      } else {
+        remSpan.textContent = `₹${Math.abs(remaining).toFixed(2)} over allocated`;
+        pill.style.background = 'var(--expense-tint)';
+        pill.style.borderColor = 'var(--expense-border)';
+        pill.style.color = 'var(--expense)';
+      }
+    }
+  },
 
   setType(type) {
     this.currentType = type;
@@ -32,7 +162,8 @@ const UI = {
 
   buildCatPicker(type='income', selected=null) {
     const cats = ['Food','Transport','Shopping','Entertainment','Health','Bills','Salary','Freelance','Investment','Other'];
-    const current = selected || (type==='income' ? 'Salary' : 'Food');
+    const matched = cats.find(c => c.toLowerCase() === (selected || '').toLowerCase());
+    const current = matched || selected || (type==='income' ? 'Salary' : 'Food');
     const picker = document.getElementById('catPicker');
     const select = document.getElementById('txnCategory');
     if (!select) return;
@@ -45,15 +176,23 @@ const UI = {
   },
 
   openAddModal(txn=null) {
-    this.editId = txn ? txn.id : null;
+    const isEdit = Boolean(txn && txn.id);
+    this.editId = isEdit ? txn.id : null;
+    this.setSplitMode(false);
+    const toggleBtn = document.getElementById('btnToggleSplit');
+    if (toggleBtn) toggleBtn.style.display = isEdit ? 'none' : 'inline-flex';
+
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
     const title = document.getElementById('modalTitle');
-    if (title) title.textContent = txn ? 'Edit Transaction' : 'Add Transaction';
+    if (title) title.textContent = isEdit ? 'Edit Transaction' : 'Add Transaction';
+    const saveBtn = document.getElementById('saveTxnBtn');
+    if (saveBtn) saveBtn.textContent = isEdit ? 'Update Transaction' : 'Save Transaction';
     set('txnDesc',   txn ? txn.description : '');
     set('txnAmount', txn ? txn.amount : '');
     set('txnDate',   txn ? txn.date : new Date().toISOString().slice(0,10));
-    this.setType(txn ? txn.type : 'income');
-    this.buildCatPicker(txn ? txn.type : 'income', txn ? txn.category : null);
+    const targetType = txn ? txn.type : 'income';
+    this.setType(targetType);
+    this.buildCatPicker(targetType, txn ? txn.category : null);
     const accSel = document.getElementById('txnAccount');
     if (accSel && txn?.account_id) accSel.value = txn.account_id;
     Tags.setPills(txn?.tags || []);
@@ -63,6 +202,7 @@ const UI = {
 
   closeAddModal() {
     document.getElementById('addModal')?.classList.remove('open');
+    this.setSplitMode(false);
     this.editId = null;
     Tags.setPills([]);
   },
@@ -88,6 +228,162 @@ const UI = {
     setTimeout(() => document.getElementById('goalName')?.focus(), 100);
   },
   closeGoalModal() { document.getElementById('goalModal')?.classList.remove('open'); },
+
+  currentSavingsGoal: null,
+  savingsMode: 'deposit', // 'deposit' | 'withdraw'
+
+  openAddSavingsModal(goal) {
+    if (!goal) return;
+    this.currentSavingsGoal = goal;
+    this.savingsMode = 'deposit';
+
+    // Set toggle state
+    const depBtn = document.getElementById('asTypeDeposit');
+    const wthBtn = document.getElementById('asTypeWithdraw');
+    if (depBtn) depBtn.className = 'type-btn active-income';
+    if (wthBtn) wthBtn.className = 'type-btn';
+
+    // Labels & text
+    const title = document.getElementById('addSavingsTitle');
+    const sub = document.getElementById('addSavingsSub');
+    const amtLbl = document.getElementById('asAmountLabel');
+    const accLbl = document.getElementById('asAccountLabel');
+    const submitBtn = document.getElementById('asSubmitBtn');
+    const logTxnLbl = document.getElementById('asLogTxnLabel');
+
+    if (title) title.textContent = `Add Savings to "${goal.name}"`;
+    if (sub) sub.textContent = 'Deposit money into your target savings fund';
+    if (amtLbl) amtLbl.textContent = 'Amount to Add (₹)';
+    if (accLbl) accLbl.textContent = 'Deduct From Account';
+    if (submitBtn) submitBtn.textContent = 'Deposit Savings';
+    if (logTxnLbl) logTxnLbl.textContent = 'Record as a "Savings / Investment" expense transaction';
+
+    // Goal Info Card
+    const saved = Number(goal.saved) || 0;
+    const target = Number(goal.target) || 0;
+    const pct = target > 0 ? Math.min(Math.round((saved / target) * 100), 100) : 0;
+    const remaining = Math.max(0, target - saved);
+
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    set('asGoalName', goal.name);
+    set('asGoalSaved', fmt(saved));
+    set('asGoalTarget', fmt(target));
+    set('asGoalPercent', `${pct}% reached`);
+    set('asGoalRemaining', remaining > 0 ? `${fmt(remaining)} to reach goal` : '🎉 Goal already reached!');
+    set('asProjectedNewPercent', '');
+
+    const bar = document.getElementById('asProgressBar');
+    if (bar) bar.style.width = `${pct}%`;
+
+    const fillRemBtn = document.getElementById('asFillRemainingBtn');
+    if (fillRemBtn) {
+      fillRemBtn.textContent = remaining > 0 ? `Full Remaining (${fmt(remaining)})` : 'Goal Full';
+      fillRemBtn.dataset.rem = remaining;
+    }
+
+    // Input fields
+    const idEl = document.getElementById('asGoalId');
+    const amtEl = document.getElementById('asAmount');
+    const dateEl = document.getElementById('asDate');
+    const noteEl = document.getElementById('asNote');
+    const logCheck = document.getElementById('asLogTxn');
+
+    if (idEl) idEl.value = goal.id;
+    if (amtEl) amtEl.value = '';
+    if (dateEl) dateEl.value = new Date().toISOString().slice(0, 10);
+    if (noteEl) noteEl.value = `Savings deposit: ${goal.name}`;
+    if (logCheck) logCheck.checked = true;
+
+    // Populate Account select with balances
+    const accSel = document.getElementById('asSourceAccount');
+    if (accSel && typeof State !== 'undefined' && Array.isArray(State.accounts)) {
+      const active = State.accounts.filter(a => !a.archived);
+      let opts = active.map(a => `<option value="${a.id}">${a.name} (${fmt(a.balance || 0)})</option>`).join('');
+      opts += '<option value="">(None - Don\'t change account balance)</option>';
+      accSel.innerHTML = opts;
+    }
+
+    document.getElementById('addSavingsModal')?.classList.add('open');
+    setTimeout(() => amtEl?.focus(), 100);
+  },
+
+  closeAddSavingsModal() {
+    document.getElementById('addSavingsModal')?.classList.remove('open');
+    this.currentSavingsGoal = null;
+  },
+
+  setSavingsMode(mode) {
+    this.savingsMode = mode;
+    const depBtn = document.getElementById('asTypeDeposit');
+    const wthBtn = document.getElementById('asTypeWithdraw');
+    const amtLbl = document.getElementById('asAmountLabel');
+    const accLbl = document.getElementById('asAccountLabel');
+    const submitBtn = document.getElementById('asSubmitBtn');
+    const logTxnLbl = document.getElementById('asLogTxnLabel');
+    const title = document.getElementById('addSavingsTitle');
+    const noteEl = document.getElementById('asNote');
+    const goal = this.currentSavingsGoal;
+    const goalName = goal ? goal.name : 'Goal';
+
+    if (mode === 'deposit') {
+      if (depBtn) depBtn.className = 'type-btn active-income';
+      if (wthBtn) wthBtn.className = 'type-btn';
+      if (title) title.textContent = `Add Savings to "${goalName}"`;
+      if (amtLbl) amtLbl.textContent = 'Amount to Add (₹)';
+      if (accLbl) accLbl.textContent = 'Deduct From Account';
+      if (submitBtn) submitBtn.textContent = 'Deposit Savings';
+      if (logTxnLbl) logTxnLbl.textContent = 'Record as a "Savings / Investment" expense transaction';
+      if (noteEl) noteEl.value = `Savings deposit: ${goalName}`;
+    } else {
+      if (wthBtn) wthBtn.className = 'type-btn active-expense';
+      if (depBtn) depBtn.className = 'type-btn';
+      if (title) title.textContent = `Withdraw from "${goalName}"`;
+      if (amtLbl) amtLbl.textContent = 'Amount to Withdraw (₹)';
+      if (accLbl) accLbl.textContent = 'Deposit Back Into Account';
+      if (submitBtn) submitBtn.textContent = 'Withdraw Funds';
+      if (logTxnLbl) logTxnLbl.textContent = 'Record as an income / funds returned transaction';
+      if (noteEl) noteEl.value = `Goal withdrawal: ${goalName}`;
+    }
+    this.updateSavingsPreview();
+  },
+
+  updateSavingsPreview() {
+    const goal = this.currentSavingsGoal;
+    if (!goal) return;
+
+    const amtInput = document.getElementById('asAmount');
+    const amt = parseFloat(amtInput?.value) || 0;
+    const saved = Number(goal.saved) || 0;
+    const target = Number(goal.target) || 0;
+
+    let newSaved = this.savingsMode === 'deposit' ? (saved + amt) : Math.max(0, saved - amt);
+    let newPct = target > 0 ? Math.min(Math.round((newSaved / target) * 100), 100) : 0;
+    let newRem = Math.max(0, target - newSaved);
+
+    const bar = document.getElementById('asProgressBar');
+    const projEl = document.getElementById('asProjectedNewPercent');
+
+    if (amt <= 0) {
+      const origPct = target > 0 ? Math.min(Math.round((saved / target) * 100), 100) : 0;
+      if (bar) bar.style.width = `${origPct}%`;
+      if (projEl) projEl.textContent = '';
+      return;
+    }
+
+    if (bar) bar.style.width = `${newPct}%`;
+
+    if (projEl) {
+      if (this.savingsMode === 'deposit') {
+        if (newSaved >= target) {
+          projEl.innerHTML = `<span style="color:var(--income)">🎉 Will reach 100% (Goal complete!)</span>`;
+        } else {
+          projEl.innerHTML = `➔ Will reach <strong>${newPct}%</strong> (${fmt(newRem)} left)`;
+        }
+      } else {
+        projEl.innerHTML = `➔ Will become <strong>${newPct}%</strong> (${fmt(newSaved)} saved)`;
+      }
+    }
+  },
 
   openAccountModal(account=null) {
     const title = document.getElementById('accountModalTitle');
@@ -121,6 +417,12 @@ const UI = {
       const current = filterSel.value;
       filterSel.innerHTML = '<option value="">All Accounts</option>' + opts;
       if ([...filterSel.options].some(o => o.value === current)) filterSel.value = current;
+    }
+
+    const asSel = document.getElementById('asSourceAccount');
+    if (asSel) {
+      const asOpts = active.map(a => `<option value="${a.id}">${a.name} (${fmt(a.balance || 0)})</option>`).join('');
+      asSel.innerHTML = asOpts + '<option value="">(None - Don\'t change account balance)</option>';
     }
   },
 
@@ -221,6 +523,9 @@ const UI = {
       const color = CAT_COLORS[t.category] || '#94A3B8';
       const isIncome = t.type === 'income';
       const borderColor = isIncome ? 'var(--income)' : 'var(--expense)';
+      const splitBadge = t.split_id
+        ? `<span class="txn-split-chip" title="Part of a split transaction">✂️ Split</span>`
+        : '';
       const tagsHtml = (t.tags && t.tags.length)
         ? `<div class="txn-tags">${t.tags.map(g => `<span class="txn-tag-chip">#${g}</span>`).join('')}</div>`
         : '';
@@ -228,7 +533,7 @@ const UI = {
         <div class="txn-name-wrap">
           <div class="txn-dot" style="background:${color}"></div>
           <div class="txn-meta-col">
-            <div class="txn-name">${t.description}</div>
+            <div class="txn-name">${t.description} ${splitBadge}</div>
             <div class="txn-date">${t.category} · ${t.date}</div>
             ${tagsHtml}
           </div>
