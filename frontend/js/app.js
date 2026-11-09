@@ -73,6 +73,16 @@ const App = {
     const h = new Date().getHours();
     const el = document.getElementById('greeting');
     if (el) el.textContent = h < 12 ? 'Morning' : h < 17 ? 'Afternoon' : 'Evening';
+
+    // Show the user's first name next to the greeting
+    const nameEl = document.getElementById('greetName');
+    if (nameEl) {
+      try {
+        const user = JSON.parse(localStorage.getItem('fl_user') || '{}');
+        const firstName = (user.name || '').split(' ')[0];
+        nameEl.textContent = firstName;
+      } catch (_) { /* ignore parse errors */ }
+    }
   },
 
   setTopbarDate() {
@@ -136,7 +146,7 @@ const App = {
       const isCurrentMonth = State.month === (new Date().getMonth() + 1) && State.year === new Date().getFullYear();
       const [summary, txns, budgets] = await Promise.all([
         API.get(`/summary?month=${State.month}&year=${State.year}`),
-        API.get('/transactions?limit=6'),
+        API.get('/transactions?limit=6&sort=created_desc'),
         // Budgets always reflect the CURRENT calendar month server-side, so
         // only fetch/show the alert when that's actually what's on screen —
         // otherwise browsing a past month would show a misleading "over
@@ -292,20 +302,77 @@ const App = {
     const descEl = document.getElementById('txnDesc');
     const amtEl = document.getElementById('txnAmount');
     const dateEl = document.getElementById('txnDate');
-    const catEl = document.getElementById('txnCategory');
-    const accEl = document.getElementById('txnAccount');
-    if (!descEl || !amtEl || !dateEl || !catEl) { UI.toast('⚠ Something went wrong loading the form', 'error'); return; }
+    const catEl  = document.getElementById('txnCategory');
+    const accEl  = document.getElementById('txnAccount');
+    if (!descEl || !amtEl || !dateEl) { UI.toast('⚠ Something went wrong loading the form', 'error'); return; }
 
-    const desc = descEl.value.trim();
-    const amount = parseFloat(amtEl.value);
-    const date = dateEl.value;
-    const category = catEl.value;
-    const type = UI.currentType;
+    const desc       = descEl.value.trim();
+    const amount     = parseFloat(amtEl.value);
+    const date       = dateEl.value;
+    const type       = UI.currentType;
     const account_id = accEl?.value || null;
-    const tags = Tags.getPills();
-    const notes = document.getElementById('txnNotes')?.value?.trim() || '';
-    if (!desc || !amount || !date || !category) { UI.toast('⚠ Fill in all fields', 'error'); return; }
+    const tags       = Tags.getPills();
+    if (!desc || !amount || !date) { UI.toast('⚠ Fill in description, amount, and date', 'error'); return; }
     if (amount <= 0) { UI.toast('⚠ Amount must be greater than 0', 'error'); return; }
+
+    // ── Handle Split Transaction Mode ────────────────────────────
+    if (UI.isSplitMode) {
+      if (!Array.isArray(UI.splitRows) || UI.splitRows.length < 2) {
+        UI.toast('⚠ Split requires at least 2 category parts', 'error');
+        return;
+      }
+      let allocatedSum = 0;
+      for (const s of UI.splitRows) {
+        const pAmt = parseFloat(s.amount);
+        if (!pAmt || isNaN(pAmt) || pAmt <= 0) {
+          UI.toast(`⚠ Enter a valid amount for category "${s.category || 'Split'}"`, 'error');
+          return;
+        }
+        if (!s.category) {
+          UI.toast('⚠ Select a category for every split item', 'error');
+          return;
+        }
+        allocatedSum += pAmt;
+      }
+      if (Math.abs(allocatedSum - amount) > 0.05) {
+        UI.toast(`⚠ Split total (${typeof fmt === 'function' ? fmt(allocatedSum) : '₹' + allocatedSum.toFixed(2)}) must equal bill amount (${typeof fmt === 'function' ? fmt(amount) : '₹' + amount.toFixed(2)})`, 'error');
+        return;
+      }
+
+      const btn = document.getElementById('saveTxnBtn');
+      if (btn) { btn.disabled = true; btn.dataset.origText = btn.textContent; btn.textContent = 'Saving Split...'; }
+      try {
+        await API.createSplitTransaction({
+          description: desc,
+          total_amount: amount,
+          type,
+          date,
+          account_id,
+          tags,
+          splits: UI.splitRows
+        });
+        UI.toast(`✂️ Split transaction saved across ${UI.splitRows.length} categories!`, 'success');
+        UI.closeAddModal();
+        this.updateNavCount();
+        Tags.populateFilterSelect();
+        this.loadAccounts(State.page === 'accounts');
+        await this.loadDashboard();
+        if (typeof this.getTxnActiveFilters === 'function') {
+          await this.loadTransactions(this.getTxnActiveFilters());
+        } else {
+          await this.loadTransactions();
+        }
+      } catch (err) {
+        UI.toast(err.message || 'Failed to save split transaction', 'error');
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = btn.dataset.origText || 'Save'; }
+      }
+      return;
+    }
+
+    // ── Standard Single Category Transaction ─────────────────────
+    const category = catEl?.value;
+    if (!category) { UI.toast('⚠ Please select a category', 'error'); return; }
 
     const btn = document.getElementById('saveTxnBtn');
     if (btn) { btn.disabled = true; btn.dataset.origText = btn.textContent; btn.textContent = 'Saving...'; }
@@ -315,15 +382,8 @@ const App = {
         await API.put(`/transactions/${UI.editId}`, { description: desc, amount, type, category, date, account_id, tags, notes });
         UI.toast('✓ Transaction updated', 'success');
       } else {
-        await API.post('/transactions', { description: desc, amount, type, category, date, account_id, tags, notes });
-        // Only worth checking for a fresh expense in the current month —
-        // that's the only case /api/budgets' spend total actually covers,
-        // and only expenses count against a budget in the first place.
-        const _txnDate = new Date(date);
-        const _now = new Date();
-        const isCurrentMonth =
-          _txnDate.getFullYear() === _now.getFullYear() &&
-          _txnDate.getMonth() === _now.getMonth();
+        await API.post('/transactions', { description:desc, amount, type, category, date, account_id, tags });
+        const isCurrentMonth = new Date(date).toISOString().slice(0,7) === new Date().toISOString().slice(0,7);
         if (type === 'expense' && isCurrentMonth) {
           budgetToastShown = await this.checkBudgetAfterSave(category);
         }
@@ -332,13 +392,14 @@ const App = {
       UI.closeAddModal();
       this.updateNavCount();
       Tags.populateFilterSelect();
-      // A transaction changes account balances, so refresh accounts too —
-      // cheap call, keeps the dashboard strip and Accounts page correct
-      // without waiting for the user to navigate away and back.
       this.loadAccounts(State.page === 'accounts');
-      if (State.page === 'transactions') await this.loadTransactions();
-      else await this.loadDashboard();
-    } catch (e) { UI.toast(e.message.match(/^\d+:/) ? 'Error: ' + e.message : e.message, 'error'); }
+      await this.loadDashboard();
+      if (typeof this.getTxnActiveFilters === 'function') {
+        await this.loadTransactions(this.getTxnActiveFilters());
+      } else {
+        await this.loadTransactions();
+      }
+    } catch(e) { UI.toast(e.message.match(/^\d+:/) ? 'Error: ' + e.message : e.message, 'error'); }
     finally { if (btn) { btn.disabled = false; btn.textContent = btn.dataset.origText || 'Save'; } }
   },
 
@@ -374,8 +435,21 @@ const App = {
   },
 
   async deleteTxn(id) {
-    if (!confirm('Delete this transaction?')) return;
     try {
+      const txn = await API.get(`/transactions/${id}`).catch(() => null);
+      if (txn && txn.split_id) {
+        if (confirm('This transaction is part of a split bill.\nClick OK to delete ALL parts of this split bill.')) {
+          await API.deleteSplitGroup(txn.split_id);
+          UI.toast('✓ Deleted entire split group', 'success');
+          this.updateNavCount();
+          this.loadAccounts(State.page === 'accounts');
+          if (State.page === 'transactions') await this.loadTransactions();
+          else await this.loadDashboard();
+        }
+        return;
+      }
+
+      if (!confirm('Delete this transaction?')) return;
       await API.del(`/transactions/${id}`);
       UI.toast('✓ Deleted', 'success');
       this.updateNavCount();
@@ -721,7 +795,7 @@ const App = {
 
     const hideResults = () => {
       document.getElementById('auditEmptyState').style.display = 'flex';
-      ['auditKpiRow', 'auditAiCard', 'auditGrid', 'auditDownloadCard'].forEach(id => {
+      ['auditKpiRow','auditScoreRow','auditAiCard','auditGrid','auditDownloadCard'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
       });
@@ -763,11 +837,8 @@ const App = {
     document.getElementById('auditEmptyGenBtn')?.addEventListener('click', generateAudit);
 
     const downloadCsv = async () => {
-      const token = localStorage.getItem('fl_token');
       try {
-        const res = await fetch(`/api/export/monthly-csv?month=${this._auditMonth}&year=${this._auditYear}`, {
-          headers: { 'Authorization': 'Bearer ' + token }
-        });
+        const res = await fetch(`/api/export/monthly-csv?month=${this._auditMonth}&year=${this._auditYear}`, { credentials: 'same-origin' });
         if (!res.ok) throw new Error('Failed to download CSV');
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
@@ -784,15 +855,12 @@ const App = {
     document.getElementById('downloadAuditCsvBtn2')?.addEventListener('click', downloadCsv);
 
     document.getElementById('downloadPdfBtn')?.addEventListener('click', async () => {
-      const btn = document.getElementById('downloadPdfBtn');
-      const token = localStorage.getItem('fl_token');
-      const m = this._auditMonth;
-      const y = this._auditYear;
+      const btn   = document.getElementById('downloadPdfBtn');
+      const m     = this._auditMonth;
+      const y     = this._auditYear;
       if (btn) { btn.textContent = '⏳ Generating...'; btn.disabled = true; }
       try {
-        const res = await fetch(`/api/export/pdf?month=${m}&year=${y}`, {
-          headers: { 'Authorization': 'Bearer ' + token }
-        });
+        const res = await fetch(`/api/export/pdf?month=${m}&year=${y}`, { credentials: 'same-origin' });
         if (!res.ok) {
           let msg = 'Failed';
           try { const j = await res.json(); msg = j.error || j.details || msg; } catch { }
@@ -818,13 +886,15 @@ const App = {
   },
 
   renderAudit(data) {
-    const { summary, byCategory, topMerchants, aiAnalysis, periodName } = data;
+    const { summary, byCategory, topMerchants, aiAnalysis, periodName,
+            healthScore, healthLabel, healthColor, spendTrend } = data;
 
     // Switch visibility
     document.getElementById('auditEmptyState').style.display = 'none';
-    document.getElementById('auditKpiRow').style.display = 'grid';
-    document.getElementById('auditAiCard').style.display = '';
-    document.getElementById('auditGrid').style.display = 'grid';
+    document.getElementById('auditKpiRow').style.display     = 'grid';
+    document.getElementById('auditScoreRow').style.display   = '';
+    document.getElementById('auditAiCard').style.display     = '';
+    document.getElementById('auditGrid').style.display       = 'grid';
     document.getElementById('auditDownloadCard').style.display = '';
 
     // KPI cards
@@ -833,7 +903,7 @@ const App = {
         <div class="kpi-top"><div class="kpi-icon kpi-icon-positive">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
         </div></div>
-        <div class="kpi-value green">${fmt(summary.income)}</div>
+        <div class="kpi-value green audit-num">${fmt(summary.income)}</div>
         <div class="kpi-label">Total Income</div>
       </div>
       <div class="kpi-card">
@@ -841,20 +911,81 @@ const App = {
           <div class="kpi-icon kpi-icon-negative"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg></div>
           ${summary.momChange !== 0 ? `<span class="audit-mom-badge ${summary.momChange > 0 ? 'up' : 'down'}">${summary.momChange > 0 ? '↑' : '↓'} ${Math.abs(summary.momChange)}% MoM</span>` : ''}
         </div>
-        <div class="kpi-value red">${fmt(summary.expense)}</div>
+        <div class="kpi-value red audit-num">${fmt(summary.expense)}</div>
         <div class="kpi-label">Total Expenses</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-top"><div class="kpi-icon kpi-icon-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div></div>
-        <div class="kpi-value ${summary.netSavings >= 0 ? 'green' : 'red'}">${fmt(summary.netSavings)}</div>
+        <div class="kpi-value ${summary.netSavings >= 0 ? 'green' : 'red'} audit-num">${fmt(summary.netSavings)}</div>
         <div class="kpi-label">Net Savings</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-top"><div class="kpi-icon kpi-icon-highlight"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0016.5 3c-1.76 0-3.332.83-4.5 2.05C10.832 3.83 9.26 3 7.5 3A5.5 5.5 0 002 8.5c0 2.3 1.5 4.05 3 5.5l7 7 7-7z"/></svg></div></div>
-        <div class="kpi-value purple">${summary.savingsRate}%</div>
+        <div class="kpi-value purple audit-num">${summary.savingsRate}%</div>
         <div class="kpi-label">Savings Rate</div>
         <div class="kpi-sub">${summary.txnCount} transactions</div>
       </div>`;
+
+    // ── Health Score ring ──
+    const score   = healthScore ?? 50;
+    const color   = healthColor ?? '#6366F1';
+    const label   = healthLabel ?? 'Fair';
+    const circ    = 314; // 2π × 50
+    const offset  = circ - (circ * score / 100);
+    const ringFill = document.getElementById('auditRingFill');
+    if (ringFill) {
+      ringFill.style.stroke = color;
+      ringFill.style.strokeDashoffset = circ; // start at 0
+      requestAnimationFrame(() => {
+        ringFill.style.transition = 'stroke-dashoffset 1.1s cubic-bezier(.4,0,.2,1)';
+        ringFill.style.strokeDashoffset = offset;
+      });
+    }
+    const numEl = document.getElementById('auditScoreNum');
+    if (numEl) { numEl.textContent = score; numEl.style.color = color; }
+    const lblEl = document.getElementById('auditScoreLabel');
+    if (lblEl) { lblEl.textContent = label; lblEl.style.color = color; }
+
+    const breakdownEl = document.getElementById('auditScoreBreakdown');
+    if (breakdownEl) {
+      const rows = [
+        { k: 'Savings Rate', v: summary.savingsRate + '%', ok: summary.savingsRate >= 20 },
+        { k: 'MoM Trend',    v: summary.momChange > 0 ? '↑ ' + summary.momChange + '% more' : summary.momChange < 0 ? '↓ ' + Math.abs(summary.momChange) + '% less' : 'No change', ok: summary.momChange <= 0 },
+        { k: 'Transactions', v: summary.txnCount + ' this month', ok: summary.txnCount >= 5 },
+      ];
+      breakdownEl.innerHTML = rows.map(r =>
+        `<div class="audit-score-row-item">
+          <span class="audit-score-pill ${r.ok ? 'ok' : 'bad'}">${r.ok ? '✓' : '!'}</span>
+          <span class="audit-score-key">${r.k}</span>
+          <span class="audit-score-val">${r.v}</span>
+        </div>`
+      ).join('');
+    }
+
+    // ── 6-month spending trend ──
+    const trendEl = document.getElementById('auditTrendBody');
+    if (trendEl && spendTrend && spendTrend.length) {
+      const maxVal = Math.max(...spendTrend.map(d => Math.max(d.expense, d.income)), 1);
+      trendEl.innerHTML = `
+        <div class="audit-trend-chart">
+          ${spendTrend.map(d => {
+            const expH = Math.round((d.expense / maxVal) * 100);
+            const incH = Math.round((d.income  / maxVal) * 100);
+            const isCur = (d.mo === (data.period || ''));
+            return `<div class="audit-trend-col ${isCur ? 'current' : ''}">
+              <div class="audit-trend-bars">
+                <div class="audit-trend-bar income-bar"  style="height:${incH}%" title="Income: ${fmt(d.income)}"></div>
+                <div class="audit-trend-bar expense-bar" style="height:${expH}%" title="Expense: ${fmt(d.expense)}"></div>
+              </div>
+              <div class="audit-trend-label">${d.label}</div>
+            </div>`;
+          }).join('')}
+        </div>
+        <div class="audit-trend-legend">
+          <span class="audit-trend-dot income-dot"></span> Income
+          <span class="audit-trend-dot expense-dot" style="margin-left:12px"></span> Expense
+        </div>`;
+    }
 
     // Period label
     const periodEl = document.getElementById('auditAiPeriod');
@@ -880,7 +1011,7 @@ const App = {
           <div class="audit-cat-row">
             <div style="width:10px;height:10px;border-radius:50%;background:${catColors[i % catColors.length]};flex-shrink:0"></div>
             <div style="flex:1;font-size:13px;font-weight:600;color:var(--text-primary)">${c.category}</div>
-            <div style="font-size:12px;color:var(--text-secondary);min-width:60px;text-align:right">${fmt(c.total)}</div>
+            <div class="audit-num" style="font-size:12px;color:var(--text-secondary);min-width:60px;text-align:right">${fmt(c.total)}</div>
             <div class="audit-cat-bar-track" style="width:80px">
               <div class="audit-cat-bar-fill" style="width:${c.percent}%;background:${catColors[i % catColors.length]}"></div>
             </div>
@@ -899,7 +1030,7 @@ const App = {
                 <div style="font-size:11px;color:var(--text-tertiary)">${t.category} · ${t.date}</div>
               </div>
             </div>
-            <div class="red" style="font-weight:700">${fmt(t.amount)}</div>
+            <div class="red audit-num" style="font-weight:700">${fmt(t.amount)}</div>
           </div>`).join('')
       : '<div style="padding:20px;text-align:center;color:var(--text-tertiary)">No transactions this month</div>';
   },
@@ -957,17 +1088,103 @@ const App = {
     if (goal) UI.openGoalModal(goal);
   },
 
-  async addSavings(id) {
+  addSavings(id) {
     const goal = State.goals.find(g => g.id === id);
     if (!goal) return;
-    const amount = parseFloat(prompt(`Add savings to "${goal.name}"\nCurrently saved: ${fmt(goal.saved)}\n\nEnter amount to add:`));
-    if (!amount || isNaN(amount) || amount <= 0) return;
+    UI.openAddSavingsModal(goal);
+  },
+
+  async submitSavingsDeposit() {
+    const goalId = parseInt(document.getElementById('asGoalId')?.value);
+    const goal = State.goals.find(g => g.id === goalId);
+    if (!goal) {
+      UI.toast('Goal not found', 'error');
+      return;
+    }
+
+    const amtInput = document.getElementById('asAmount');
+    const amount = parseFloat(amtInput?.value);
+    if (!amount || isNaN(amount) || amount <= 0) {
+      UI.toast('Please enter a valid amount greater than 0', 'error');
+      amtInput?.focus();
+      return;
+    }
+
+    const mode = UI.savingsMode || 'deposit';
+    const isDeposit = mode === 'deposit';
+    const currentSaved = Number(goal.saved) || 0;
+    const target = Number(goal.target) || 0;
+
+    if (!isDeposit && amount > currentSaved) {
+      UI.toast(`Cannot withdraw more than saved balance (${fmt(currentSaved)})`, 'error');
+      return;
+    }
+
+    const newSaved = isDeposit ? (currentSaved + amount) : Math.max(0, currentSaved - amount);
+    const dateVal = document.getElementById('asDate')?.value || new Date().toISOString().slice(0, 10);
+    const noteVal = document.getElementById('asNote')?.value.trim();
+    const accountVal = document.getElementById('asSourceAccount')?.value;
+    const logTxn = document.getElementById('asLogTxn')?.checked;
+
+    const btn = document.getElementById('asSubmitBtn');
+    if (btn) {
+      btn.disabled = true;
+      btn.dataset.origText = btn.textContent;
+      btn.textContent = 'Processing...';
+    }
+
     try {
-      await API.put(`/goals/${id}`, { name: goal.name, target: goal.target, saved: goal.saved + amount, date: goal.date });
-      UI.toast(`✓ Added ${fmt(amount)} to ${goal.name}`, 'success');
+      // 1. Update Goal saved amount
+      await API.put(`/goals/${goal.id}`, {
+        name: goal.name,
+        target: goal.target,
+        saved: newSaved,
+        date: goal.date
+      });
+
+      // 2. Optionally record as a transaction to affect account balance and reports
+      if (logTxn) {
+        const txnDescription = noteVal || (isDeposit ? `Savings: ${goal.name}` : `Withdrawal: ${goal.name}`);
+        const txnType = isDeposit ? 'expense' : 'income';
+        const txnCategory = isDeposit ? 'Investment' : 'Savings';
+        const accountId = accountVal ? parseInt(accountVal) : null;
+
+        await API.post('/transactions', {
+          description: txnDescription,
+          amount: amount,
+          type: txnType,
+          category: txnCategory,
+          date: dateVal,
+          account_id: accountId
+        });
+      }
+
+      // 3. Celebratory feedback
+      const newPct = target > 0 ? Math.min(Math.round((newSaved / target) * 100), 100) : 0;
+      if (isDeposit && newSaved >= target) {
+        UI.toast(`🎉 Congratulations! You reached your goal for "${goal.name}"!`, 'success');
+      } else if (isDeposit) {
+        UI.toast(`✓ Added ${fmt(amount)} to "${goal.name}" (${newPct}% reached)`, 'success');
+      } else {
+        UI.toast(`✓ Withdrew ${fmt(amount)} from "${goal.name}" (${newPct}% remaining)`, 'success');
+      }
+
+      UI.closeAddSavingsModal();
+
+      // 4. Reload data
       await this.loadGoals();
+      if (logTxn) {
+        await this.loadAccounts();
+        await this.loadDashboard();
+        if (State.page === 'transactions') await this.loadTransactions();
+      }
     } catch (e) {
       UI.toast('⚠ ' + e.message.replace(/^\d+:\s*/, ''), 'error');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = btn.dataset.origText || 'Deposit Savings';
+      }
     }
   },
 
@@ -1244,7 +1461,21 @@ const App = {
         await this.loadAiSessions();
       }
       this.appendMsg('assistant', res.reply, res.model || State.aiModel);
-    } catch (e) {
+
+      // ── Handle AI-initiated transaction save ──────────────────────────────
+      // The backend auto-saves a transaction when it detects add-intent and
+      // confirms the add in its reply. Reload the data so the new row
+      // appears immediately on Dashboard and Transactions page.
+      if (res.action?.type === 'transaction_added') {
+        try {
+          await App.loadDashboard();
+          await App.loadTransactions({});
+          if (typeof App.updateNavCount === 'function') App.updateNavCount();
+          if (typeof Tags !== 'undefined' && typeof Tags.populateFilterSelect === 'function') Tags.populateFilterSelect();
+        } catch (_) { /* silent — UI reload is best-effort */ }
+        UI.toast('✅ Transaction saved by NOVA!', 'success');
+      }
+    } catch(e) {
       document.getElementById('typingIndicator')?.remove();
       this.appendMsg('assistant', '⚠ Error: ' + e.message);
     } finally {
@@ -1300,11 +1531,15 @@ const App = {
   },
 
   bindModals() {
-    this.on('openAddModal', 'click', () => UI.openAddModal());
-    this.on('closeAddModal', 'click', () => UI.closeAddModal());
-    this.on('saveTxnBtn', 'click', () => this.saveTxn());
-    this.on('addModal', 'click', e => { if (e.target.id === 'addModal') UI.closeAddModal(); });
-    this.on('txnAmount', 'keydown', e => { if (e.key === 'Enter') this.saveTxn(); });
+    this.on('openAddModal',    'click', () => UI.openAddModal());
+    this.on('closeAddModal',   'click', () => UI.closeAddModal());
+    this.on('saveTxnBtn',      'click', () => this.saveTxn());
+    this.on('addModal',        'click', e  => { if (e.target.id === 'addModal') UI.closeAddModal(); });
+    this.on('txnAmount',       'keydown', e => { if (e.key === 'Enter') this.saveTxn(); });
+    this.on('txnAmount',       'input',   () => { if (UI.isSplitMode) UI.updateSplitCalculator(); });
+    this.on('btnToggleSplit',  'click', () => UI.setSplitMode(!UI.isSplitMode));
+    this.on('btnCancelSplit',  'click', () => UI.setSplitMode(false));
+    this.on('btnAddSplitRow',  'click', () => UI.addSplitRow());
 
     this.on('openBudgetModal', 'click', () => UI.openBudgetModal());
     this.on('closeBudgetModal', 'click', () => UI.closeBudgetModal());
@@ -1325,6 +1560,33 @@ const App = {
     this.on('closeGoalModal', 'click', () => UI.closeGoalModal());
     this.on('saveGoalBtn', 'click', () => this.saveGoal());
     this.on('goalModal', 'click', e => { if (e.target.id === 'goalModal') UI.closeGoalModal(); });
+
+    // Add Savings to Goal Modal
+    this.on('closeAddSavingsModal', 'click', () => UI.closeAddSavingsModal());
+    this.on('asCancelBtn',          'click', () => UI.closeAddSavingsModal());
+    this.on('asSubmitBtn',          'click', () => this.submitSavingsDeposit());
+    this.on('addSavingsModal',      'click', e => { if (e.target.id === 'addSavingsModal') UI.closeAddSavingsModal(); });
+    this.on('asTypeDeposit',        'click', () => UI.setSavingsMode('deposit'));
+    this.on('asTypeWithdraw',       'click', () => UI.setSavingsMode('withdraw'));
+    this.on('asAmount',             'input', () => UI.updateSavingsPreview());
+    this.on('asAmount',             'keydown', e => { if (e.key === 'Enter') this.submitSavingsDeposit(); });
+
+    // Quick chips in Add Savings modal
+    document.getElementById('asQuickChips')?.addEventListener('click', e => {
+      const chip = e.target.closest('.as-chip');
+      if (!chip) return;
+      const amtInput = document.getElementById('asAmount');
+      if (!amtInput) return;
+      if (chip.id === 'asFillRemainingBtn') {
+        const rem = parseFloat(chip.dataset.rem) || 0;
+        if (rem > 0) amtInput.value = rem;
+      } else {
+        const addAmt = parseFloat(chip.dataset.amt) || 0;
+        const current = parseFloat(amtInput.value) || 0;
+        amtInput.value = current + addAmt;
+      }
+      UI.updateSavingsPreview();
+    });
 
     // Recurring modal
     this.on('openRecurringModal', 'click', () => {
@@ -1524,6 +1786,66 @@ const App = {
 
     sortSelect?.addEventListener('change', triggerSearch);
 
+    // ── Custom sort dropdown wiring ───────────────────────────────────────────
+    const sortBtn    = document.getElementById('txnSortBtn');
+    const sortMenu   = document.getElementById('txnSortMenu');
+    const sortLabel  = document.getElementById('txnSortLabel');
+
+    if (sortBtn && sortMenu && sortSelect) {
+      // Toggle open/close
+      sortBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = sortMenu.style.display !== 'none';
+        sortMenu.style.display = isOpen ? 'none' : 'block';
+        sortBtn.setAttribute('aria-expanded', String(!isOpen));
+      });
+
+      // Handle option selection
+      sortMenu.querySelectorAll('.sort-option').forEach(opt => {
+        opt.addEventListener('click', () => {
+          const val   = opt.dataset.sort;
+          const icon  = opt.dataset.icon;
+          const label = opt.dataset.label;
+
+          // Update hidden select (getTxnActiveFilters reads its .value)
+          sortSelect.value = val;
+
+          // Update button face (label + matching SVG icon)
+          const btnIcon = sortBtn.querySelector('.sort-btn-icon');
+          const optIcon = opt.querySelector('.sort-opt-icon');
+          if (btnIcon && optIcon) btnIcon.innerHTML = optIcon.innerHTML;
+          if (sortLabel) sortLabel.textContent = label;
+
+          // Mark active option
+          sortMenu.querySelectorAll('.sort-option').forEach(o => o.classList.remove('active'));
+          opt.classList.add('active');
+
+          // Close menu & trigger search
+          sortMenu.style.display = 'none';
+          sortBtn.setAttribute('aria-expanded', 'false');
+          triggerSearch();
+        });
+      });
+
+      // Close on outside click
+      document.addEventListener('click', (e) => {
+        if (!sortBtn.closest('#sortDropdownWrap')?.contains(e.target)) {
+          sortMenu.style.display = 'none';
+          sortBtn.setAttribute('aria-expanded', 'false');
+        }
+      });
+
+      // Close on Escape key
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && sortMenu.style.display !== 'none') {
+          sortMenu.style.display = 'none';
+          sortBtn.setAttribute('aria-expanded', 'false');
+          sortBtn.focus();
+        }
+      });
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     advToggleBtn?.addEventListener('click', () => {
       if (!advDrawer) return;
       const isHidden = advDrawer.style.display === 'none';
@@ -1584,6 +1906,19 @@ const App = {
       if (clearSearchBtn) clearSearchBtn.style.display = 'none';
       if (sortSelect) sortSelect.value = 'date_desc';
 
+      // Reset custom sort dropdown button to default label and icon
+      const firstOpt     = document.querySelector('#txnSortMenu .sort-option[data-sort="date_desc"]');
+      const sortBtnIcon  = document.querySelector('#txnSortBtn .sort-btn-icon');
+      const sortBtnLabel = document.getElementById('txnSortLabel');
+      if (sortBtnLabel) sortBtnLabel.textContent = 'Newest First';
+      if (sortBtnIcon && firstOpt) {
+        const optIcon = firstOpt.querySelector('.sort-opt-icon');
+        if (optIcon) sortBtnIcon.innerHTML = optIcon.innerHTML;
+      }
+      document.querySelectorAll('#txnSortMenu .sort-option').forEach(o => {
+        o.classList.toggle('active', o.dataset.sort === 'date_desc');
+      });
+
       document.querySelectorAll('.quick-chip').forEach(c => c.classList.remove('active'));
       document.querySelector('.quick-chip[data-preset="all"]')?.classList.add('active');
 
@@ -1610,7 +1945,17 @@ const App = {
       exportBtn.disabled = true;
       exportBtn.textContent = '⏳ Exporting...';
       try {
-        await API.exportCSV(qs.toString());
+        const res = await fetch(`/api/transactions/export-csv?${qs}`, { credentials: 'same-origin' });
+        if (!res.ok) throw new Error('Export failed');
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `transactions-export-${new Date().toISOString().slice(0, 10)}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
         UI.toast('✓ Filtered transactions exported to CSV!', 'success');
       } catch (err) {
         UI.toast('Export error: ' + (err.message || 'Failed'), 'error');
@@ -1767,75 +2112,99 @@ const App = {
 
   bindVoiceInput() {
     const micBtn = document.getElementById('voiceQuickBtn');
-    const input = document.getElementById('aiQuickInput');
+    const input  = document.getElementById('aiQuickInput');
     if (!micBtn || !input) return;
 
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRec) {
+      micBtn.title = 'Voice input requires Chrome, Edge, or Safari';
       micBtn.addEventListener('click', () => {
-        UI.toast('Voice dictation is supported in Chrome, Edge, and Safari.', 'info');
+        UI.toast('🎙️ Voice input is supported in Chrome, Edge, and Safari.', 'error');
       });
       return;
     }
 
-    let recognition = null;
     let isListening = false;
 
-    try {
-      recognition = new SpeechRec();
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.lang = 'en-IN';
+    // ── Build a fresh recognition instance each time ──────────────────────────
+    // Chrome throws InvalidStateError if you call .start() on an already-used
+    // SpeechRecognition object — always create a new one per session.
+    function createRecognition() {
+      const rec = new SpeechRec();
+      rec.continuous     = false;
+      rec.interimResults = true;   // show interim so user gets live feedback
+      rec.lang           = navigator.language || 'en-IN';
 
-      recognition.onstart = () => {
+      rec.onstart = () => {
         isListening = true;
         micBtn.classList.add('listening');
-        input.placeholder = '🎙️ Listening... speak naturally (e.g. "Dinner at Olive Garden ₹450")';
-        UI.toast('🎙️ Listening... speak your transaction', 'info');
+        micBtn.title = 'Click to stop listening';
+        input.placeholder = '🎙️ Listening… say your transaction (e.g. "Spent ₹450 on lunch today")';
+        UI.toast('🎙️ Listening — speak your transaction now', 'info');
       };
 
-      recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
+      rec.onresult = (event) => {
+        // Show interim results live in the input while speaking
+        let interim = '';
+        let final   = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const t = event.results[i][0].transcript;
+          if (event.results[i].isFinal) final += t;
+          else interim += t;
+        }
+        input.value = final || interim;
+      };
+
+      rec.onerror = (event) => {
+        isListening = false;
+        micBtn.classList.remove('listening');
+        micBtn.title = 'Click to speak';
+        input.placeholder = 'Enter transaction details...';
+        if (event.error === 'not-allowed' || event.error === 'permission-denied') {
+          UI.toast('⚠️ Microphone access denied — please allow it in your browser settings.', 'error');
+        } else if (event.error === 'network') {
+          UI.toast('⚠️ Network error during voice recognition. Check your connection.', 'error');
+        } else if (event.error !== 'no-speech' && event.error !== 'aborted') {
+          UI.toast(`Voice error: ${event.error}`, 'error');
+        }
+      };
+
+      rec.onend = () => {
+        isListening = false;
+        micBtn.classList.remove('listening');
+        micBtn.title = 'Click to speak';
+        input.placeholder = 'Enter transaction details...';
+        // If we got a final transcript, auto-submit
+        const transcript = input.value.trim();
         if (transcript) {
-          input.value = transcript;
-          UI.toast(`Transcribed: "${transcript}"`, 'success');
-          // Automatically trigger the NLP parse button
+          UI.toast(`✅ Heard: "${transcript}"`, 'success');
           const quickBtn = document.getElementById('aiQuickSubmitBtn');
-          quickBtn?.click();
+          // Small delay so the toast is visible before the modal opens
+          setTimeout(() => quickBtn?.click(), 300);
         }
       };
 
-      recognition.onerror = (event) => {
-        isListening = false;
-        micBtn.classList.remove('listening');
-        input.placeholder = 'Enter transaction details...';
-        if (event.error === 'not-allowed') {
-          UI.toast('⚠ Microphone access was denied. Please allow microphone permissions.', 'error');
-        } else if (event.error !== 'no-speech') {
-          UI.toast(`Voice recognition error: ${event.error}`, 'error');
-        }
-      };
-
-      recognition.onend = () => {
-        isListening = false;
-        micBtn.classList.remove('listening');
-        input.placeholder = 'Enter transaction details...';
-      };
-
-      micBtn.addEventListener('click', () => {
-        if (isListening) {
-          recognition.stop();
-        } else {
-          try {
-            recognition.start();
-          } catch (err) {
-            console.warn('Speech recognition start failed:', err);
-          }
-        }
-      });
-    } catch (e) {
-      console.warn('SpeechRec initialization error:', e);
+      return rec;
     }
+
+    micBtn.addEventListener('click', () => {
+      if (isListening) {
+        // User pressed mic again to cancel
+        isListening = false; // onend will clean up
+        try { micBtn._rec?.stop(); } catch (_) {}
+      } else {
+        const rec = createRecognition();
+        micBtn._rec = rec; // keep reference so we can stop it
+        try {
+          rec.start();
+        } catch (err) {
+          isListening = false;
+          micBtn.classList.remove('listening');
+          console.warn('Voice start error:', err);
+          UI.toast('Could not start voice input. Try refreshing the page.', 'error');
+        }
+      }
+    });
   },
 
   updateHealthScore(summary, budgets, accounts) {
@@ -2067,24 +2436,26 @@ const App = {
     const handleQuickAdd = async () => {
       const text = quickInput?.value?.trim();
       if (!text) {
-        UI.toast('Please enter a transaction sentence (e.g. "Spent ₹450 on coffee yesterday")', 'error');
+        UI.toast('Please enter a transaction sentence or paste bank SMS', 'error');
         return;
       }
 
       if (quickBtn) { quickBtn.disabled = true; quickBtn.textContent = '✨ Extracting...'; }
       try {
-        const res = await API.parseNaturalLanguage(text);
+        // If the text looks like a bank alert or UPI SMS, use specialized bank parser
+        const isSmsLike = /(?:debited|credited|a\/c|acct|ending in|upi|vpa|avl\s+bal|txn\s+id|ref\s+no)/i.test(text);
+        const res = isSmsLike ? await API.parseBankSms(text) : await API.parseNaturalLanguage(text);
         if (res && res.result) {
           const r = res.result;
-          UI.toast('✨ AI extracted transaction details!', 'success');
+          UI.toast(isSmsLike ? '📱 AI parsed bank SMS details!' : '✨ AI extracted transaction details!', 'success');
           UI.openAddModal({
-            description: r.description || text,
+            description: r.description || r.merchant || text,
             amount: r.amount || '',
             type: r.type || 'expense',
             category: r.category || 'Other',
             date: r.date || (typeof getLocalDateString === 'function' ? getLocalDateString() : new Date().toISOString().slice(0, 10)),
             account_id: r.account_id || '',
-            tags: r.tags || []
+            tags: r.tags || ['quick-add']
           });
           if (quickInput) quickInput.value = '';
         }
@@ -2104,6 +2475,7 @@ const App = {
 
     // 2. Receipt Scanner Modal & Drag & Drop Processing
     const btnScan = document.getElementById('btnScanReceipt');
+    const btnScanTxn = document.getElementById('btnScanReceiptTxn');
     const receiptModal = document.getElementById('receiptModal');
     const closeReceiptBtn = document.getElementById('closeReceiptModal');
     const cancelReceiptBtn = document.getElementById('cancelReceiptBtn');
@@ -2146,6 +2518,7 @@ const App = {
     };
 
     if (btnScan) btnScan.addEventListener('click', openReceiptModal);
+    if (btnScanTxn) btnScanTxn.addEventListener('click', openReceiptModal);
     if (closeReceiptBtn) closeReceiptBtn.addEventListener('click', closeReceiptModal);
     if (cancelReceiptBtn) cancelReceiptBtn.addEventListener('click', closeReceiptModal);
     if (rescanBtn) rescanBtn.addEventListener('click', resetReceiptModal);
@@ -2248,15 +2621,20 @@ const App = {
         resetReceiptModal();
 
         // Ensure date is formatted as YYYY-MM-DD for <input type="date">
-        let dateStr = typeof getLocalDateString === 'function' ? getLocalDateString() : new Date().toISOString().slice(0, 10);
+        let dateStr = new Date().toISOString().slice(0, 10);
+        let hasCustomDate = false;
         if (data.date) {
           if (/^\d{4}-\d{2}-\d{2}$/.test(data.date)) {
             dateStr = data.date;
+            hasCustomDate = true;
           } else {
             try {
               const p = new Date(data.date);
-              if (!isNaN(p.getTime())) dateStr = typeof getLocalDateString === 'function' ? getLocalDateString(p) : p.toISOString().slice(0, 10);
-            } catch { }
+              if (!isNaN(p.getTime())) {
+                dateStr = p.toISOString().slice(0, 10);
+                hasCustomDate = true;
+              }
+            } catch {}
           }
         }
 
@@ -2268,7 +2646,237 @@ const App = {
           date: dateStr,
           tags: Array.isArray(data.tags) && data.tags.length ? data.tags : ['receipt']
         });
-        UI.toast('✓ Form pre-filled from receipt!', 'success');
+        const currentYear = new Date().getFullYear();
+        const receiptYear = parseInt(dateStr.slice(0, 4), 10);
+        if (hasCustomDate && receiptYear < currentYear) {
+          UI.toast(`✓ Form pre-filled from receipt! Note: Date is ${dateStr} (past year). Change to Today if you want it in this month's stats.`, 'info', 5000);
+        } else {
+          UI.toast('✓ Form pre-filled from receipt!', 'success');
+        }
+      });
+    }
+
+    // ── 3. Bank SMS & UPI Alert Instant Parser ──────────────────────────
+    const btnOpenSms = document.getElementById('btnOpenSmsModal');
+    const smsModal = document.getElementById('smsParserModal');
+    const closeSmsBtn = document.getElementById('closeSmsModal');
+    const cancelSmsBtn = document.getElementById('cancelSmsBtn');
+    const smsInput = document.getElementById('smsInputText');
+    const btnExtractSms = document.getElementById('btnExtractSms');
+    const btnPasteClip = document.getElementById('btnPasteFromClipboard');
+    const btnOpenInForm = document.getElementById('btnOpenSmsInForm');
+    const btnSaveDirect = document.getElementById('btnSaveSmsDirect');
+    const smsStatusArea = document.getElementById('smsStatusArea');
+    const smsLoader = document.getElementById('smsLoader');
+    const smsResultCard = document.getElementById('smsResultCard');
+
+    let currentSmsParsedData = null;
+
+    const resetSmsModal = () => {
+      if (smsInput) smsInput.value = '';
+      if (smsStatusArea) smsStatusArea.style.display = 'none';
+      if (smsLoader) smsLoader.style.display = 'none';
+      if (smsResultCard) smsResultCard.style.display = 'none';
+      if (btnOpenInForm) btnOpenInForm.style.display = 'none';
+      if (btnSaveDirect) btnSaveDirect.style.display = 'none';
+      if (btnExtractSms) {
+        btnExtractSms.style.display = 'inline-block';
+        btnExtractSms.disabled = false;
+        btnExtractSms.textContent = '✨ Extract Data';
+      }
+      currentSmsParsedData = null;
+    };
+
+    if (btnOpenSms && smsModal) {
+      btnOpenSms.addEventListener('click', () => {
+        resetSmsModal();
+        smsModal.classList.add('open');
+        setTimeout(() => smsInput?.focus(), 100);
+      });
+    }
+
+    const closeSms = () => {
+      if (smsModal) smsModal.classList.remove('open');
+      resetSmsModal();
+    };
+    if (closeSmsBtn) closeSmsBtn.addEventListener('click', closeSms);
+    if (cancelSmsBtn) cancelSmsBtn.addEventListener('click', closeSms);
+
+    // Quick test samples
+    document.querySelectorAll('.sms-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const sample = chip.dataset.sample;
+        if (smsInput && sample) {
+          smsInput.value = sample;
+          executeSmsParse();
+        }
+      });
+    });
+
+    // Paste from clipboard
+    if (btnPasteClip && smsInput) {
+      btnPasteClip.addEventListener('click', async () => {
+        try {
+          if (navigator.clipboard && navigator.clipboard.readText) {
+            const clipText = await navigator.clipboard.readText();
+            if (clipText && clipText.trim()) {
+              smsInput.value = clipText.trim();
+              UI.toast('📋 Pasted from clipboard!', 'info');
+              executeSmsParse();
+              return;
+            }
+          }
+          smsInput.focus();
+          UI.toast('Please press Ctrl+V to paste your SMS', 'info');
+        } catch (_) {
+          smsInput.focus();
+          UI.toast('Clipboard permission not granted. Press Ctrl+V to paste', 'info');
+        }
+      });
+    }
+
+    // Execute SMS parse logic
+    const executeSmsParse = async () => {
+      const text = smsInput?.value?.trim();
+      if (!text) {
+        UI.toast('Please enter or paste a bank SMS message first', 'error');
+        return;
+      }
+
+      if (smsStatusArea) smsStatusArea.style.display = 'block';
+      if (smsLoader) smsLoader.style.display = 'flex';
+      if (smsResultCard) smsResultCard.style.display = 'none';
+      if (btnExtractSms) {
+        btnExtractSms.disabled = true;
+        btnExtractSms.textContent = 'Analyzing...';
+      }
+
+      try {
+        const res = await API.parseBankSms(text);
+        if (res && res.result) {
+          currentSmsParsedData = res.result;
+
+          if (smsLoader) smsLoader.style.display = 'none';
+          if (smsResultCard) smsResultCard.style.display = 'block';
+
+          // Type badge
+          const typeBadge = document.getElementById('smsTypeBadge');
+          const isIncome = currentSmsParsedData.type === 'income';
+          if (typeBadge) {
+            typeBadge.textContent = isIncome ? 'Income / Credit' : 'Expense / Debit';
+            typeBadge.style.background = isIncome ? 'var(--income-tint)' : 'var(--expense-tint)';
+            typeBadge.style.color = isIncome ? 'var(--income)' : 'var(--expense)';
+          }
+
+          // Fields
+          const m = document.getElementById('smsResMerchant');
+          const a = document.getElementById('smsResAmount');
+          const c = document.getElementById('smsResCategory');
+          const d = document.getElementById('smsResDate');
+
+          if (m) m.textContent = currentSmsParsedData.merchant || currentSmsParsedData.description || 'Bank Alert';
+          if (a) {
+            a.textContent = (isIncome ? '+' : '-') + (typeof fmt === 'function' ? fmt(currentSmsParsedData.amount || 0) : `₹${currentSmsParsedData.amount || 0}`);
+            a.className = isIncome ? 'green' : 'red';
+          }
+          if (c) c.textContent = currentSmsParsedData.category || 'Other';
+          if (d) d.textContent = currentSmsParsedData.date || new Date().toISOString().slice(0, 10);
+
+          // Matched account
+          const accSpan = document.getElementById('smsResAccount');
+          if (accSpan) {
+            if (currentSmsParsedData.account_id && Array.isArray(State.accounts)) {
+              const matchedAcc = State.accounts.find(acc => acc.id === currentSmsParsedData.account_id);
+              accSpan.innerHTML = matchedAcc ? `<strong style="color:var(--brand)">✓ ${matchedAcc.name}</strong>` : 'Detected';
+            } else {
+              accSpan.textContent = 'None matched (will use default)';
+            }
+          }
+
+          // Ref & Bal
+          const refWrap = document.getElementById('smsResRefWrap');
+          const refSpan = document.getElementById('smsResRef');
+          if (refWrap && refSpan) {
+            if (currentSmsParsedData.reference_no) {
+              refWrap.style.display = 'block';
+              refSpan.textContent = currentSmsParsedData.reference_no;
+            } else {
+              refWrap.style.display = 'none';
+            }
+          }
+
+          const balWrap = document.getElementById('smsResBalWrap');
+          const balSpan = document.getElementById('smsResBal');
+          if (balWrap && balSpan) {
+            if (currentSmsParsedData.balance) {
+              balWrap.style.display = 'block';
+              balSpan.textContent = typeof fmt === 'function' ? fmt(currentSmsParsedData.balance) : `₹${currentSmsParsedData.balance}`;
+            } else {
+              balWrap.style.display = 'none';
+            }
+          }
+
+          if (btnOpenInForm) btnOpenInForm.style.display = 'inline-block';
+          if (btnSaveDirect) btnSaveDirect.style.display = 'inline-block';
+          UI.toast('✨ Bank SMS parsed successfully!', 'success');
+        }
+      } catch (err) {
+        if (smsLoader) smsLoader.style.display = 'none';
+        UI.toast(err.message || 'Failed to parse bank SMS. Try entering manually.', 'error');
+      } finally {
+        if (btnExtractSms) {
+          btnExtractSms.disabled = false;
+          btnExtractSms.textContent = '✨ Re-parse';
+        }
+      }
+    };
+
+    if (btnExtractSms) btnExtractSms.addEventListener('click', executeSmsParse);
+
+    // "Review in Form" -> opens standard Add Transaction modal pre-filled
+    if (btnOpenInForm) {
+      btnOpenInForm.addEventListener('click', () => {
+        if (!currentSmsParsedData) return;
+        const data = { ...currentSmsParsedData };
+        closeSms();
+        UI.openAddModal({
+          description: data.description || data.merchant || 'Bank Transaction',
+          amount: data.amount || '',
+          type: data.type || 'expense',
+          category: data.category || 'Other',
+          date: data.date || new Date().toISOString().slice(0, 10),
+          account_id: data.account_id || '',
+          tags: Array.isArray(data.tags) ? data.tags : ['bank-sms']
+        });
+        UI.toast('📝 Form pre-filled from bank alert!', 'info');
+      });
+    }
+
+    // "Save Directly" -> 1-click database insert without opening modal
+    if (btnSaveDirect) {
+      btnSaveDirect.addEventListener('click', async () => {
+        if (!currentSmsParsedData) return;
+        btnSaveDirect.disabled = true;
+        btnSaveDirect.textContent = 'Saving...';
+        try {
+          const text = smsInput?.value?.trim() || '';
+          const res = await API.parseBankSms(text, true);
+          if (res && res.saved) {
+            UI.toast(`⚡ Saved ${typeof fmt === 'function' ? fmt(currentSmsParsedData.amount) : '₹' + currentSmsParsedData.amount} (${currentSmsParsedData.merchant || currentSmsParsedData.category})!`, 'success');
+            closeSms();
+            // Refresh dashboard, transactions and account balances
+            await App.loadDashboard();
+            if (typeof App.loadTransactions === 'function') await App.loadTransactions({});
+            if (typeof App.loadAccounts === 'function') await App.loadAccounts(false);
+          } else {
+            throw new Error('Could not auto-save transaction');
+          }
+        } catch (err) {
+          UI.toast(err.message || 'Failed to direct-save transaction', 'error');
+        } finally {
+          btnSaveDirect.disabled = false;
+          btnSaveDirect.textContent = '⚡ Save Directly';
+        }
       });
     }
   }

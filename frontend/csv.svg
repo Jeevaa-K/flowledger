@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="csvGradient" gradientUnits="userSpaceOnUse" x1="60" y1="40" x2="450" y2="470">
+      <stop offset="0" stop-color="#7a00ff"/>
+      <stop offset="0.55" stop-color="#b800ff"/>
+      <stop offset="1" stop-color="#e400ff"/>
+    </linearGradient>
+  </defs>
+  <g fill="none" stroke="url(#csvGradient)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+    <!-- page outline -->
+    <path d="M222 40 H92 Q68 40 68 64 V448 Q68 472 92 472 H358 Q376 472 376 454 V446"/>
+    <!-- folded corner -->
+    <path d="M254 44 L378 160 H276 Q254 160 254 138 Z"/>
+    <!-- connector -->
+    <path d="M378 160 V252"/>
+    <!-- label box -->
+    <rect x="156" y="254" width="290" height="160" rx="30"/>
+    <!-- C -->
+    <path d="M247 307 Q239 294 222 294 Q196 294 196 318 V352 Q196 376 222 376 Q239 376 247 363"/>
+    <!-- S -->
+    <path d="M331 308 Q322 294 303 294 Q280 294 280 312 Q280 328 304 334 Q332 340 332 358 Q332 376 306 376 Q287 376 278 362"/>
+    <!-- V -->
+    <path d="M352 294 L382 376 L412 294"/>
+  </g>
+</svg>
+

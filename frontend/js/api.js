@@ -1,15 +1,16 @@
-const BASE = window.location.protocol === 'file:'
-  ? 'http://localhost:3001/api'
-  : '/api';
+// The session is an httpOnly cookie set by the server, so JavaScript never
+// sees (or stores) the auth token. The app must be served by the backend.
+const BASE = '/api';
 
 const API = {
-  getToken() { return localStorage.getItem('fl_token'); },
-
   headers() {
-    const h = { 'Content-Type': 'application/json' };
-    const t = this.getToken();
-    if (t) h['Authorization'] = 'Bearer ' + t;
-    return h;
+    return { 'Content-Type': 'application/json' };
+  },
+
+  // Session expired or missing: drop the cached profile and show the login screen.
+  handleUnauthorized() {
+    localStorage.removeItem('fl_user');
+    window.location.reload();
   },
 
   async request(method, path, body) {
@@ -23,9 +24,7 @@ const API = {
       throw new Error("You're offline — check your connection and try again.");
     }
     if (r.status === 401) {
-      localStorage.removeItem('fl_token');
-      localStorage.removeItem('fl_user');
-      window.location.reload();
+      this.handleUnauthorized();
       return;
     }
     if (!r.ok) {
@@ -48,9 +47,7 @@ const API = {
   async getWithCount(path) {
     const r = await fetch(BASE + path, { headers: this.headers() });
     if (r.status === 401) {
-      localStorage.removeItem('fl_token');
-      localStorage.removeItem('fl_user');
-      window.location.reload();
+      this.handleUnauthorized();
       return { data: [], total: 0 };
     }
     if (!r.ok) {
@@ -68,24 +65,38 @@ const API = {
     return this.post('/ai/parse-text', { text });
   },
 
+  parseBankSms(sms, save = false) {
+    return this.post('/ai/parse-sms', { sms, save });
+  },
+
   scanReceipt(image) {
     return this.post('/ai/scan-receipt', { image });
   },
 
-  getGroups() { return this.get('/groups'); },
-  createGroup(data) { return this.post('/groups', data); },
-  getGroupDetails(id) { return this.get(`/groups/${id}`); },
-  addGroupExpense(groupId, data) { return this.post(`/groups/${groupId}/expenses`, data); },
-  settleGroup(groupId, data) { return this.post(`/groups/${groupId}/settle`, data); },
+  createSplitTransaction(data) {
+    return this.post('/transactions/split', data);
+  },
+
+  getSplitGroup(splitId) {
+    return this.get(`/transactions/split/${splitId}`);
+  },
+
+  deleteSplitGroup(splitId) {
+    return this.del(`/transactions/split/${splitId}`);
+  },
+
+  getGroups()                         { return this.get('/groups'); },
+  createGroup(data)                  { return this.post('/groups', data); },
+  getGroupDetails(id)                { return this.get(`/groups/${id}`); },
+  addGroupExpense(groupId, data)     { return this.post(`/groups/${groupId}/expenses`, data); },
+  settleGroup(groupId, data)         { return this.post(`/groups/${groupId}/settle`, data); },
   deleteGroupExpense(groupId, expId) { return this.del(`/groups/${groupId}/expenses/${expId}`); },
   deleteGroup(id) { return this.del(`/groups/${id}`); },
 
   async exportCSV(queryString = '') {
     try {
-      // Token goes in the Authorization header, never the URL — a query
-      // param would end up in server access logs and browser history.
-      const urlPath = queryString ? `/transactions/export-csv?${queryString}` : '/export/csv';
-      const res = await fetch(BASE + urlPath, { headers: this.headers() });
+      // The session cookie authenticates the download; nothing sensitive in the URL.
+      const res = await fetch(BASE + '/export/csv', { headers: this.headers() });
       if (!res.ok) throw new Error('Export failed');
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
