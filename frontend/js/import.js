@@ -170,7 +170,7 @@ const Importer = {
   // year, US-style). ISO (YYYY-MM-DD) and DD-MM-YYYY are unambiguous and
   // ignore the format setting.
   parseDate(s, format = this.dateFormat) {
-    if (!s) return new Date().toISOString().slice(0, 10);
+    if (!s) return typeof getLocalDateString === 'function' ? getLocalDateString() : new Date().toISOString().slice(0, 10);
     s = s.trim().replace(/"/g, '');
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
     if (/^\d{2}-\d{2}-\d{4}$/.test(s)) {
@@ -190,8 +190,13 @@ const Importer = {
       else                { day = a; month = b; }         // 'auto' and 'dmy' both default day-first
       return `${y}-${month.padStart(2,'0')}-${day.padStart(2,'0')}`;
     }
-    try { const d = new Date(s); if (!isNaN(d)) return d.toISOString().slice(0,10); } catch {}
-    return new Date().toISOString().slice(0, 10);
+    try {
+      const d = new Date(s);
+      if (!isNaN(d.getTime())) {
+        return typeof getLocalDateString === 'function' ? getLocalDateString(d) : d.toISOString().slice(0, 10);
+      }
+    } catch {}
+    return typeof getLocalDateString === 'function' ? getLocalDateString() : new Date().toISOString().slice(0, 10);
   },
 
   showPreview(rows) {

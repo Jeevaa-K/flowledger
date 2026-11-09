@@ -194,15 +194,15 @@ const Auth = {
     try {
       let data;
       try {
-        data = await API.post('/auth/register', { name:'Demo User', email:'demo@flowledger.app', password:'demo123456' });
+        data = await API.post('/auth/login', { email: 'demo@flowledger.app', password: 'demo123456' });
       } catch {
-        data = await API.post('/auth/login', { email:'demo@flowledger.app', password:'demo123456' });
+        data = await API.post('/auth/register', { name: 'Demo User', email: 'demo@flowledger.app', password: 'demo123456' });
       }
       this.storeSession(data, false);
       // See the comment in login() above.
       window.location.reload();
-    } catch(e) {
-      this.setError('loginError', 'Demo failed: ' + e.message.replace(/^\d+:\s*/,''));
+    } catch (e) {
+      this.setError('loginError', 'Demo failed: ' + e.message.replace(/^\d+:\s*/, ''));
     }
   },
 

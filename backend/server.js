@@ -1,4 +1,4 @@
-﻿require('dotenv').config();
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -26,6 +26,17 @@ if (!JWT_SECRET) {
 if (JWT_SECRET.length < 32) {
   console.error('❌ FATAL: JWT_SECRET is too short (min 32 characters). Refusing to start.');
   process.exit(1);
+}
+if (!process.env.DATABASE_URL) {
+  console.error('❌ FATAL: DATABASE_URL environment variable is not set. Refusing to start.');
+  process.exit(1);
+}
+
+// Trust reverse proxy (Vercel, Render, Railway, Nginx) so express-rate-limit
+// can read the real client IP from X-Forwarded-For without crashing or
+// grouping all visitors under the same proxy IP.
+if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
+  app.set('trust proxy', 1);
 }
 
 // ── Security headers ─────────────────────────────────────────────
@@ -90,7 +101,14 @@ app.use('/api/', apiLimiter);
 // ── PostgreSQL ────────────────────────────────────────────────
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  max: parseInt(process.env.DB_POOL_MAX || '10', 10),
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000
+});
+
+pool.on('error', (err) => {
+  console.error('⚠️ Unexpected idle PostgreSQL client error:', err.message);
 });
 
 const db = {
@@ -190,6 +208,10 @@ async function initDB() {
   // user's transaction count grows.
   await db.run(`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}'`);
   await db.run(`CREATE INDEX IF NOT EXISTS idx_transactions_tags ON transactions USING GIN (tags)`);
+  // Notes column for additional details (reconciliation notes, references, invoice IDs)
+  await db.run(`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT ''`);
+  await db.run(`CREATE INDEX IF NOT EXISTS idx_transactions_user_date ON transactions (user_id, date DESC)`);
+  await db.run(`CREATE INDEX IF NOT EXISTS idx_transactions_user_cat ON transactions (user_id, category)`);
   // ── Group Expense Splitting Tables ─────────────────────────────
   await db.run(`CREATE TABLE IF NOT EXISTS groups (
     id SERIAL PRIMARY KEY,
@@ -259,16 +281,15 @@ const apiKey = process.env.GROQ_API_KEY;
 console.log('🔑 GROQ_API_KEY:', apiKey ? `found (${apiKey.slice(0, 8)}...)` : 'NOT FOUND ❌');
 if (apiKey) { groq = new Groq({ apiKey }); console.log('✅ Groq AI enabled'); }
 
-// Candidate Groq models to try in fallback sequence if a specific model returns 404
-const GROQ_MODELS = [
-  'openai/gpt-oss-120b',
-  'openai/gpt-oss-20b',
-  'qwen/qwen3.8-27b',
+// Candidate Groq models with user override support via GROQ_MODEL environment variable
+const DEFAULT_GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+const FAST_GROQ_MODEL = 'llama-3.1-8b-instant';
+const GROQ_MODELS = Array.from(new Set([
+  DEFAULT_GROQ_MODEL,
+  'llama-3.3-70b-versatile',
   'llama-3.1-8b-instant',
-  'llama3-70b-8192',
-  'llama3-8b-8192',
   'mixtral-8x7b-32768'
-];
+].filter(Boolean)));
 
 async function createGroqCompletion(params) {
   if (!groq) throw new Error('Groq AI is not configured');
@@ -302,13 +323,21 @@ async function createGroqCompletion(params) {
 
 // ── Langfuse ──────────────────────────────────────────────────
 let langfuse = null;
-if (process.env.LANGFUSE_PUBLIC_KEY && process.env.LANGFUSE_SECRET_KEY) {
-  langfuse = new Langfuse({
-    publicKey: process.env.LANGFUSE_PUBLIC_KEY,
-    secretKey: process.env.LANGFUSE_SECRET_KEY,
-    baseUrl: process.env.LANGFUSE_HOST || 'https://cloud.langfuse.com'
-  });
-  console.log('✅ Langfuse tracing enabled');
+// Only activate if real public key is configured (avoids background errors with dummy keys)
+if (process.env.LANGFUSE_PUBLIC_KEY &&
+    process.env.LANGFUSE_SECRET_KEY &&
+    process.env.LANGFUSE_PUBLIC_KEY.startsWith('pk-lf-') &&
+    !process.env.LANGFUSE_PUBLIC_KEY.startsWith('pk-lf-your_')) {
+  try {
+    langfuse = new Langfuse({
+      publicKey: process.env.LANGFUSE_PUBLIC_KEY,
+      secretKey: process.env.LANGFUSE_SECRET_KEY,
+      baseUrl: process.env.LANGFUSE_HOST || 'https://cloud.langfuse.com'
+    });
+    console.log('✅ Langfuse tracing enabled');
+  } catch (err) {
+    console.warn('⚠️ Langfuse init failed:', err.message);
+  }
 }
 
 // ── Auth Middleware ───────────────────────────────────────────
@@ -340,6 +369,35 @@ function sanitizeTags(input) {
     if (seen.size >= 15) break; // cap tags per transaction
   }
   return [...seen];
+}
+
+// Escapes a CSV field: quotes it, doubles internal quotes, and neutralizes
+// leading =/+/-/@ so a description like "=cmd|..." can't execute as a
+// formula when the file is opened in Excel/Sheets (CSV injection).
+function csvField(val) {
+  let s = String(val ?? '');
+  if (/^[=+\-@]/.test(s)) s = "'" + s;
+  return `"${s.replace(/"/g, '""')}"`;
+}
+
+// Format Date / string reliably into YYYY-MM-DD without UTC day-shifting
+function toDateString(d) {
+  if (!d) return '';
+  if (typeof d === 'string') return d.slice(0, 10);
+  if (d instanceof Date && !isNaN(d.getTime())) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+  return String(d).slice(0, 10);
+}
+
+// Strips characters outside Latin-1/ASCII so PDFKit Helvetica font never crashes on emojis/glyphs
+function pdfSafeText(val, fallback = '') {
+  if (!val) return fallback;
+  const clean = String(val).replace(/[^\x20-\x7E\xA0-\xFF]/g, '').trim();
+  return clean || fallback;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -402,6 +460,10 @@ app.put('/api/auth/password', auth, async (req, res) => {
   if (newPassword.length > 200) return res.status(400).json({ error: 'Password is too long' });
   try {
     const user = await db.get('SELECT * FROM users WHERE id=$1', [req.user.id]);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (user.email === 'demo@flowledger.app') {
+      return res.status(403).json({ error: 'Demo account password cannot be modified.' });
+    }
     const match = await bcrypt.compare(currentPassword, user.password);
     if (!match) return res.status(401).json({ error: 'Current password incorrect' });
     await db.run('UPDATE users SET password=$1 WHERE id=$2', [await bcrypt.hash(newPassword, 10), req.user.id]);
@@ -412,11 +474,17 @@ app.put('/api/auth/password', auth, async (req, res) => {
 app.delete('/api/auth/account', auth, async (req, res) => {
   try {
     const { password } = req.body || {};
-    if (password) {
-      const user = await db.get('SELECT password FROM users WHERE id=$1', [req.user.id]);
-      if (!user || !(await bcrypt.compare(password, user.password))) {
-        return res.status(403).json({ error: 'Incorrect password. Account deletion cancelled for your security.' });
-      }
+    if (!password) {
+      return res.status(400).json({ error: 'Password required to confirm account deletion' });
+    }
+    const user = await db.get('SELECT email, password FROM users WHERE id=$1', [req.user.id]);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (user.email === 'demo@flowledger.app') {
+      return res.status(403).json({ error: 'The demo account cannot be deleted.' });
+    }
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) {
+      return res.status(403).json({ error: 'Incorrect password. Account deletion cancelled for your security.' });
     }
     await db.run('DELETE FROM users WHERE id=$1', [req.user.id]);
     res.json({ success: true });
@@ -506,14 +574,14 @@ app.get('/api/transactions/export-csv', auth, async (req, res) => {
 
     const rows = await db.all(`SELECT date, type, category, description, amount, notes, tags FROM transactions${where} ${orderBy} LIMIT 2000`, p);
 
-    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="transactions-${new Date().toISOString().slice(0,10)}.csv"`);
 
     let csv = 'Date,Type,Category,Description,Amount,Notes,Tags\r\n';
     for (const r of rows) {
-      const esc = v => `"${String(v || '').replace(/"/g, '""')}"`;
       const tags = Array.isArray(r.tags) ? r.tags.join(';') : '';
-      csv += `${esc(r.date)},${esc(r.type)},${esc(r.category)},${esc(r.description)},${r.amount},${esc(r.notes)},${esc(tags)}\r\n`;
+      const d = r.date instanceof Date ? r.date.toISOString().slice(0, 10) : String(r.date || '').slice(0, 10);
+      csv += `${csvField(d)},${csvField(r.type)},${csvField(r.category)},${csvField(r.description)},${r.amount},${csvField(r.notes || '')},${csvField(tags)}\r\n`;
     }
     res.send(csv);
   } catch (e) {
@@ -546,7 +614,7 @@ async function resolveAccountId(accountId, userId) {
 
 app.post('/api/transactions', auth, async (req, res) => {
   try {
-    const { description, amount, type, category, date, account_id, tags } = req.body;
+    const { description, amount, type, category, date, account_id, tags, notes } = req.body;
     if (!description || !amount || !type || !category || !date)
       return res.status(400).json({ error: 'All fields required' });
     if (description.length > 500) return res.status(400).json({ error: 'Description is too long' });
@@ -554,9 +622,10 @@ app.post('/api/transactions', auth, async (req, res) => {
     const amt = parseFloat(amount);
     if (!Number.isFinite(amt) || amt <= 0) return res.status(400).json({ error: 'Invalid amount' });
     const accId = await resolveAccountId(account_id, req.user.id);
+    const cleanNotes = typeof notes === 'string' ? notes.trim().slice(0, 1000) : '';
     const row = await db.get(
-      'INSERT INTO transactions (user_id,description,amount,type,category,date,account_id,tags) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *',
-      [req.user.id, description, amt, type, category, date, accId, sanitizeTags(tags)]
+      'INSERT INTO transactions (user_id,description,amount,type,category,date,account_id,tags,notes) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *',
+      [req.user.id, description, amt, type, category, date, accId, sanitizeTags(tags), cleanNotes]
     );
     res.status(201).json(row);
   } catch (e) {
@@ -567,24 +636,34 @@ app.post('/api/transactions', auth, async (req, res) => {
 
 app.put('/api/transactions/:id', auth, async (req, res) => {
   try {
-    const { description, amount, type, category, date, account_id, tags } = req.body;
+    const existing = await db.get('SELECT * FROM transactions WHERE id=$1 AND user_id=$2', [req.params.id, req.user.id]);
+    if (!existing) return res.status(404).json({ error: 'Transaction not found' });
+
+    const { description, amount, type, category, date, account_id, tags, notes } = req.body;
     if (type && !['income', 'expense'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
     const amt = amount !== undefined ? parseFloat(amount) : undefined;
     if (amt !== undefined && (!Number.isFinite(amt) || amt <= 0)) return res.status(400).json({ error: 'Invalid amount' });
-    const accId = await resolveAccountId(account_id, req.user.id);
-    // COALESCE can't distinguish "omitted" from "clear all tags" the way
-    // it does for scalar columns (an empty array is still NOT NULL), so
-    // tags are only overwritten when the field is actually present in
-    // the request body — omitting `tags` entirely leaves existing tags
-    // untouched, same as every other optional field on this route.
-    const tagsVal = tags !== undefined ? sanitizeTags(tags) : undefined;
+
+    // Handle account_id unlinking: explicitly passing null or empty string unassigns the account
+    let accId = existing.account_id;
+    if (account_id !== undefined) {
+      accId = (account_id === null || account_id === '') ? null : await resolveAccountId(account_id, req.user.id);
+    }
+
+    const descVal = description !== undefined ? String(description).slice(0, 500) : existing.description;
+    const amtVal = amt !== undefined ? amt : existing.amount;
+    const typeVal = type !== undefined ? type : existing.type;
+    const catVal = category !== undefined ? category : existing.category;
+    const dateVal = date !== undefined ? date : existing.date;
+    const tagsVal = tags !== undefined ? sanitizeTags(tags) : existing.tags;
+    const notesVal = notes !== undefined ? String(notes).trim().slice(0, 1000) : existing.notes;
+
     const row = await db.get(
-      `UPDATE transactions SET description=$1,amount=$2,type=$3,category=$4,date=$5,
-         account_id=COALESCE($6,account_id), tags=COALESCE($7,tags)
-       WHERE id=$8 AND user_id=$9 RETURNING *`,
-      [description, amt, type, category, date, accId, tagsVal, req.params.id, req.user.id]
+      `UPDATE transactions SET description=$1, amount=$2, type=$3, category=$4, date=$5,
+         account_id=$6, tags=$7, notes=$8
+       WHERE id=$9 AND user_id=$10 RETURNING *`,
+      [descVal, amtVal, typeVal, catVal, dateVal, accId, tagsVal, notesVal, req.params.id, req.user.id]
     );
-    if (!row) return res.status(404).json({ error: 'Transaction not found' }); // wasn't yours or doesn't exist
     res.json(row);
   } catch (e) {
     if (e?.status) return res.status(e.status).json({ error: e.error });
@@ -621,7 +700,7 @@ app.post('/api/transactions/import', auth, async (req, res) => {
         [req.user.id, dates]
       )
       : [];
-    const dupKey = r => `${r.description}|${Number(r.amount)}|${r.type}|${r.category}|${new Date(r.date).toISOString().slice(0, 10)}`;
+    const dupKey = r => `${r.description}|${Number(r.amount)}|${r.type}|${r.category}|${toDateString(r.date)}`;
     const existingKeys = new Set(existingRows.map(dupKey));
 
     let imported = 0, skipped = 0;
@@ -631,11 +710,13 @@ app.post('/api/transactions/import', auth, async (req, res) => {
       const amt = parseFloat(t.amount);
       if (!Number.isFinite(amt) || amt <= 0) continue;
       const description = String(t.description).slice(0, 500);
-      const key = `${description}|${amt}|${t.type}|${t.category}|${t.date}`;
+      const formattedDate = toDateString(t.date);
+      const key = `${description}|${amt}|${t.type}|${t.category}|${formattedDate}`;
       if (existingKeys.has(key)) { skipped++; continue; }
+      const notes = t.notes ? String(t.notes).slice(0, 1000) : '';
       await db.run(
-        'INSERT INTO transactions (user_id,description,amount,type,category,date,account_id) VALUES ($1,$2,$3,$4,$5,$6,$7)',
-        [req.user.id, description, amt, t.type, t.category, t.date, accId]
+        'INSERT INTO transactions (user_id,description,amount,type,category,date,account_id,notes) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+        [req.user.id, description, amt, t.type, t.category, formattedDate, accId, notes]
       );
       existingKeys.add(key); // guards against duplicates within the same uploaded file too
       imported++;
@@ -650,6 +731,7 @@ app.post('/api/transactions/import', auth, async (req, res) => {
 // ── Summary ───────────────────────────────────────────────────
 app.get('/api/summary', auth, async (req, res) => {
   try {
+    await processDueRecurring(req.user.id);
     const { month, year } = req.query;
     let dateFilter = '';
     const p = [req.user.id];
@@ -922,7 +1004,13 @@ app.post('/api/budgets/apply-suggestions', auth, async (req, res) => {
 // mapRow keeps that translation in one place instead of scattered
 // across every route below.
 function mapGoalRow(g) {
-  return { id: g.id, name: g.name, target: Number(g.target), saved: Number(g.saved), date: g.target_date };
+  return {
+    id: g.id,
+    name: g.name,
+    target: Number(g.target),
+    saved: Number(g.saved),
+    date: g.target_date ? toDateString(g.target_date) : null
+  };
 }
 
 app.get('/api/goals', auth, async (req, res) => {
@@ -1071,7 +1159,10 @@ app.get('/api/tags', auth, async (req, res) => {
 
 // ── Recurring ─────────────────────────────────────────────────
 app.get('/api/recurring', auth, async (req, res) => {
-  try { res.json(await db.all('SELECT * FROM recurring WHERE user_id=$1 ORDER BY next_date ASC', [req.user.id])); }
+  try {
+    await processDueRecurring(req.user.id);
+    res.json(await db.all('SELECT * FROM recurring WHERE user_id=$1 ORDER BY next_date ASC', [req.user.id]));
+  }
   catch (e) { safeError(res, e, 'List recurring'); }
 });
 
@@ -1162,12 +1253,17 @@ app.get('/api/recurring/detect', auth, async (req, res) => {
   }
 });
 
+const VALID_RECURRING_FREQUENCIES = ['daily', 'weekly', 'monthly', 'yearly'];
+
 app.post('/api/recurring', auth, async (req, res) => {
   try {
     const { description, amount, type, category, frequency, next_date } = req.body;
     if (!description || !amount || !type || !category || !frequency || !next_date)
       return res.status(400).json({ error: 'All fields required' });
     if (!['income', 'expense'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
+    if (!VALID_RECURRING_FREQUENCIES.includes(frequency)) {
+      return res.status(400).json({ error: `Invalid frequency. Allowed: ${VALID_RECURRING_FREQUENCIES.join(', ')}` });
+    }
     const amt = parseFloat(amount);
     if (!Number.isFinite(amt) || amt <= 0) return res.status(400).json({ error: 'Invalid amount' });
     const row = await db.get(
@@ -1180,14 +1276,29 @@ app.post('/api/recurring', auth, async (req, res) => {
 
 app.put('/api/recurring/:id', auth, async (req, res) => {
   try {
+    const existing = await db.get('SELECT * FROM recurring WHERE id=$1 AND user_id=$2', [req.params.id, req.user.id]);
+    if (!existing) return res.status(404).json({ error: 'Recurring transaction not found' });
+
     const { description, amount, type, category, frequency, next_date, active } = req.body;
+    if (type && !['income', 'expense'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
+    if (frequency && !VALID_RECURRING_FREQUENCIES.includes(frequency)) {
+      return res.status(400).json({ error: `Invalid frequency. Allowed: ${VALID_RECURRING_FREQUENCIES.join(', ')}` });
+    }
     const amt = amount !== undefined ? parseFloat(amount) : undefined;
     if (amt !== undefined && (!Number.isFinite(amt) || amt <= 0)) return res.status(400).json({ error: 'Invalid amount' });
+
+    const descVal = description !== undefined ? description : existing.description;
+    const amtVal = amt !== undefined ? amt : existing.amount;
+    const typeVal = type !== undefined ? type : existing.type;
+    const catVal = category !== undefined ? category : existing.category;
+    const freqVal = frequency !== undefined ? frequency : existing.frequency;
+    const nextVal = next_date !== undefined ? next_date : existing.next_date;
+    const activeVal = active !== undefined ? (active ? 1 : 0) : existing.active;
+
     const row = await db.get(
       'UPDATE recurring SET description=$1,amount=$2,type=$3,category=$4,frequency=$5,next_date=$6,active=$7 WHERE id=$8 AND user_id=$9 RETURNING *',
-      [description, amt, type, category, frequency, next_date, active ? 1 : 0, req.params.id, req.user.id]
+      [descVal, amtVal, typeVal, catVal, freqVal, nextVal, activeVal, req.params.id, req.user.id]
     );
-    if (!row) return res.status(404).json({ error: 'Recurring transaction not found' });
     res.json(row);
   } catch (e) { safeError(res, e, 'Update recurring'); }
 });
@@ -1222,32 +1333,65 @@ function addPeriod(date, frequency, anchorDay) {
     next.setDate(Math.min(anchorDay, lastDayOfTargetMonth));
     return next;
   }
-  return next; // unknown frequency — leave unchanged rather than guess
+  // Fallback: advance by at least 1 day to guarantee loop progress and avoid hangs
+  next.setDate(next.getDate() + 1);
+  return next;
+}
+
+async function processDueRecurring(userId = null) {
+  const today = new Date().toISOString().slice(0, 10);
+  try {
+    const query = userId
+      ? 'SELECT * FROM recurring WHERE active=1 AND next_date<=$1 AND user_id=$2'
+      : 'SELECT * FROM recurring WHERE active=1 AND next_date<=$1';
+    const params = userId ? [today, userId] : [today];
+    const due = await db.all(query, params);
+
+    let totalCreated = 0;
+    for (const r of due) {
+      // Find user's active primary account if available
+      const defaultAccount = await db.get(
+        'SELECT id FROM accounts WHERE user_id=$1 AND archived=false ORDER BY id ASC LIMIT 1',
+        [r.user_id]
+      );
+      const accId = defaultAccount ? defaultAccount.id : null;
+
+      // anchorDay is fixed from the rule's ORIGINAL next_date
+      const anchorDay = new Date(r.next_date).getDate();
+
+      // Loop over all overdue periods up to today (generating intermediate transactions
+      // rather than skipping them, with a safety cap of 365 iterations per rule).
+      let currentDue = new Date(r.next_date);
+      let loops = 0;
+      while (currentDue.toISOString().slice(0, 10) <= today && loops < 365) {
+        const occurrenceDate = currentDue.toISOString().slice(0, 10);
+        await db.run(
+          'INSERT INTO transactions (user_id,description,amount,type,category,date,account_id,notes) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+          [r.user_id, r.description, r.amount, r.type, r.category, occurrenceDate, accId, `Auto-generated from ${r.frequency} recurring rule`]
+        );
+        totalCreated++;
+
+        const nextDue = addPeriod(currentDue, r.frequency, anchorDay);
+        // Ensure strictly advancing forward
+        if (nextDue.getTime() <= currentDue.getTime()) {
+          nextDue.setDate(currentDue.getDate() + 1);
+        }
+        currentDue = nextDue;
+        loops++;
+      }
+
+      await db.run('UPDATE recurring SET next_date=$1 WHERE id=$2', [currentDue.toISOString().slice(0, 10), r.id]);
+    }
+    if (totalCreated) console.log(`✅ Processed ${totalCreated} recurring transactions${userId ? ` for user ${userId}` : ''}`);
+    return totalCreated;
+  } catch (e) {
+    console.error('Recurring processing error:', e.message);
+    return 0;
+  }
 }
 
 cron.schedule('0 0 * * *', async () => {
-  const today = new Date().toISOString().slice(0, 10);
-  try {
-    const due = await db.all('SELECT * FROM recurring WHERE active=1 AND next_date<=$1', [today]);
-    for (const r of due) {
-      await db.run(
-        'INSERT INTO transactions (user_id,description,amount,type,category,date) VALUES ($1,$2,$3,$4,$5,$6)',
-        [r.user_id, r.description, r.amount, r.type, r.category, today]
-      );
-      // anchorDay is fixed from the rule's ORIGINAL next_date, not
-      // re-derived after each step — otherwise a clamp in a short month
-      // (e.g. Feb 28) would permanently shrink a "31st of the month" rule.
-      const anchorDay = new Date(r.next_date).getDate();
-      // Loop in case next_date fell more than one period behind (e.g. server
-      // was down) — advances one period at a time so intermediate months
-      // are still generated correctly rather than skipped.
-      let next = new Date(r.next_date);
-      do { next = addPeriod(next, r.frequency, anchorDay); }
-      while (next.toISOString().slice(0, 10) <= today);
-      await db.run('UPDATE recurring SET next_date=$1 WHERE id=$2', [next.toISOString().slice(0, 10), r.id]);
-    }
-    if (due.length) console.log(`✅ Processed ${due.length} recurring transactions`);
-  } catch (e) { console.error('Cron error:', e.message); }
+  await processDueRecurring();
 });
 
 // ── AI Chat ───────────────────────────────────────────────────
@@ -1386,8 +1530,9 @@ app.post('/api/ai/chat', auth, async (req, res) => {
     }
 
     let personaRules = '';
-    let groqModelChoice = 'openai/gpt-oss-120b';
+    let groqModelChoice = DEFAULT_GROQ_MODEL;
     if (activeModel === 'claude') {
+      groqModelChoice = DEFAULT_GROQ_MODEL;
       personaRules = `You are CLAUDE 3.5 SONNET, an elite financial auditor and budget strategist on FlowLedger.
 TONE: Exceptionally thoughtful, rigorous, structured, and objective.
 STYLE:
@@ -1396,11 +1541,12 @@ STYLE:
 - Calculate concrete metrics: savings rate %, burn rate, and discretionary spending buffer.
 - Emphasize financial resilience, debt avoidance, and pragmatic risk mitigation.`;
     } else if (activeModel === 'fast') {
-      groqModelChoice = 'openai/gpt-oss-20b';
+      groqModelChoice = FAST_GROQ_MODEL;
       personaRules = `You are a high-speed financial assistant.
 TONE: Crisp, direct, concise (under 80 words).
 STYLE: Give immediate numerical answers, calculations, and punchy bullet points without pleasantries or fluff.`;
     } else {
+      groqModelChoice = DEFAULT_GROQ_MODEL;
       // default: chatgpt / gpt-4o
       personaRules = `You are CHATGPT (GPT-4o), an encouraging, visionary financial strategist and wealth architect on FlowLedger.
 TONE: Proactive, strategic, accessible, and motivating.
@@ -1642,7 +1788,11 @@ Return ONLY a valid JSON object with the following fields:
 }`;
 
     let jsonResult = null;
-    const visionModels = ['qwen/qwen3.8-27b', 'llama-3.2-11b-vision-preview', 'llama-3.2-90b-vision-preview'];
+    const visionModels = Array.from(new Set([
+      process.env.GROQ_VISION_MODEL,
+      'llama-3.2-11b-vision-preview',
+      'llama-3.2-90b-vision-preview'
+    ].filter(Boolean)));
     let lastErr = null;
 
     for (const vModel of visionModels) {
@@ -1904,10 +2054,17 @@ app.post('/api/groups/:id/expenses', auth, async (req, res) => {
     // Save splits
     let splitList = Array.isArray(splits) ? splits : [];
     if (!splitList.length) {
-      // Equal split among all group members by default
+      // Equal split among all group members by default, cleanly allocating remainder cents
       const members = await db.all(`SELECT id FROM group_members WHERE group_id=$1`, [groupId]);
-      const share = Number((totalAmt / members.length).toFixed(2));
-      splitList = members.map(m => ({ member_id: m.id, split_amount: share }));
+      const n = members.length;
+      if (n > 0) {
+        const baseShare = Math.floor((totalAmt / n) * 100) / 100;
+        const remainder = Number((totalAmt - (baseShare * n)).toFixed(2));
+        splitList = members.map((m, idx) => {
+          const memberShare = idx === 0 ? Number((baseShare + remainder).toFixed(2)) : baseShare;
+          return { member_id: m.id, split_amount: memberShare };
+        });
+      }
     }
 
     for (const s of splitList) {
@@ -1933,6 +2090,9 @@ app.post('/api/groups/:id/settle', auth, async (req, res) => {
   }
 
   try {
+    const group = await db.get(`SELECT id FROM groups WHERE id=$1 AND user_id=$2`, [groupId, req.user.id]);
+    if (!group) return res.status(404).json({ error: 'Group not found' });
+
     const fromMember = await db.get(`SELECT name FROM group_members WHERE id=$1 AND group_id=$2`, [parseInt(from_id), groupId]);
     const toMember = await db.get(`SELECT name FROM group_members WHERE id=$1 AND group_id=$2`, [parseInt(to_id), groupId]);
     if (!fromMember || !toMember) return res.status(404).json({ error: 'Members not found' });
@@ -1985,15 +2145,6 @@ app.delete('/api/groups/:id', auth, async (req, res) => {
   }
 });
 
-// Escapes a CSV field: quotes it, doubles internal quotes, and neutralizes
-// leading =/+/-/@ so a description like "=cmd|..." can't execute as a
-// formula when the file is opened in Excel/Sheets (CSV injection).
-function csvField(val) {
-  let s = String(val ?? '');
-  if (/^[=+\-@]/.test(s)) s = "'" + s;
-  return `"${s.replace(/"/g, '""')}"`;
-}
-
 // ── CSV Export ────────────────────────────────────────────────
 // Auth token must come from the Authorization header, never a ?token=
 // query string — query params get written to server access logs, browser
@@ -2004,9 +2155,13 @@ app.get('/api/export/csv', auth, async (req, res) => {
   const user = req.user;
   try {
     const rows = await db.all('SELECT * FROM transactions WHERE user_id=$1 ORDER BY date DESC', [user.id]);
-    const csv = 'ID,Description,Amount,Type,Category,Date\n' +
-      rows.map(r => [r.id, csvField(r.description), r.amount, csvField(r.type), csvField(r.category), r.date].join(',')).join('\n');
-    res.setHeader('Content-Type', 'text/csv');
+    const csv = 'ID,Date,Type,Category,Description,Amount,Notes,Tags\r\n' +
+      rows.map(r => {
+        const d = r.date instanceof Date ? r.date.toISOString().slice(0, 10) : String(r.date || '').slice(0, 10);
+        const tags = Array.isArray(r.tags) ? r.tags.join(';') : '';
+        return [r.id, csvField(d), csvField(r.type), csvField(r.category), csvField(r.description), r.amount, csvField(r.notes || ''), csvField(tags)].join(',');
+      }).join('\r\n');
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="expenses.csv"');
     res.send(csv);
   } catch (e) { safeError(res, e, 'CSV export'); }
@@ -2049,8 +2204,12 @@ app.get('/api/burnrate', auth, async (req, res) => {
 
     // Pace status: safe / warning / danger
     let pace = 'safe';
-    if (projectedExpense >= income * 0.95) pace = 'danger';
-    else if (projectedExpense >= income * 0.80) pace = 'warning';
+    if (income > 0) {
+      if (projectedExpense >= income * 0.95) pace = 'danger';
+      else if (projectedExpense >= income * 0.80) pace = 'warning';
+    } else if (expense > 0) {
+      pace = 'warning';
+    }
 
     res.json({
       income, expense, dailyRate, projectedExpense, projectedSavings,
@@ -2058,8 +2217,7 @@ app.get('/api/burnrate', auth, async (req, res) => {
       month, year
     });
   } catch(e) {
-    console.error('Burn rate error:', e);
-    res.status(500).json({ error: e.message });
+    safeError(res, e, 'Burn rate');
   }
 });
 
@@ -2102,8 +2260,8 @@ app.get('/api/reports/audit', auth, async (req, res) => {
 
     if (groq) {
       try {
-        const completion = await groq.chat.completions.create({
-          model: 'llama-3.3-70b-versatile',
+        const completion = await createGroqCompletion({
+          model: DEFAULT_GROQ_MODEL,
           messages: [
             {
               role: 'system',
@@ -2191,10 +2349,21 @@ app.get('/api/export/monthly-csv', auth, async (req, res) => {
   try {
     const { month, year } = req.query;
     const m = month && year ? `${year}-${String(month).padStart(2, '0')}` : new Date().toISOString().slice(0, 7);
-    const rows = await db.all(`SELECT * FROM transactions WHERE user_id=$1 AND TO_CHAR(date,'YYYY-MM')=$2 ORDER BY date DESC`, [user.id, m]);
-    const csv = 'Date,Description,Category,Type,Amount\n' +
-      rows.map(r => [r.date ? new Date(r.date).toISOString().slice(0, 10) : '', csvField(r.description), csvField(r.category), csvField(r.type), r.amount].join(',')).join('\n');
-    res.setHeader('Content-Type', 'text/csv');
+    const rows = await db.all(
+      `SELECT *, notes, tags FROM transactions WHERE user_id=$1 AND TO_CHAR(date,'YYYY-MM')=$2 ORDER BY date DESC`,
+      [user.id, m]
+    );
+    const csvRows = rows.map(r => [
+      r.date ? new Date(r.date).toISOString().slice(0, 10) : '',
+      csvField(r.description),
+      csvField(r.category),
+      csvField(r.type),
+      r.amount,
+      csvField(r.notes),
+      csvField(r.tags)
+    ].join(','));
+    const csv = 'Date,Description,Category,Type,Amount,Notes,Tags\r\n' + csvRows.join('\r\n');
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="statement-${m}.csv"`);
     res.send(csv);
   } catch (e) { safeError(res, e, 'Monthly CSV export'); }
@@ -2214,9 +2383,15 @@ app.get('/api/export/pdf', auth, async (req, res) => {
     const exp = parseFloat(expRow?.t || 0);
     const txns = await db.all(`SELECT * FROM transactions WHERE user_id=$1 AND TO_CHAR(date,'YYYY-MM')=$2 ORDER BY date DESC`, [user.id, m]);
     const cats = await db.all(`SELECT category, SUM(amount) as total FROM transactions WHERE user_id=$1 AND type='expense' AND TO_CHAR(date,'YYYY-MM')=$2 GROUP BY category ORDER BY total DESC`, [user.id, m]);
-    const userInfo = await db.get('SELECT name,email FROM users WHERE id=$1', [user.id]);
+    const userInfo = await db.get('SELECT name,email,currency FROM users WHERE id=$1', [user.id]);
 
     if (!userInfo) return res.status(404).json({ error: 'User not found' });
+
+    const curr = userInfo.currency || '₹';
+    // Standard PDF Helvetica doesn't support the Indian Rupee unicode glyph (₹),
+    // so map ₹ to 'Rs. ' while ASCII currency symbols ($ etc.) render natively.
+    const currPrefix = curr === '₹' ? 'Rs. ' : `${curr} `;
+    const locale = curr === '₹' ? 'en-IN' : 'en-US';
 
     const doc = new PDFDocument({ margin: 50, size: 'A4' });
     res.setHeader('Content-Type', 'application/pdf');
@@ -2226,14 +2401,14 @@ app.get('/api/export/pdf', auth, async (req, res) => {
 
     doc.fontSize(24).font('Helvetica-Bold').fillColor('#111').text('FlowLedger', 50, 50);
     doc.fontSize(12).font('Helvetica').fillColor('#666').text(`Financial Report - ${m}`, 50, 82);
-    doc.fontSize(10).text(`Generated for: ${userInfo.name} (${userInfo.email})`, 50, 98);
+    doc.fontSize(10).text(`Generated for: ${pdfSafeText(userInfo.name, 'User')} (${pdfSafeText(userInfo.email)})`, 50, 98);
     doc.moveTo(50, 120).lineTo(545, 120).stroke('#e5e7eb');
 
     doc.fontSize(14).font('Helvetica-Bold').fillColor('#111').text('Summary', 50, 135);
     doc.fontSize(11).font('Helvetica');
-    doc.fillColor('#10b981').text(`Income:   Rs.${inc.toLocaleString('en-IN')}`, 50, 158);
-    doc.fillColor('#ef4444').text(`Expenses: Rs.${exp.toLocaleString('en-IN')}`, 50, 175);
-    doc.fillColor(inc - exp >= 0 ? '#6366f1' : '#ef4444').text(`Balance:  Rs.${(inc - exp).toLocaleString('en-IN')}`, 50, 192);
+    doc.fillColor('#10b981').text(`Income:   ${currPrefix}${inc.toLocaleString(locale)}`, 50, 158);
+    doc.fillColor('#ef4444').text(`Expenses: ${currPrefix}${exp.toLocaleString(locale)}`, 50, 175);
+    doc.fillColor(inc - exp >= 0 ? '#6366f1' : '#ef4444').text(`Balance:  ${currPrefix}${(inc - exp).toLocaleString(locale)}`, 50, 192);
     doc.fillColor('#f59e0b').text(`Savings Rate: ${inc > 0 ? (((inc - exp) / inc) * 100).toFixed(1) : 0}%`, 50, 209);
 
     if (cats.length) {
@@ -2241,8 +2416,8 @@ app.get('/api/export/pdf', auth, async (req, res) => {
       doc.fontSize(14).font('Helvetica-Bold').fillColor('#111').text('Category Breakdown', 50, 248);
       let cy = 270;
       cats.forEach(cat => {
-        doc.fontSize(10).font('Helvetica').fillColor('#374151').text(cat.category, 50, cy);
-        doc.fillColor('#ef4444').text(`Rs.${Number(cat.total).toLocaleString('en-IN')}`, 400, cy, { align: 'right', width: 145 });
+        doc.fontSize(10).font('Helvetica').fillColor('#374151').text(pdfSafeText(cat.category, 'Other'), 50, cy);
+        doc.fillColor('#ef4444').text(`${currPrefix}${Number(cat.total).toLocaleString(locale)}`, 400, cy, { align: 'right', width: 145 });
         cy += 18;
       });
     }
@@ -2259,13 +2434,13 @@ app.get('/api/export/pdf', auth, async (req, res) => {
 
     txns.slice(0, 40).forEach(t => {
       if (ty > 750) { doc.addPage(); ty = 50; }
-      const d = t.date ? new Date(t.date).toISOString().slice(0, 10) : '';
+      const d = toDateString(t.date);
       doc.fontSize(9).font('Helvetica').fillColor('#374151');
       doc.text(d, 50, ty, { width: 55 });
-      doc.text(t.description, 110, ty, { width: 190, ellipsis: true });
-      doc.text(t.category, 310, ty, { width: 110 });
+      doc.text(pdfSafeText(t.description, 'Transaction'), 110, ty, { width: 190, ellipsis: true });
+      doc.text(pdfSafeText(t.category, 'Other'), 310, ty, { width: 110 });
       doc.fillColor(t.type === 'income' ? '#10b981' : '#ef4444')
-        .text(`${t.type === 'income' ? '+' : '-'}Rs.${Number(t.amount).toLocaleString('en-IN')}`, 430, ty, { width: 115, align: 'right' });
+        .text(`${t.type === 'income' ? '+' : '-'}${currPrefix}${Number(t.amount).toLocaleString(locale)}`, 430, ty, { width: 115, align: 'right' });
       ty += 16;
     });
 
@@ -2300,5 +2475,20 @@ if (process.env.VERCEL) {
     process.exit(1);
   });
 }
+
+// ── Graceful Shutdown ──────────────────────────────────────────
+const shutdown = async (signal) => {
+  console.log(`\n🛑 Received ${signal}. Shutting down gracefully...`);
+  try {
+    await pool.end();
+    console.log('✅ PostgreSQL connection pool closed cleanly.');
+  } catch (err) {
+    console.error('Error closing pool:', err.message);
+  }
+  process.exit(0);
+};
+
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
 
 module.exports = app;

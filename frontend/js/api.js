@@ -37,10 +37,10 @@ const API = {
     return r.json();
   },
 
-  get(path)        { return this.request('GET',    path); },
-  post(path, body) { return this.request('POST',   path, body); },
-  put(path, body)  { return this.request('PUT',    path, body); },
-  del(path, body)  { return this.request('DELETE', path, body); },
+  get(path) { return this.request('GET', path); },
+  post(path, body) { return this.request('POST', path, body); },
+  put(path, body) { return this.request('PUT', path, body); },
+  del(path, body) { return this.request('DELETE', path, body); },
 
   // Same as get(), but also returns the X-Total-Count header — used only
   // by the paginated transactions list, so request()'s return shape
@@ -72,27 +72,35 @@ const API = {
     return this.post('/ai/scan-receipt', { image });
   },
 
-  getGroups()                         { return this.get('/groups'); },
-  createGroup(data)                  { return this.post('/groups', data); },
-  getGroupDetails(id)                { return this.get(`/groups/${id}`); },
-  addGroupExpense(groupId, data)     { return this.post(`/groups/${groupId}/expenses`, data); },
-  settleGroup(groupId, data)         { return this.post(`/groups/${groupId}/settle`, data); },
+  getGroups() { return this.get('/groups'); },
+  createGroup(data) { return this.post('/groups', data); },
+  getGroupDetails(id) { return this.get(`/groups/${id}`); },
+  addGroupExpense(groupId, data) { return this.post(`/groups/${groupId}/expenses`, data); },
+  settleGroup(groupId, data) { return this.post(`/groups/${groupId}/settle`, data); },
   deleteGroupExpense(groupId, expId) { return this.del(`/groups/${groupId}/expenses/${expId}`); },
-  deleteGroup(id)                    { return this.del(`/groups/${id}`); },
+  deleteGroup(id) { return this.del(`/groups/${id}`); },
 
-  async exportCSV() {
+  async exportCSV(queryString = '') {
     try {
       // Token goes in the Authorization header, never the URL — a query
       // param would end up in server access logs and browser history.
-      const res = await fetch(BASE + '/export/csv', { headers: this.headers() });
+      const urlPath = queryString ? `/transactions/export-csv?${queryString}` : '/export/csv';
+      const res = await fetch(BASE + urlPath, { headers: this.headers() });
       if (!res.ok) throw new Error('Export failed');
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url; a.download = 'expenses.csv';
+      a.href = url;
+      a.download = queryString ? `transactions-export-${new Date().toISOString().slice(0, 10)}.csv` : 'expenses.csv';
       document.body.appendChild(a); a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    } catch(e) { alert('CSV export failed: ' + e.message); }
+    } catch (e) {
+      if (typeof UI !== 'undefined' && UI.toast) {
+        UI.toast('CSV export failed: ' + e.message, 'error');
+      } else {
+        alert('CSV export failed: ' + e.message);
+      }
+    }
   }
 };

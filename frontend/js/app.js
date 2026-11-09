@@ -1,4 +1,4 @@
-﻿// ── Apply saved theme & sidebar state immediately (before DOM paint) ──────────
+// ── Apply saved theme & sidebar state immediately (before DOM paint) ──────────
 (function () {
   const t = localStorage.getItem('fl_theme');
   if (t === 'dark') document.documentElement.classList.add('dark-pre');
@@ -23,7 +23,7 @@
 const State = {
   page: 'dashboard',
   month: new Date().getMonth() + 1,
-  year:  new Date().getFullYear(),
+  year: new Date().getFullYear(),
   transactions: [],
   summary: {},
   // Goals load from the backend (see loadGoals) — no longer localStorage,
@@ -70,14 +70,14 @@ const App = {
   },
 
   setGreeting() {
-    const h  = new Date().getHours();
+    const h = new Date().getHours();
     const el = document.getElementById('greeting');
     if (el) el.textContent = h < 12 ? 'Morning' : h < 17 ? 'Afternoon' : 'Evening';
   },
 
   setTopbarDate() {
     const el = document.getElementById('topbarDate');
-    if (el) el.textContent = new Date().toLocaleDateString('en-IN', {weekday:'short',day:'numeric',month:'short',year:'numeric'});
+    if (el) el.textContent = new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
   },
 
   // ── Navigation ─────────────────────────────────────────────
@@ -99,37 +99,37 @@ const App = {
       State.month++; if (State.month > 12) { State.month = 1; State.year++; }
       this.loadDashboard();
     });
-    this.on('quickAdd',   'click', () => UI.openAddModal());
-    this.on('exportBtn',  'click', () => API.exportCSV());
-    this.on('getTipBtn',  'click', () => this.getQuickTip());
+    this.on('quickAdd', 'click', () => UI.openAddModal());
+    this.on('exportBtn', 'click', () => API.exportCSV());
+    this.on('getTipBtn', 'click', () => this.getQuickTip());
   },
 
   async navigate(page) {
     State.page = page;
     document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.page === page));
     document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === `page-${page}`));
-    if      (page === 'dashboard')    await this.loadDashboard();
+    if (page === 'dashboard') await this.loadDashboard();
     else if (page === 'transactions') await this.loadTransactions();
-    else if (page === 'accounts')     await this.loadAccounts(true);
-    else if (page === 'budgets')      await this.loadBudgets();
-    else if (page === 'analytics')    await this.loadAnalytics();
-    else if (page === 'ai')           await this.loadAI();
-    else if (page === 'goals')        await this.loadGoals();
-    else if (page === 'recurring')    await Recurring.load();
-    else if (page === 'groups')       await Groups.init();
-    else if (page === 'import')             Importer.init();
-    else if (page === 'reports')            this.initReports();
+    else if (page === 'accounts') await this.loadAccounts(true);
+    else if (page === 'budgets') await this.loadBudgets();
+    else if (page === 'analytics') await this.loadAnalytics();
+    else if (page === 'ai') await this.loadAI();
+    else if (page === 'goals') await this.loadGoals();
+    else if (page === 'recurring') await Recurring.load();
+    else if (page === 'groups') await Groups.init();
+    else if (page === 'import') Importer.init();
+    else if (page === 'reports') this.initReports();
   },
 
   // ── Dashboard ──────────────────────────────────────────────
   async loadDashboard() {
-    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     const ml = document.getElementById('monthLabel');
     const cl = document.getElementById('currentMonthLabel');
     if (ml) ml.textContent = months[State.month - 1];
     if (cl) cl.textContent = `${months[State.month - 1]} ${State.year}`;
 
-    const kpiIds = ['kpiBalance','kpiIncome','kpiExpense','kpiSavings'];
+    const kpiIds = ['kpiBalance', 'kpiIncome', 'kpiExpense', 'kpiSavings'];
     kpiIds.forEach(id => document.getElementById(id)?.classList.add('is-loading'));
 
     try {
@@ -151,7 +151,7 @@ const App = {
       setText('kpiBalance', fmt(summary.balance));
       const balEl = document.getElementById('kpiBalance');
       if (balEl) balEl.classList.toggle('negative', summary.balance < 0);
-      setText('kpiIncome',  fmt(summary.income));
+      setText('kpiIncome', fmt(summary.income));
       setText('kpiExpense', fmt(summary.expense));
       setText('kpiSavings', summary.savingsRate + '%');
       kpiIds.forEach(id => document.getElementById(id)?.classList.remove('is-loading'));
@@ -187,10 +187,10 @@ const App = {
 
       const inTxns = txns.filter(t => t.type === 'income').length;
       const exTxns = txns.filter(t => t.type === 'expense').length;
-      setText('incomeCount',  `${inTxns} transaction${inTxns !== 1 ? 's' : ''}`);
+      setText('incomeCount', `${inTxns} transaction${inTxns !== 1 ? 's' : ''}`);
       setText('expenseCount', `${exTxns} transaction${exTxns !== 1 ? 's' : ''}`);
 
-    } catch(e) {
+    } catch (e) {
       console.error('Dashboard error:', e);
       kpiIds.forEach(id => document.getElementById(id)?.classList.remove('is-loading'));
       UI.toast('⚠ Could not load data. Is the server running?', 'error');
@@ -199,7 +199,7 @@ const App = {
 
   updateAIStats(summary) {
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-    set('aiStatInc', fmt(summary.income  || 0));
+    set('aiStatInc', fmt(summary.income || 0));
     set('aiStatExp', fmt(summary.expense || 0));
     set('aiStatSav', fmt((summary.income || 0) - (summary.expense || 0)));
   },
@@ -210,7 +210,7 @@ const App = {
   // whole month without noticing they're close to (or already past) a
   // limit unless they happened to open that one page.
   renderBudgetAlert(budgets) {
-    const over    = (budgets || []).filter(b => b.percent >= 100);
+    const over = (budgets || []).filter(b => b.percent >= 100);
     const nearing = (budgets || []).filter(b => b.percent >= 80 && b.percent < 100);
     const items = [
       ...over.map(b => ({
@@ -232,7 +232,7 @@ const App = {
       const txns = await API.get('/transactions?limit=500');
       const el = document.getElementById('txn-count');
       if (el) el.textContent = txns.length;
-    } catch {}
+    } catch { }
   },
 
   async getQuickTip() {
@@ -249,24 +249,24 @@ const App = {
   },
 
   // ── Transactions ───────────────────────────────────────────
-  async loadTransactions(filters={}, resetPage=true) {
+  async loadTransactions(filters = {}, resetPage = true) {
     const list = document.getElementById('allTxns');
     list?.classList.add('is-fetching');
     if (resetPage) State.txnPage = 1;
     try {
       const qs = new URLSearchParams();
-      if (filters.type)       qs.set('type',       filters.type);
-      if (filters.category)   qs.set('category',   filters.category);
-      if (filters.from)       qs.set('from',       filters.from);
-      if (filters.to)         qs.set('to',         filters.to);
+      if (filters.type) qs.set('type', filters.type);
+      if (filters.category) qs.set('category', filters.category);
+      if (filters.from) qs.set('from', filters.from);
+      if (filters.to) qs.set('to', filters.to);
       if (filters.account_id) qs.set('account_id', filters.account_id);
-      if (filters.tag)        qs.set('tag',        filters.tag);
-      if (filters.search)     qs.set('search',     filters.search);
+      if (filters.tag) qs.set('tag', filters.tag);
+      if (filters.search) qs.set('search', filters.search);
       if (filters.min_amount) qs.set('min_amount', filters.min_amount);
       if (filters.max_amount) qs.set('max_amount', filters.max_amount);
-      if (filters.sort)       qs.set('sort',       filters.sort);
+      if (filters.sort) qs.set('sort', filters.sort);
       qs.set('limit', State.txnPageSize);
-      qs.set('page',  State.txnPage);
+      qs.set('page', State.txnPage);
       const { data: txns, total } = await API.getWithCount('/transactions?' + qs);
       State.transactions = txns;
       State.txnTotal = total;
@@ -281,28 +281,29 @@ const App = {
   renderTxnPagination() {
     const totalPages = Math.max(Math.ceil(State.txnTotal / State.txnPageSize), 1);
     const label = document.getElementById('txnPageLabel');
-    const prev  = document.getElementById('txnPrevPage');
-    const next  = document.getElementById('txnNextPage');
+    const prev = document.getElementById('txnPrevPage');
+    const next = document.getElementById('txnNextPage');
     if (label) label.textContent = `Page ${State.txnPage} of ${totalPages} (${State.txnTotal} total)`;
-    if (prev)  prev.disabled = State.txnPage <= 1;
-    if (next)  next.disabled = State.txnPage >= totalPages;
+    if (prev) prev.disabled = State.txnPage <= 1;
+    if (next) next.disabled = State.txnPage >= totalPages;
   },
 
   async saveTxn() {
     const descEl = document.getElementById('txnDesc');
-    const amtEl  = document.getElementById('txnAmount');
+    const amtEl = document.getElementById('txnAmount');
     const dateEl = document.getElementById('txnDate');
-    const catEl  = document.getElementById('txnCategory');
-    const accEl  = document.getElementById('txnAccount');
+    const catEl = document.getElementById('txnCategory');
+    const accEl = document.getElementById('txnAccount');
     if (!descEl || !amtEl || !dateEl || !catEl) { UI.toast('⚠ Something went wrong loading the form', 'error'); return; }
 
-    const desc       = descEl.value.trim();
-    const amount     = parseFloat(amtEl.value);
-    const date       = dateEl.value;
-    const category   = catEl.value;
-    const type       = UI.currentType;
+    const desc = descEl.value.trim();
+    const amount = parseFloat(amtEl.value);
+    const date = dateEl.value;
+    const category = catEl.value;
+    const type = UI.currentType;
     const account_id = accEl?.value || null;
-    const tags       = Tags.getPills();
+    const tags = Tags.getPills();
+    const notes = document.getElementById('txnNotes')?.value?.trim() || '';
     if (!desc || !amount || !date || !category) { UI.toast('⚠ Fill in all fields', 'error'); return; }
     if (amount <= 0) { UI.toast('⚠ Amount must be greater than 0', 'error'); return; }
 
@@ -311,14 +312,18 @@ const App = {
     try {
       let budgetToastShown = false;
       if (UI.editId) {
-        await API.put(`/transactions/${UI.editId}`, { description:desc, amount, type, category, date, account_id, tags });
+        await API.put(`/transactions/${UI.editId}`, { description: desc, amount, type, category, date, account_id, tags, notes });
         UI.toast('✓ Transaction updated', 'success');
       } else {
-        await API.post('/transactions', { description:desc, amount, type, category, date, account_id, tags });
+        await API.post('/transactions', { description: desc, amount, type, category, date, account_id, tags, notes });
         // Only worth checking for a fresh expense in the current month —
         // that's the only case /api/budgets' spend total actually covers,
         // and only expenses count against a budget in the first place.
-        const isCurrentMonth = new Date(date).toISOString().slice(0,7) === new Date().toISOString().slice(0,7);
+        const _txnDate = new Date(date);
+        const _now = new Date();
+        const isCurrentMonth =
+          _txnDate.getFullYear() === _now.getFullYear() &&
+          _txnDate.getMonth() === _now.getMonth();
         if (type === 'expense' && isCurrentMonth) {
           budgetToastShown = await this.checkBudgetAfterSave(category);
         }
@@ -333,7 +338,7 @@ const App = {
       this.loadAccounts(State.page === 'accounts');
       if (State.page === 'transactions') await this.loadTransactions();
       else await this.loadDashboard();
-    } catch(e) { UI.toast(e.message.match(/^\d+:/) ? 'Error: ' + e.message : e.message, 'error'); }
+    } catch (e) { UI.toast(e.message.match(/^\d+:/) ? 'Error: ' + e.message : e.message, 'error'); }
     finally { if (btn) { btn.disabled = false; btn.textContent = btn.dataset.origText || 'Save'; } }
   },
 
@@ -384,29 +389,29 @@ const App = {
   // forceRerender=true when called from navigate() (user is actually
   // looking at the Accounts page); false on the init() background load,
   // where we only need State.accounts populated for the selects/strip.
-  async loadAccounts(forceRerender=false) {
+  async loadAccounts(forceRerender = false) {
     try {
       State.accounts = await API.get('/accounts');
       UI.populateAccountSelects(State.accounts);
       UI.renderAccountStrip(State.accounts);
       if (forceRerender) UI.renderAccounts(State.accounts);
-    } catch(e) {
+    } catch (e) {
       console.error('Load accounts error:', e);
       if (forceRerender) UI.toast('⚠ Could not load accounts', 'error');
     }
   },
 
   async saveAccount() {
-    const nameEl  = document.getElementById('accountName');
-    const typeEl  = document.getElementById('accountType');
-    const balEl   = document.getElementById('accountStartingBalance');
+    const nameEl = document.getElementById('accountName');
+    const typeEl = document.getElementById('accountType');
+    const balEl = document.getElementById('accountStartingBalance');
     const editIdEl = document.getElementById('editAccountId');
     if (!nameEl || !typeEl || !balEl || !editIdEl) { UI.toast('⚠ Something went wrong loading the form', 'error'); return; }
 
-    const name             = nameEl.value.trim();
-    const type              = typeEl.value;
+    const name = nameEl.value.trim();
+    const type = typeEl.value;
     const starting_balance = parseFloat(balEl.value) || 0;
-    const editId            = editIdEl.value;
+    const editId = editIdEl.value;
     if (!name) { UI.toast('⚠ Enter an account name', 'error'); return; }
 
     const btn = document.getElementById('saveAccountBtn');
@@ -422,8 +427,8 @@ const App = {
       UI.closeAccountModal();
       await this.loadAccounts(State.page === 'accounts');
       if (State.page === 'dashboard') await this.loadDashboard();
-    } catch(e) {
-      UI.toast('⚠ ' + e.message.replace(/^\d+:\s*/,''), 'error');
+    } catch (e) {
+      UI.toast('⚠ ' + e.message.replace(/^\d+:\s*/, ''), 'error');
     } finally { if (btn) { btn.disabled = false; btn.textContent = btn.dataset.origText || 'Save Account'; } }
   },
 
@@ -443,8 +448,8 @@ const App = {
       UI.toast('✓ Account removed', 'success');
       await this.loadAccounts(true);
       if (State.page === 'dashboard') await this.loadDashboard();
-    } catch(e) {
-      UI.toast('⚠ ' + e.message.replace(/^\d+:\s*/,''), 'error');
+    } catch (e) {
+      UI.toast('⚠ ' + e.message.replace(/^\d+:\s*/, ''), 'error');
     }
   },
 
@@ -458,7 +463,7 @@ const App = {
     const catEl = document.getElementById('budgetCategory');
     const limEl = document.getElementById('budgetLimit');
     if (!catEl || !limEl) { UI.toast('⚠ Something went wrong loading the form', 'error'); return; }
-    const category      = catEl.value;
+    const category = catEl.value;
     const monthly_limit = parseFloat(limEl.value);
     if (!monthly_limit || monthly_limit <= 0) { UI.toast('⚠ Enter a valid limit', 'error'); return; }
     const btn = document.getElementById('saveBudgetBtn');
@@ -697,12 +702,12 @@ const App = {
 
   // ── Reports / Financial Audit ───────────────────────────────
   initReports() {
-    const months = ['January','February','March','April','May','June','July',
-                    'August','September','October','November','December'];
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
+      'August', 'September', 'October', 'November', 'December'];
 
     // Reset month/year to current State each time the page is opened
     this._auditMonth = State.month;
-    this._auditYear  = State.year;
+    this._auditYear = State.year;
 
     const setMonthLabel = () => {
       const el = document.getElementById('auditMonthLabel');
@@ -716,7 +721,7 @@ const App = {
 
     const hideResults = () => {
       document.getElementById('auditEmptyState').style.display = 'flex';
-      ['auditKpiRow','auditAiCard','auditGrid','auditDownloadCard'].forEach(id => {
+      ['auditKpiRow', 'auditAiCard', 'auditGrid', 'auditDownloadCard'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
       });
@@ -736,20 +741,20 @@ const App = {
     });
 
     const generateAudit = async () => {
-      const btn  = document.getElementById('generateAuditBtn');
+      const btn = document.getElementById('generateAuditBtn');
       const btn2 = document.getElementById('auditEmptyGenBtn');
-      const origText  = btn  ? btn.textContent  : '';
+      const origText = btn ? btn.textContent : '';
       const origText2 = btn2 ? btn2.textContent : '';
-      if (btn)  { btn.disabled  = true; btn.textContent  = '⏳ Analyzing...'; }
+      if (btn) { btn.disabled = true; btn.textContent = '⏳ Analyzing...'; }
       if (btn2) { btn2.disabled = true; btn2.textContent = '⏳ Analyzing...'; }
       try {
         const data = await API.get(`/reports/audit?month=${this._auditMonth}&year=${this._auditYear}`);
         this.renderAudit(data);
-      } catch(e) {
+      } catch (e) {
         console.error('Audit error:', e);
         UI.toast('Error generating audit: ' + e.message, 'error');
       } finally {
-        if (btn)  { btn.disabled  = false; btn.textContent  = origText; }
+        if (btn) { btn.disabled = false; btn.textContent = origText; }
         if (btn2) { btn2.disabled = false; btn2.textContent = origText2; }
       }
     };
@@ -765,24 +770,24 @@ const App = {
         });
         if (!res.ok) throw new Error('Failed to download CSV');
         const blob = await res.blob();
-        const url  = URL.createObjectURL(blob);
-        const a    = document.createElement('a');
-        a.href     = url;
-        a.download = `statement-${this._auditYear}-${String(this._auditMonth).padStart(2,'0')}.csv`;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `statement-${this._auditYear}-${String(this._auditMonth).padStart(2, '0')}.csv`;
         document.body.appendChild(a); a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         UI.toast('✓ CSV downloaded!', 'success');
-      } catch(e) { UI.toast('CSV error: ' + e.message, 'error'); }
+      } catch (e) { UI.toast('CSV error: ' + e.message, 'error'); }
     };
     document.getElementById('downloadAuditCsvBtn')?.addEventListener('click', downloadCsv);
     document.getElementById('downloadAuditCsvBtn2')?.addEventListener('click', downloadCsv);
 
     document.getElementById('downloadPdfBtn')?.addEventListener('click', async () => {
-      const btn   = document.getElementById('downloadPdfBtn');
+      const btn = document.getElementById('downloadPdfBtn');
       const token = localStorage.getItem('fl_token');
-      const m     = this._auditMonth;
-      const y     = this._auditYear;
+      const m = this._auditMonth;
+      const y = this._auditYear;
       if (btn) { btn.textContent = '⏳ Generating...'; btn.disabled = true; }
       try {
         const res = await fetch(`/api/export/pdf?month=${m}&year=${y}`, {
@@ -790,20 +795,20 @@ const App = {
         });
         if (!res.ok) {
           let msg = 'Failed';
-          try { const j = await res.json(); msg = j.error || j.details || msg; } catch {}
+          try { const j = await res.json(); msg = j.error || j.details || msg; } catch { }
           throw new Error(msg);
         }
         const blob = await res.blob();
         if (blob.size === 0) throw new Error('Empty PDF received');
         const url = URL.createObjectURL(blob);
-        const a   = document.createElement('a');
-        a.href    = url;
-        a.download = `flowledger-${y}-${String(m).padStart(2,'0')}.pdf`;
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `flowledger-${y}-${String(m).padStart(2, '0')}.pdf`;
         document.body.appendChild(a); a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         UI.toast('✓ PDF downloaded!', 'success');
-      } catch(e) {
+      } catch (e) {
         console.error('PDF error:', e);
         UI.toast('PDF error: ' + e.message, 'error');
       } finally {
@@ -817,9 +822,9 @@ const App = {
 
     // Switch visibility
     document.getElementById('auditEmptyState').style.display = 'none';
-    document.getElementById('auditKpiRow').style.display     = 'grid';
-    document.getElementById('auditAiCard').style.display     = '';
-    document.getElementById('auditGrid').style.display       = 'grid';
+    document.getElementById('auditKpiRow').style.display = 'grid';
+    document.getElementById('auditAiCard').style.display = '';
+    document.getElementById('auditGrid').style.display = 'grid';
     document.getElementById('auditDownloadCard').style.display = '';
 
     // KPI cards
@@ -869,7 +874,7 @@ const App = {
     }
 
     // Category breakdown
-    const catColors = ['#6366F1','#10B981','#F59E0B','#EF4444','#06B6D4','#8B5CF6','#EC4899','#F97316'];
+    const catColors = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#06B6D4', '#8B5CF6', '#EC4899', '#F97316'];
     document.getElementById('auditCatList').innerHTML = (byCategory || []).length
       ? byCategory.map((c, i) => `
           <div class="audit-cat-row">
@@ -888,7 +893,7 @@ const App = {
       ? topMerchants.map((t, i) => `
           <div class="audit-merchant-row">
             <div style="display:flex;align-items:center;gap:8px">
-              <div style="width:22px;height:22px;border-radius:var(--r-sm,6px);background:var(--surface-sunken);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text-secondary)">${i+1}</div>
+              <div style="width:22px;height:22px;border-radius:var(--r-sm,6px);background:var(--surface-sunken);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text-secondary)">${i + 1}</div>
               <div>
                 <div style="font-weight:600;color:var(--text-primary)">${t.description}</div>
                 <div style="font-size:11px;color:var(--text-tertiary)">${t.category} · ${t.date}</div>
@@ -909,24 +914,24 @@ const App = {
     try {
       State.goals = await API.get('/goals');
       UI.renderGoals(State.goals);
-    } catch(e) {
+    } catch (e) {
       console.error('Load goals error:', e);
       UI.toast('⚠ Could not load goals', 'error');
     }
   },
 
   async saveGoal() {
-    const nameEl   = document.getElementById('goalName');
+    const nameEl = document.getElementById('goalName');
     const targetEl = document.getElementById('goalTarget');
-    const savedEl  = document.getElementById('goalSaved');
-    const dateEl   = document.getElementById('goalDate');
+    const savedEl = document.getElementById('goalSaved');
+    const dateEl = document.getElementById('goalDate');
     const editIdEl = document.getElementById('goalEditId');
     if (!nameEl || !targetEl || !savedEl || !dateEl || !editIdEl) { UI.toast('⚠ Something went wrong loading the form', 'error'); return; }
 
-    const name   = nameEl.value.trim();
+    const name = nameEl.value.trim();
     const target = parseFloat(targetEl.value);
-    const saved  = parseFloat(savedEl.value) || 0;
-    const date   = dateEl.value;
+    const saved = parseFloat(savedEl.value) || 0;
+    const date = dateEl.value;
     const editId = editIdEl.value;
     if (!name || !target) { UI.toast('⚠ Fill in goal name and target', 'error'); return; }
 
@@ -942,8 +947,8 @@ const App = {
       }
       UI.closeGoalModal();
       await this.loadGoals();
-    } catch(e) {
-      UI.toast('⚠ ' + e.message.replace(/^\d+:\s*/,''), 'error');
+    } catch (e) {
+      UI.toast('⚠ ' + e.message.replace(/^\d+:\s*/, ''), 'error');
     } finally { if (btn) btn.disabled = false; }
   },
 
@@ -961,8 +966,8 @@ const App = {
       await API.put(`/goals/${id}`, { name: goal.name, target: goal.target, saved: goal.saved + amount, date: goal.date });
       UI.toast(`✓ Added ${fmt(amount)} to ${goal.name}`, 'success');
       await this.loadGoals();
-    } catch(e) {
-      UI.toast('⚠ ' + e.message.replace(/^\d+:\s*/,''), 'error');
+    } catch (e) {
+      UI.toast('⚠ ' + e.message.replace(/^\d+:\s*/, ''), 'error');
     }
   },
 
@@ -972,8 +977,8 @@ const App = {
       await API.del(`/goals/${id}`);
       UI.toast('✓ Goal removed', 'success');
       await this.loadGoals();
-    } catch(e) {
-      UI.toast('⚠ ' + e.message.replace(/^\d+:\s*/,''), 'error');
+    } catch (e) {
+      UI.toast('⚠ ' + e.message.replace(/^\d+:\s*/, ''), 'error');
     }
   },
 
@@ -1059,7 +1064,7 @@ const App = {
       listEl.innerHTML = State.aiSessions.map(s => {
         const isActive = State.aiSessionId === s.id;
         const icon = s.model === 'claude' ? '🟣' : s.model === 'fast' ? '⚡' : '🟢';
-        const d = s.updated_at ? new Date(s.updated_at).toLocaleDateString('en-IN', {month:'short', day:'numeric'}) : '';
+        const d = s.updated_at ? new Date(s.updated_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }) : '';
         return `
           <div class="ai-session-item ${isActive ? 'active' : ''}" data-session-id="${s.id}">
             <div class="ai-session-meta">
@@ -1177,7 +1182,7 @@ const App = {
       <div class="msg-content">
         <div class="msg-bubble">${formattedHtml}</div>
         <div class="msg-meta-row">
-          <div class="msg-time">${new Date().toLocaleTimeString('en', {hour:'2-digit',minute:'2-digit'})}</div>
+          <div class="msg-time">${new Date().toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' })}</div>
           ${isAssistant ? `<button type="button" class="msg-copy-btn" title="Copy response">📋 Copy</button>` : ''}
         </div>
       </div>`;
@@ -1219,7 +1224,7 @@ const App = {
   async sendChat(msg) {
     if (!msg || !msg.trim()) return;
     const input = document.getElementById('chatInput');
-    const btn   = document.getElementById('chatSend');
+    const btn = document.getElementById('chatSend');
     if (input) input.value = '';
     if (btn) btn.disabled = true;
 
@@ -1233,13 +1238,13 @@ const App = {
         session_id: State.aiSessionId
       });
       document.getElementById('typingIndicator')?.remove();
-      
+
       if (res && res.session_id && !State.aiSessionId) {
         State.aiSessionId = res.session_id;
         await this.loadAiSessions();
       }
       this.appendMsg('assistant', res.reply, res.model || State.aiModel);
-    } catch(e) {
+    } catch (e) {
       document.getElementById('typingIndicator')?.remove();
       this.appendMsg('assistant', '⚠ Error: ' + e.message);
     } finally {
@@ -1251,7 +1256,7 @@ const App = {
   // ── Search ─────────────────────────────────────────────────
   bindSearch() {
     const input = document.getElementById('globalSearch');
-    const wrap  = input?.closest('.topbar-search');
+    const wrap = input?.closest('.topbar-search');
     if (!input) return;
     let resultsEl = null;
     input.addEventListener('input', async () => {
@@ -1267,7 +1272,7 @@ const App = {
           // string ("1,500") so a search for either form finds it.
           String(t.amount).includes(q) ||
           fmt(t.amount).toLowerCase().includes(q)
-        ).slice(0,6);
+        ).slice(0, 6);
         if (!matches.length) return;
         resultsEl = document.createElement('div');
         resultsEl.className = 'search-results';
@@ -1278,10 +1283,10 @@ const App = {
               <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.description}</div>
               <div style="font-size:11px;color:#A79C8C">${t.category} · ${t.date}</div>
             </div>
-            <div style="font-size:13px;font-family:'JetBrains Mono',monospace;color:${t.type==='income'?'#3E6154':'#A6402F'}">${t.type==='income'?'+':'-'}${fmt(t.amount)}</div>
+            <div style="font-size:13px;font-family:'JetBrains Mono',monospace;color:${t.type === 'income' ? '#3E6154' : '#A6402F'}">${t.type === 'income' ? '+' : '-'}${fmt(t.amount)}</div>
           </div>`).join('');
         wrap.appendChild(resultsEl);
-      } catch {}
+      } catch { }
     });
     document.addEventListener('click', e => {
       if (!wrap?.contains(e.target) && resultsEl) { resultsEl.remove(); resultsEl = null; }
@@ -1295,43 +1300,43 @@ const App = {
   },
 
   bindModals() {
-    this.on('openAddModal',    'click', () => UI.openAddModal());
-    this.on('closeAddModal',   'click', () => UI.closeAddModal());
-    this.on('saveTxnBtn',      'click', () => this.saveTxn());
-    this.on('addModal',        'click', e  => { if (e.target.id === 'addModal') UI.closeAddModal(); });
-    this.on('txnAmount',       'keydown', e => { if (e.key === 'Enter') this.saveTxn(); });
+    this.on('openAddModal', 'click', () => UI.openAddModal());
+    this.on('closeAddModal', 'click', () => UI.closeAddModal());
+    this.on('saveTxnBtn', 'click', () => this.saveTxn());
+    this.on('addModal', 'click', e => { if (e.target.id === 'addModal') UI.closeAddModal(); });
+    this.on('txnAmount', 'keydown', e => { if (e.key === 'Enter') this.saveTxn(); });
 
     this.on('openBudgetModal', 'click', () => UI.openBudgetModal());
-    this.on('closeBudgetModal','click', () => UI.closeBudgetModal());
-    this.on('saveBudgetBtn',   'click', () => this.saveBudget());
-    this.on('budgetModal',     'click', e  => { if (e.target.id === 'budgetModal') UI.closeBudgetModal(); });
-    this.on('openAutoBudgetBtn',    'click', () => this.openAutoBudgetPlanner());
-    this.on('closeAutoBudgetBtn',   'click', () => this.closeAutoBudgetPlanner());
-    this.on('cancelAutoBudgetBtn',  'click', () => this.closeAutoBudgetPlanner());
+    this.on('closeBudgetModal', 'click', () => UI.closeBudgetModal());
+    this.on('saveBudgetBtn', 'click', () => this.saveBudget());
+    this.on('budgetModal', 'click', e => { if (e.target.id === 'budgetModal') UI.closeBudgetModal(); });
+    this.on('openAutoBudgetBtn', 'click', () => this.openAutoBudgetPlanner());
+    this.on('closeAutoBudgetBtn', 'click', () => this.closeAutoBudgetPlanner());
+    this.on('cancelAutoBudgetBtn', 'click', () => this.closeAutoBudgetPlanner());
     this.on('refreshAutoBudgetBtn', 'click', () => this.fetchBudgetSuggestions());
-    this.on('applyAutoBudgetsBtn',  'click', () => this.applySelectedBudgets());
+    this.on('applyAutoBudgetsBtn', 'click', () => this.applySelectedBudgets());
 
-    this.on('openAccountModal',  'click', () => UI.openAccountModal());
+    this.on('openAccountModal', 'click', () => UI.openAccountModal());
     this.on('closeAccountModal', 'click', () => UI.closeAccountModal());
-    this.on('saveAccountBtn',    'click', () => this.saveAccount());
-    this.on('accountModal',      'click', e => { if (e.target.id === 'accountModal') UI.closeAccountModal(); });
+    this.on('saveAccountBtn', 'click', () => this.saveAccount());
+    this.on('accountModal', 'click', e => { if (e.target.id === 'accountModal') UI.closeAccountModal(); });
 
-    this.on('openGoalModal',   'click', () => UI.openGoalModal());
-    this.on('closeGoalModal',  'click', () => UI.closeGoalModal());
-    this.on('saveGoalBtn',     'click', () => this.saveGoal());
-    this.on('goalModal',       'click', e  => { if (e.target.id === 'goalModal') UI.closeGoalModal(); });
+    this.on('openGoalModal', 'click', () => UI.openGoalModal());
+    this.on('closeGoalModal', 'click', () => UI.closeGoalModal());
+    this.on('saveGoalBtn', 'click', () => this.saveGoal());
+    this.on('goalModal', 'click', e => { if (e.target.id === 'goalModal') UI.closeGoalModal(); });
 
     // Recurring modal
-    this.on('openRecurringModal',  'click', () => {
+    this.on('openRecurringModal', 'click', () => {
       const nd = document.getElementById('recNextDate');
-      if (nd) nd.value = new Date().toISOString().slice(0,10);
+      if (nd) nd.value = getLocalDateString();
       document.getElementById('recurringModal')?.classList.add('open');
     });
     this.on('closeRecurringModal', 'click', () => document.getElementById('recurringModal')?.classList.remove('open'));
-    this.on('saveRecurringBtn',    'click', () => Recurring.save());
-    this.on('recurringModal',      'click', e => { if(e.target.id==='recurringModal') document.getElementById('recurringModal')?.classList.remove('open'); });
-    this.on('receiptModal',        'click', e => { if(e.target.id==='receiptModal') document.getElementById('receiptModal')?.classList.remove('open'); });
-    this.on('deleteAccountModal',  'click', e => { if(e.target.id==='deleteAccountModal') document.getElementById('deleteAccountModal')?.classList.remove('open'); });
+    this.on('saveRecurringBtn', 'click', () => Recurring.save());
+    this.on('recurringModal', 'click', e => { if (e.target.id === 'recurringModal') document.getElementById('recurringModal')?.classList.remove('open'); });
+    this.on('receiptModal', 'click', e => { if (e.target.id === 'receiptModal') document.getElementById('receiptModal')?.classList.remove('open'); });
+    this.on('deleteAccountModal', 'click', e => { if (e.target.id === 'deleteAccountModal') document.getElementById('deleteAccountModal')?.classList.remove('open'); });
 
     // Import
     this.on('importBtn', 'click', () => Importer.importAll());
@@ -1340,10 +1345,10 @@ const App = {
     document.addEventListener('click', e => {
       const t = e.target.closest('[data-action]');
       if (!t) return;
-      const a  = t.dataset.action;
+      const a = t.dataset.action;
       const id = parseInt(t.dataset.id);
 
-      if      (a === 'type-income')  UI.setType('income');
+      if (a === 'type-income') UI.setType('income');
       else if (a === 'type-expense') UI.setType('expense');
       else if (a === 'rec-type-income') {
         document.getElementById('recType').value = 'income';
@@ -1365,19 +1370,19 @@ const App = {
           sel.innerHTML += `<option value="${t.dataset.cat}">${t.dataset.cat}</option>`;
         sel.value = t.dataset.cat;
       }
-      else if (a === 'edit-txn')          App.editTxn(id);
-      else if (a === 'del-txn')           App.deleteTxn(id);
-      else if (a === 'del-budget')        App.deleteBudget(id);
+      else if (a === 'edit-txn') App.editTxn(id);
+      else if (a === 'del-txn') App.deleteTxn(id);
+      else if (a === 'del-budget') App.deleteBudget(id);
       else if (a === 'apply-single-budget') App.applySingleBudget(parseInt(t.dataset.idx));
-      else if (a === 'edit-account')      App.editAccount(id);
-      else if (a === 'del-account')       App.deleteAccount(id);
-      else if (a === 'goto-accounts')     App.navigate('accounts');
-      else if (a === 'edit-goal')         App.editGoal(id);
-      else if (a === 'del-goal')          App.deleteGoal(id);
-      else if (a === 'add-savings')       App.addSavings(id);
-      else if (a === 'goto-dashboard')    App.navigate('dashboard');
-      else if (a === 'toggle-recurring')  Recurring.toggle(id, parseInt(t.dataset.active));
-      else if (a === 'del-recurring')     Recurring.delete(id);
+      else if (a === 'edit-account') App.editAccount(id);
+      else if (a === 'del-account') App.deleteAccount(id);
+      else if (a === 'goto-accounts') App.navigate('accounts');
+      else if (a === 'edit-goal') App.editGoal(id);
+      else if (a === 'del-goal') App.deleteGoal(id);
+      else if (a === 'add-savings') App.addSavings(id);
+      else if (a === 'goto-dashboard') App.navigate('dashboard');
+      else if (a === 'toggle-recurring') Recurring.toggle(id, parseInt(t.dataset.active));
+      else if (a === 'del-recurring') Recurring.delete(id);
       else if (a === 'goto-transactions') App.navigate('transactions');
       else if (a === 'goto-budgets') {
         document.getElementById('notifDropdown')?.classList.remove('show');
@@ -1409,15 +1414,15 @@ const App = {
   // ── Transactions Search & Filtering ────────────────────────
   getTxnActiveFilters() {
     const searchVal = document.getElementById('txnLiveSearch')?.value?.trim() || '';
-    const sortVal   = document.getElementById('txnSortSelect')?.value || 'date_desc';
-    const typeVal   = document.getElementById('filterType')?.value || '';
-    const catVal    = document.getElementById('filterCategory')?.value || '';
-    const accVal    = document.getElementById('filterAccount')?.value || '';
-    const tagVal    = document.getElementById('filterTag')?.value || '';
-    const fromVal   = document.getElementById('filterFrom')?.value || '';
-    const toVal     = document.getElementById('filterTo')?.value || '';
-    const minVal    = document.getElementById('filterMinAmount')?.value || '';
-    const maxVal    = document.getElementById('filterMaxAmount')?.value || '';
+    const sortVal = document.getElementById('txnSortSelect')?.value || 'date_desc';
+    const typeVal = document.getElementById('filterType')?.value || '';
+    const catVal = document.getElementById('filterCategory')?.value || '';
+    const accVal = document.getElementById('filterAccount')?.value || '';
+    const tagVal = document.getElementById('filterTag')?.value || '';
+    const fromVal = document.getElementById('filterFrom')?.value || '';
+    const toVal = document.getElementById('filterTo')?.value || '';
+    const minVal = document.getElementById('filterMinAmount')?.value || '';
+    const maxVal = document.getElementById('filterMaxAmount')?.value || '';
 
     return {
       search: searchVal,
@@ -1533,7 +1538,7 @@ const App = {
         const preset = chip.dataset.preset;
         const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
 
-        ['filterType','filterCategory','filterAccount','filterTag','filterFrom','filterTo','filterMinAmount','filterMaxAmount'].forEach(id => setVal(id, ''));
+        ['filterType', 'filterCategory', 'filterAccount', 'filterTag', 'filterFrom', 'filterTo', 'filterMinAmount', 'filterMaxAmount'].forEach(id => setVal(id, ''));
 
         const now = new Date();
         const y = now.getFullYear();
@@ -1566,12 +1571,12 @@ const App = {
       if (advDrawer) advDrawer.style.display = 'none';
     });
 
-    ['filterType','filterCategory','filterAccount','filterTag','filterFrom','filterTo','filterMinAmount','filterMaxAmount'].forEach(id => {
+    ['filterType', 'filterCategory', 'filterAccount', 'filterTag', 'filterFrom', 'filterTo', 'filterMinAmount', 'filterMaxAmount'].forEach(id => {
       document.getElementById(id)?.addEventListener('change', triggerSearch);
     });
 
     const clearAll = () => {
-      ['filterType','filterCategory','filterAccount','filterTag','filterFrom','filterTo','filterMinAmount','filterMaxAmount'].forEach(id => {
+      ['filterType', 'filterCategory', 'filterAccount', 'filterTag', 'filterFrom', 'filterTo', 'filterMinAmount', 'filterMaxAmount'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = '';
       });
@@ -1591,34 +1596,21 @@ const App = {
     exportBtn?.addEventListener('click', async () => {
       const filters = this.getTxnActiveFilters();
       const qs = new URLSearchParams();
-      if (filters.search)     qs.set('search',     filters.search);
-      if (filters.type)       qs.set('type',       filters.type);
-      if (filters.category)   qs.set('category',   filters.category);
+      if (filters.search) qs.set('search', filters.search);
+      if (filters.type) qs.set('type', filters.type);
+      if (filters.category) qs.set('category', filters.category);
       if (filters.account_id) qs.set('account_id', filters.account_id);
-      if (filters.tag)        qs.set('tag',        filters.tag);
-      if (filters.from)       qs.set('from',       filters.from);
-      if (filters.to)         qs.set('to',         filters.to);
+      if (filters.tag) qs.set('tag', filters.tag);
+      if (filters.from) qs.set('from', filters.from);
+      if (filters.to) qs.set('to', filters.to);
       if (filters.min_amount) qs.set('min_amount', filters.min_amount);
       if (filters.max_amount) qs.set('max_amount', filters.max_amount);
-      if (filters.sort)       qs.set('sort',       filters.sort);
+      if (filters.sort) qs.set('sort', filters.sort);
 
-      const token = localStorage.getItem('fl_token');
       exportBtn.disabled = true;
       exportBtn.textContent = '⏳ Exporting...';
       try {
-        const res = await fetch(`/api/transactions/export-csv?${qs}`, {
-          headers: { 'Authorization': 'Bearer ' + token }
-        });
-        if (!res.ok) throw new Error('Export failed');
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `transactions-export-${new Date().toISOString().slice(0, 10)}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        await API.exportCSV(qs.toString());
         UI.toast('✓ Filtered transactions exported to CSV!', 'success');
       } catch (err) {
         UI.toast('Export error: ' + (err.message || 'Failed'), 'error');
@@ -1643,7 +1635,7 @@ const App = {
 
   bindChat() {
     const input = document.getElementById('chatInput');
-    const btn   = document.getElementById('chatSend');
+    const btn = document.getElementById('chatSend');
     btn?.addEventListener('click', () => this.sendChat(input.value));
     input?.addEventListener('keydown', e => {
       if (e.key === 'Enter' && !e.shiftKey) {
@@ -1678,7 +1670,7 @@ const App = {
         }
         this.startNewAiChat();
         UI.toast('✓ Chat cleared', 'success');
-      } catch(e) {
+      } catch (e) {
         UI.toast('⚠ Could not clear chat: ' + e.message.replace(/^\d+:\s*/, ''), 'error');
       } finally {
         if (clearBtn) clearBtn.disabled = false;
@@ -1854,7 +1846,7 @@ const App = {
     const income = summary.income || 0;
     const expense = summary.expense || 0;
     const savingsRate = income > 0 ? ((income - expense) / income) * 100 : 0;
-    
+
     let savingsScore = 0;
     if (savingsRate >= 30) {
       savingsScore = 40;
@@ -1927,14 +1919,14 @@ const App = {
       grade = 'Healthy';
       badgeClass = 'status-healthy';
       gaugeColor = '#06B6D4';
-      tipText = savingsScore < 25 
+      tipText = savingsScore < 25
         ? `Good overall health! Boosting your monthly savings rate closer to 20% would push your score past 85.`
         : `Strong financial discipline! Review categories nearing budget limits to keep expenses balanced.`;
     } else if (totalScore >= 50) {
       grade = 'Fair';
       badgeClass = 'status-fair';
       gaugeColor = '#F59E0B';
-      tipText = budgetScore < 20 
+      tipText = budgetScore < 20
         ? `Some category budgets have exceeded limits. Consider setting stricter limits or trimming discretionary spend.`
         : `Your liquid reserves are currently below recommended 2 months of expenses. Focus on building an emergency cushion.`;
     } else {
@@ -1995,7 +1987,7 @@ const App = {
       card.style.display = '';
 
       const { income, expense, dailyRate, projectedExpense, projectedSavings,
-              daysLeft, safeDaily, pace, isCurrentMonth } = data;
+        daysLeft, safeDaily, pace, isCurrentMonth } = data;
 
       // Pace badge
       const badge = document.getElementById('burnPaceBadge');
@@ -2007,22 +1999,22 @@ const App = {
 
       // Stat values
       const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-      setText('burnDailyRate',  fmt(dailyRate));
-      setText('burnProjected',  fmt(projectedExpense));
-      setText('burnSafeDaily',  isCurrentMonth && daysLeft > 0 ? fmt(safeDaily) : '—');
+      setText('burnDailyRate', fmt(dailyRate));
+      setText('burnProjected', fmt(projectedExpense));
+      setText('burnSafeDaily', isCurrentMonth && daysLeft > 0 && income > 0 ? fmt(safeDaily) : '—');
 
       // Progress bar
-      const actualPct   = income > 0 ? Math.min(100, (expense / income) * 100) : 0;
-      const projectPct  = income > 0 ? Math.min(100, (projectedExpense / income) * 100) : 0;
-      const barActual   = document.getElementById('burnBarActual');
-      const barProject  = document.getElementById('burnBarProject');
-      if (barActual)  barActual.style.width  = actualPct  + '%';
+      const actualPct = income > 0 ? Math.min(100, (expense / income) * 100) : 0;
+      const projectPct = income > 0 ? Math.min(100, (projectedExpense / income) * 100) : 0;
+      const barActual = document.getElementById('burnBarActual');
+      const barProject = document.getElementById('burnBarProject');
+      if (barActual) barActual.style.width = actualPct + '%';
       if (barProject) {
         barProject.style.width = projectPct + '%';
         barProject.className = `burn-bar-project ${pace}`;
       }
       const barSpent = document.getElementById('burnBarSpent');
-      if (barSpent) barSpent.textContent = `Spent ${fmt(expense)} of ${fmt(income)}`;
+      if (barSpent) barSpent.textContent = income > 0 ? `Spent ${fmt(expense)} of ${fmt(income)}` : `Spent ${fmt(expense)} (no income logged)`;
 
       // Warning message
       const warn = document.getElementById('burnWarning');
@@ -2035,7 +2027,11 @@ const App = {
           warn.style.background = 'rgba(245,158,11,0.08)';
           warn.style.borderColor = 'rgba(245,158,11,0.25)';
           warn.style.color = '#F59E0B';
-          warn.textContent = `Heads up: projected month-end spend is ${fmt(projectedExpense)}, eating ${Math.round((projectedExpense/income)*100)}% of income. Consider slowing down spending.`;
+          if (income > 0) {
+            warn.textContent = `Heads up: projected month-end spend is ${fmt(projectedExpense)}, eating ${Math.round((projectedExpense / income) * 100)}% of income. Consider slowing down spending.`;
+          } else {
+            warn.textContent = `Heads up: no income recorded yet for this month. Projected month-end spend is ${fmt(projectedExpense)}.`;
+          }
         } else {
           warn.style.display = 'none';
         }
@@ -2046,13 +2042,15 @@ const App = {
         const existing = (State.burnAlert || '');
         const msg = pace === 'danger'
           ? `Burn Rate ALERT: Projected overspend of ${fmt(projectedExpense - income)} this month!`
-          : `Burn Rate Warning: Spending at ${Math.round((projectedExpense/income)*100)}% of income pace.`;
+          : (income > 0
+            ? `Burn Rate Warning: Spending at ${Math.round((projectedExpense / income) * 100)}% of income pace.`
+            : `Burn Rate: Projected month-end spend is ${fmt(projectedExpense)} (no income logged).`);
         if (existing !== msg && typeof Notifications !== 'undefined') {
           State.burnAlert = msg;
           Notifications.add({ id: 'burn-' + pace, text: msg, type: pace, icon: '🔥' });
         }
       }
-    } catch(e) {
+    } catch (e) {
       console.error('Burn rate error:', e);
       // Silently hide the card if endpoint not available
       const card = document.getElementById('burnRateCard');
@@ -2065,7 +2063,7 @@ const App = {
     // 1. Natural Language Quick Add
     const quickInput = document.getElementById('aiQuickInput');
     const quickBtn = document.getElementById('aiQuickSubmitBtn');
-    
+
     const handleQuickAdd = async () => {
       const text = quickInput?.value?.trim();
       if (!text) {
@@ -2084,7 +2082,7 @@ const App = {
             amount: r.amount || '',
             type: r.type || 'expense',
             category: r.category || 'Other',
-            date: r.date || new Date().toISOString().slice(0, 10),
+            date: r.date || (typeof getLocalDateString === 'function' ? getLocalDateString() : new Date().toISOString().slice(0, 10)),
             account_id: r.account_id || '',
             tags: r.tags || []
           });
@@ -2216,7 +2214,7 @@ const App = {
             if (m) m.textContent = currentExtractedData.merchant || 'Store Receipt';
             if (a) a.textContent = typeof fmt === 'function' ? fmt(currentExtractedData.amount || 0) : `₹${currentExtractedData.amount || 0}`;
             if (c) c.textContent = currentExtractedData.category || 'Other';
-            if (d) d.textContent = currentExtractedData.date || new Date().toISOString().slice(0, 10);
+            if (d) d.textContent = currentExtractedData.date || (typeof getLocalDateString === 'function' ? getLocalDateString() : new Date().toISOString().slice(0, 10));
 
             const itemsWrap = document.getElementById('resLineItemsWrap');
             if (itemsWrap) {
@@ -2250,15 +2248,15 @@ const App = {
         resetReceiptModal();
 
         // Ensure date is formatted as YYYY-MM-DD for <input type="date">
-        let dateStr = new Date().toISOString().slice(0, 10);
+        let dateStr = typeof getLocalDateString === 'function' ? getLocalDateString() : new Date().toISOString().slice(0, 10);
         if (data.date) {
           if (/^\d{4}-\d{2}-\d{2}$/.test(data.date)) {
             dateStr = data.date;
           } else {
             try {
               const p = new Date(data.date);
-              if (!isNaN(p.getTime())) dateStr = p.toISOString().slice(0, 10);
-            } catch {}
+              if (!isNaN(p.getTime())) dateStr = typeof getLocalDateString === 'function' ? getLocalDateString(p) : p.toISOString().slice(0, 10);
+            } catch { }
           }
         }
 
@@ -2344,7 +2342,7 @@ const Notifications = {
   render() {
     const visible = this.items.filter(i => !this.clearedKeys.has(i.key));
     const list = document.getElementById('notifList');
-    const dot  = document.getElementById('notifDot');
+    const dot = document.getElementById('notifDot');
     if (dot) dot.style.display = visible.length ? 'block' : 'none';
     if (!list) return;
 
@@ -2380,7 +2378,7 @@ const Tags = {
     this.populateFilterSelect();
 
     const input = document.getElementById('tagInput');
-    const box   = document.getElementById('tagSuggestions');
+    const box = document.getElementById('tagSuggestions');
     if (!input) return;
 
     input.addEventListener('input', () => this.showSuggestions(input.value));

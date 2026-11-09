@@ -1,10 +1,12 @@
-// Unregister ALL service workers permanently
-if ('serviceWorker' in navigator) {
+// Safe cleanup of legacy service workers without wiping HTTP browser caches on every page load
+if ('serviceWorker' in navigator && !sessionStorage.getItem('fl_sw_cleaned')) {
   navigator.serviceWorker.getRegistrations().then(regs => {
-    regs.forEach(r => { r.unregister(); console.log('SW unregistered'); });
-  });
-  // Also clear all caches
-  if (window.caches) {
-    caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
-  }
+    if (regs && regs.length) {
+      regs.forEach(r => {
+        r.unregister();
+        console.log('Legacy ServiceWorker unregistered');
+      });
+    }
+  }).catch(() => {});
+  sessionStorage.setItem('fl_sw_cleaned', '1');
 }

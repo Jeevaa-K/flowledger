@@ -99,7 +99,28 @@ const Charts = {
     if (!ctx) return;
     const rev = [...(trend||[])].reverse();
     if (!rev.length) {
-      ctx.canvas.parentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#A79C8C;font-size:13px">No data yet — add transactions to see trends</div>';
+      charts.line = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['No trend data yet'],
+          datasets: [{
+            label: 'No data',
+            data: [0],
+            borderColor: '#CBD5E1',
+            borderDash: [5, 5],
+            pointRadius: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { enabled: false }
+          },
+          scales: SCALES
+        }
+      });
       return;
     }
     const labels  = rev.map(t => { const[y,m]=t.month.split('-'); return new Date(y,m-1).toLocaleString('default',{month:'short',year:'numeric'}); });

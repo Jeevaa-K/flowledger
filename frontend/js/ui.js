@@ -11,6 +11,15 @@ function currentCurrency() {
   catch { return '₹'; }
 }
 
+function getLocalDateString(d = new Date()) {
+  const dateObj = typeof d === 'string' || typeof d === 'number' ? new Date(d) : d;
+  if (!dateObj || isNaN(dateObj.getTime())) return new Date().toISOString().slice(0, 10);
+  const year = dateObj.getFullYear();
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const day = String(dateObj.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 const fmt = n => {
   const symbol = currentCurrency();
   const locale = CURRENCY_LOCALE[symbol] || 'en-IN';
@@ -51,7 +60,8 @@ const UI = {
     if (title) title.textContent = txn ? 'Edit Transaction' : 'Add Transaction';
     set('txnDesc',   txn ? txn.description : '');
     set('txnAmount', txn ? txn.amount : '');
-    set('txnDate',   txn ? txn.date : new Date().toISOString().slice(0,10));
+    set('txnDate',   txn ? (txn.date ? String(txn.date).slice(0, 10) : getLocalDateString()) : getLocalDateString());
+    set('txnNotes',  txn ? txn.notes || '' : '');
     this.setType(txn ? txn.type : 'income');
     this.buildCatPicker(txn ? txn.type : 'income', txn ? txn.category : null);
     const accSel = document.getElementById('txnAccount');
@@ -64,6 +74,8 @@ const UI = {
   closeAddModal() {
     document.getElementById('addModal')?.classList.remove('open');
     this.editId = null;
+    const n = document.getElementById('txnNotes');
+    if (n) n.value = '';
     Tags.setPills([]);
   },
 
@@ -82,7 +94,7 @@ const UI = {
     set('goalName',   goal ? goal.name   : '');
     set('goalTarget', goal ? goal.target : '');
     set('goalSaved',  goal ? goal.saved  : '0');
-    set('goalDate',   goal ? goal.date   : '');
+    set('goalDate',   goal && goal.date ? getLocalDateString(goal.date) : '');
     set('goalEditId', goal ? goal.id     : '');
     document.getElementById('goalModal')?.classList.add('open');
     setTimeout(() => document.getElementById('goalName')?.focus(), 100);
@@ -229,7 +241,7 @@ const UI = {
           <div class="txn-dot" style="background:${color}"></div>
           <div class="txn-meta-col">
             <div class="txn-name">${t.description}</div>
-            <div class="txn-date">${t.category} · ${t.date}</div>
+            <div class="txn-date">${t.category} · ${t.date}${t.notes ? ` · <span style="font-style:italic;color:var(--text-tertiary)">${t.notes}</span>` : ''}</div>
             ${tagsHtml}
           </div>
         </div>
@@ -339,7 +351,7 @@ const UI = {
         <div class="goal-header">
           <div>
             <div class="goal-name">${g.name}</div>
-            <div class="goal-date">${g.date ? 'Target: '+g.date : 'No deadline'}</div>
+            <div class="goal-date">${g.date ? 'Target: ' + getLocalDateString(g.date) : 'No deadline'}</div>
           </div>
           <div style="display:flex;gap:4px">
             <button class="txn-btn edit" data-action="edit-goal" data-id="${g.id}" title="Edit">✎</button>

@@ -357,7 +357,7 @@ const Groups = {
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
     set('gExpDesc', '');
     set('gExpAmount', '');
-    set('gExpDate', new Date().toISOString().slice(0, 10));
+    set('gExpDate', typeof getLocalDateString === 'function' ? getLocalDateString() : new Date().toISOString().slice(0, 10));
 
     const payerSel = document.getElementById('gExpPayerSelect');
     if (payerSel && this.activeGroupData.members) {
