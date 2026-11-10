@@ -3,7 +3,7 @@ const PDFDocument = require('pdfkit');
 const { auth } = require('../middleware/auth');
 const { db, pool } = require('../db');
 const { csvField, safeError, pdfSafeText, toDateString } = require('../utils');
-const { groq } = require('../services/ai');
+const { groq, createGroqCompletion } = require('../services/ai');
 const router = express.Router();
 
 // ── CSV Export ────────────────────────────────────────────────
@@ -134,8 +134,7 @@ router.get('/reports/audit', auth, async (req, res) => {
 
     if (groq) {
       try {
-        const completion = await groq.chat.completions.create({
-          model: 'llama-3.3-70b-versatile',
+        const completion = await createGroqCompletion({
           messages: [
             {
               role: 'system',
