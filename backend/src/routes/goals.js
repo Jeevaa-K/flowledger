@@ -1,7 +1,7 @@
 const express = require('express');
 const { auth } = require('../middleware/auth');
 const { db } = require('../db');
-const { safeError } = require('../utils');
+const { safeError, toDateString } = require('../utils');
 const router = express.Router();
 
 // ── Goals ─────────────────────────────────────────────────────
@@ -9,7 +9,7 @@ const router = express.Router();
 // mapRow keeps that translation in one place instead of scattered
 // across every route below.
 function mapGoalRow(g) {
-  return { id: g.id, name: g.name, target: Number(g.target), saved: Number(g.saved), date: g.target_date };
+  return { id: g.id, name: g.name, target: Number(g.target), saved: Number(g.saved), date: toDateString(g.target_date) };
 }
 
 router.get('/goals', auth, async (req, res) => {

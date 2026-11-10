@@ -329,8 +329,9 @@ Return ONLY a valid JSON object with the following fields:
     let jsonResult = null;
     const visionModels = Array.from(new Set([
       process.env.GROQ_VISION_MODEL,
-      'qwen/qwen3.8-27b',
-      'meta-models/muse-spark-open'
+      'llama-3.2-11b-vision-preview',
+      'llama-3.2-90b-vision-preview',
+      'qwen/qwen3.8-27b'
     ])).filter(Boolean);
     let lastErr = null;
 

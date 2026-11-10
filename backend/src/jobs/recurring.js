@@ -22,7 +22,12 @@ function addPeriod(date, frequency, anchorDay) {
     next.setDate(Math.min(anchorDay, lastDayOfTargetMonth));
     return next;
   }
-  return next; // unknown frequency — leave unchanged rather than guess
+  // Unknown frequency: advance by one day to prevent an infinite loop
+  // in processDueRecurring's while loop. The INSERT will record today's date
+  // for the transaction, so the slight date shift for the next_date update
+  // only affects future scheduling, not the transaction itself.
+  next.setDate(next.getDate() + 1);
+  return next;
 }
 
 async function processDueRecurring() {
@@ -30,21 +35,27 @@ async function processDueRecurring() {
   try {
     const due = await db.all('SELECT * FROM recurring WHERE active=1 AND next_date<=$1', [today]);
     for (const r of due) {
-      await db.run(
-        'INSERT INTO transactions (user_id,description,amount,type,category,date) VALUES ($1,$2,$3,$4,$5,$6)',
-        [r.user_id, r.description, r.amount, r.type, r.category, today]
-      );
-      // anchorDay is fixed from the rule's ORIGINAL next_date, not
-      // re-derived after each step — otherwise a clamp in a short month
-      // (e.g. Feb 28) would permanently shrink a "31st of the month" rule.
+      // anchorDay is fixed from the rule's ORIGINAL next_date — not re-derived
+      // after each step — so a clamp in a short month (Feb 28) doesn't
+      // permanently shrink a "31st of the month" rule.
       const anchorDay = parseInt(String(r.next_date).slice(8, 10), 10);
-      // Loop in case next_date fell more than one period behind (e.g. server
-      // was down) — advances one period at a time so intermediate months
-      // are still generated correctly rather than skipped.
-      let next = new Date(r.next_date);
-      do { next = addPeriod(next, r.frequency, anchorDay); }
-      while (next.toISOString().slice(0, 10) <= today);
-      await db.run('UPDATE recurring SET next_date=$1 WHERE id=$2', [next.toISOString().slice(0, 10), r.id]);
+
+      // Generate one transaction per missed period (backfill) rather than a
+      // single insert dated "today". Cap at 365 iterations so an unknown
+      // frequency or a very old start date can't loop forever.
+      let currentDue = new Date(r.next_date);
+      let iterations = 0;
+      while (currentDue.toISOString().slice(0, 10) <= today && iterations < 365) {
+        iterations++;
+        const txDate = currentDue.toISOString().slice(0, 10);
+        await db.run(
+          'INSERT INTO transactions (user_id,description,amount,type,category,date) VALUES ($1,$2,$3,$4,$5,$6)',
+          [r.user_id, r.description, r.amount, r.type, r.category, txDate]
+        );
+        currentDue = addPeriod(currentDue, r.frequency, anchorDay);
+      }
+
+      await db.run('UPDATE recurring SET next_date=$1 WHERE id=$2', [currentDue.toISOString().slice(0, 10), r.id]);
     }
     if (due.length) console.log(`✅ Processed ${due.length} recurring transactions`);
   } catch (e) { console.error('Cron error:', e.message); }

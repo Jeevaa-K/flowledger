@@ -1,7 +1,7 @@
 const express = require('express');
 const { auth } = require('../middleware/auth');
 const { db } = require('../db');
-const { safeError, sanitizeTags } = require('../utils');
+const { safeError, sanitizeTags, toDateString } = require('../utils');
 const router = express.Router();
 
 // ── Transactions ──────────────────────────────────────────────
@@ -251,24 +251,29 @@ router.delete('/transactions/split/:split_id', auth, async (req, res) => {
 
 router.put('/transactions/:id', auth, async (req, res) => {
   try {
-    const { description, amount, type, category, date, account_id, tags } = req.body;
+    const existing = await db.get('SELECT * FROM transactions WHERE id=$1 AND user_id=$2', [req.params.id, req.user.id]);
+    if (!existing) return res.status(404).json({ error: 'Transaction not found' });
+
+    const { description, amount, type, category, date, account_id, tags, notes } = req.body;
     if (type && !['income', 'expense'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
-    const amt = amount !== undefined ? parseFloat(amount) : undefined;
-    if (amt !== undefined && (!Number.isFinite(amt) || amt <= 0)) return res.status(400).json({ error: 'Invalid amount' });
-    const accId = await resolveAccountId(account_id, req.user.id);
-    // COALESCE can't distinguish "omitted" from "clear all tags" the way
-    // it does for scalar columns (an empty array is still NOT NULL), so
-    // tags are only overwritten when the field is actually present in
-    // the request body — omitting `tags` entirely leaves existing tags
-    // untouched, same as every other optional field on this route.
-    const tagsVal = tags !== undefined ? sanitizeTags(tags) : undefined;
+    const amt = amount !== undefined ? parseFloat(amount) : parseFloat(existing.amount);
+    if (!Number.isFinite(amt) || amt <= 0) return res.status(400).json({ error: 'Invalid amount' });
+    if (description !== undefined && description.length > 500) return res.status(400).json({ error: 'Description is too long' });
+
+    const accId = account_id !== undefined ? await resolveAccountId(account_id, req.user.id) : existing.account_id;
+    const tagsVal = tags !== undefined ? sanitizeTags(tags) : existing.tags;
+    const finalDesc = description !== undefined ? description : existing.description;
+    const finalType = type !== undefined ? type : existing.type;
+    const finalCat = category !== undefined ? category : existing.category;
+    const finalDate = date !== undefined ? date : existing.date;
+    const finalNotes = notes !== undefined ? notes : existing.notes;
+
     const row = await db.get(
       `UPDATE transactions SET description=$1,amount=$2,type=$3,category=$4,date=$5,
-         account_id=COALESCE($6,account_id), tags=COALESCE($7,tags)
-       WHERE id=$8 AND user_id=$9 RETURNING *`,
-      [description, amt, type, category, date, accId, tagsVal, req.params.id, req.user.id]
+         account_id=$6, tags=$7, notes=$8
+       WHERE id=$9 AND user_id=$10 RETURNING *`,
+      [finalDesc, amt, finalType, finalCat, finalDate, accId, tagsVal, finalNotes, req.params.id, req.user.id]
     );
-    if (!row) return res.status(404).json({ error: 'Transaction not found' }); // wasn't yours or doesn't exist
     res.json(row);
   } catch (e) {
     if (e?.status) return res.status(e.status).json({ error: e.error });
@@ -305,7 +310,7 @@ router.post('/transactions/import', auth, async (req, res) => {
         [req.user.id, dates]
       )
       : [];
-    const dupKey = r => `${r.description}|${Number(r.amount)}|${r.type}|${r.category}|${new Date(r.date).toISOString().slice(0, 10)}`;
+    const dupKey = r => `${r.description}|${Number(r.amount)}|${r.type}|${r.category}|${toDateString(r.date)}`;
     const existingKeys = new Set(existingRows.map(dupKey));
 
     let imported = 0, skipped = 0;

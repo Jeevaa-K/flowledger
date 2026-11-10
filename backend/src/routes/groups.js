@@ -208,6 +208,9 @@ router.post('/groups/:id/settle', auth, async (req, res) => {
   }
 
   try {
+    const group = await db.get(`SELECT id FROM groups WHERE id=$1 AND user_id=$2`, [groupId, req.user.id]);
+    if (!group) return res.status(404).json({ error: 'Group not found' });
+
     const fromMember = await db.get(`SELECT name FROM group_members WHERE id=$1 AND group_id=$2`, [parseInt(from_id), groupId]);
     const toMember = await db.get(`SELECT name FROM group_members WHERE id=$1 AND group_id=$2`, [parseInt(to_id), groupId]);
     if (!fromMember || !toMember) return res.status(404).json({ error: 'Members not found' });

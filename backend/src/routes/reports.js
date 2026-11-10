@@ -2,7 +2,7 @@ const express = require('express');
 const PDFDocument = require('pdfkit');
 const { auth } = require('../middleware/auth');
 const { db, pool } = require('../db');
-const { csvField, safeError } = require('../utils');
+const { csvField, safeError, pdfSafeText, toDateString } = require('../utils');
 const { groq } = require('../services/ai');
 const router = express.Router();
 
@@ -61,8 +61,12 @@ router.get('/burnrate', auth, async (req, res) => {
 
     // Pace status: safe / warning / danger
     let pace = 'safe';
-    if (projectedExpense >= income * 0.95) pace = 'danger';
-    else if (projectedExpense >= income * 0.80) pace = 'warning';
+    if (income > 0) {
+      if (projectedExpense >= income * 0.95) pace = 'danger';
+      else if (projectedExpense >= income * 0.80) pace = 'warning';
+    } else if (expense > 0) {
+      pace = 'warning';
+    }
 
     res.json({
       income, expense, dailyRate, projectedExpense, projectedSavings,
@@ -286,7 +290,7 @@ router.get('/export/pdf', auth, async (req, res) => {
 
     doc.fontSize(24).font('Helvetica-Bold').fillColor('#111').text('FlowLedger', 50, 50);
     doc.fontSize(12).font('Helvetica').fillColor('#666').text(`Financial Report - ${m}`, 50, 82);
-    doc.fontSize(10).text(`Generated for: ${userInfo.name} (${userInfo.email})`, 50, 98);
+    doc.fontSize(10).text(`Generated for: ${pdfSafeText(userInfo.name, 'User')} (${pdfSafeText(userInfo.email)})`, 50, 98);
     doc.moveTo(50, 120).lineTo(545, 120).stroke('#e5e7eb');
 
     doc.fontSize(14).font('Helvetica-Bold').fillColor('#111').text('Summary', 50, 135);
@@ -301,7 +305,7 @@ router.get('/export/pdf', auth, async (req, res) => {
       doc.fontSize(14).font('Helvetica-Bold').fillColor('#111').text('Category Breakdown', 50, 248);
       let cy = 270;
       cats.forEach(cat => {
-        doc.fontSize(10).font('Helvetica').fillColor('#374151').text(cat.category, 50, cy);
+        doc.fontSize(10).font('Helvetica').fillColor('#374151').text(pdfSafeText(cat.category, 'Other'), 50, cy);
         doc.fillColor('#ef4444').text(`Rs.${Number(cat.total).toLocaleString('en-IN')}`, 400, cy, { align: 'right', width: 145 });
         cy += 18;
       });
@@ -319,11 +323,11 @@ router.get('/export/pdf', auth, async (req, res) => {
 
     txns.slice(0, 40).forEach(t => {
       if (ty > 750) { doc.addPage(); ty = 50; }
-      const d = t.date ? new Date(t.date).toISOString().slice(0, 10) : '';
+      const d = toDateString(t.date);
       doc.fontSize(9).font('Helvetica').fillColor('#374151');
       doc.text(d, 50, ty, { width: 55 });
-      doc.text(t.description, 110, ty, { width: 190, ellipsis: true });
-      doc.text(t.category, 310, ty, { width: 110 });
+      doc.text(pdfSafeText(t.description, 'Expense'), 110, ty, { width: 190, ellipsis: true });
+      doc.text(pdfSafeText(t.category, 'Other'), 310, ty, { width: 110 });
       doc.fillColor(t.type === 'income' ? '#10b981' : '#ef4444')
         .text(`${t.type === 'income' ? '+' : '-'}Rs.${Number(t.amount).toLocaleString('en-IN')}`, 430, ty, { width: 115, align: 'right' });
       ty += 16;

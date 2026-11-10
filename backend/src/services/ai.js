@@ -10,9 +10,6 @@ if (apiKey) { groq = new Groq({ apiKey }); console.log('✅ Groq AI enabled'); }
 const GROQ_MODELS = [
   process.env.GROQ_MODEL,
   'llama-3.3-70b-versatile',
-  'openai/gpt-oss-120b',
-  'openai/gpt-oss-20b',
-  'qwen/qwen3.8-27b',
   'llama-3.1-8b-instant',
   'llama3-70b-8192',
   'llama3-8b-8192',
@@ -51,7 +48,15 @@ async function createGroqCompletion(params) {
 
 // ── Langfuse ──────────────────────────────────────────────────
 let langfuse = null;
-if (process.env.LANGFUSE_PUBLIC_KEY && process.env.LANGFUSE_SECRET_KEY && process.env.NODE_ENV !== 'test') {
+if (
+  process.env.LANGFUSE_PUBLIC_KEY &&
+  process.env.LANGFUSE_PUBLIC_KEY.startsWith('pk-lf-') &&
+  !process.env.LANGFUSE_PUBLIC_KEY.includes('your-') &&
+  process.env.LANGFUSE_SECRET_KEY &&
+  process.env.LANGFUSE_SECRET_KEY.startsWith('sk-lf-') &&
+  !process.env.LANGFUSE_SECRET_KEY.includes('your-') &&
+  process.env.NODE_ENV !== 'test'
+) {
   const { Langfuse } = require('langfuse'); // loaded only when tracing is configured
   langfuse = new Langfuse({
     publicKey: process.env.LANGFUSE_PUBLIC_KEY,

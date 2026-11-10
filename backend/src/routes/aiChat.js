@@ -233,7 +233,7 @@ router.post('/ai/chat', auth, async (req, res) => {
     }
 
     let personaRules = '';
-    let groqModelChoice = 'openai/gpt-oss-120b';
+    let groqModelChoice = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
     if (activeModel === 'claude') {
       personaRules = `You are CLAUDE 3.5 SONNET, an elite financial auditor and budget strategist on FlowLedger.
 TONE: Exceptionally thoughtful, rigorous, structured, and objective.
@@ -243,7 +243,7 @@ STYLE:
 - Calculate concrete metrics: savings rate %, burn rate, and discretionary spending buffer.
 - Emphasize financial resilience, debt avoidance, and pragmatic risk mitigation.`;
     } else if (activeModel === 'fast') {
-      groqModelChoice = 'openai/gpt-oss-20b';
+      groqModelChoice = process.env.GROQ_FAST_MODEL || 'llama-3.1-8b-instant';
       personaRules = `You are a high-speed financial assistant.
 TONE: Crisp, direct, concise (under 80 words).
 STYLE: Give immediate numerical answers, calculations, and punchy bullet points without pleasantries or fluff.`;

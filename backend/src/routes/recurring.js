@@ -4,6 +4,10 @@ const { db } = require('../db');
 const { safeError } = require('../utils');
 const router = express.Router();
 
+// Allowlist of valid frequency values — rejects typos / unexpected strings
+// before they reach the cron job where addPeriod would loop forever on them.
+const VALID_FREQUENCIES = ['daily', 'weekly', 'monthly', 'yearly'];
+
 // ── Recurring ─────────────────────────────────────────────────
 router.get('/recurring', auth, async (req, res) => {
   try { res.json(await db.all('SELECT * FROM recurring WHERE user_id=$1 ORDER BY next_date ASC', [req.user.id])); }
@@ -103,6 +107,7 @@ router.post('/recurring', auth, async (req, res) => {
     if (!description || !amount || !type || !category || !frequency || !next_date)
       return res.status(400).json({ error: 'All fields required' });
     if (!['income', 'expense'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
+    if (!VALID_FREQUENCIES.includes(frequency)) return res.status(400).json({ error: 'Invalid frequency' });
     const amt = parseFloat(amount);
     if (!Number.isFinite(amt) || amt <= 0) return res.status(400).json({ error: 'Invalid amount' });
     const row = await db.get(
@@ -115,14 +120,33 @@ router.post('/recurring', auth, async (req, res) => {
 
 router.put('/recurring/:id', auth, async (req, res) => {
   try {
+    const existing = await db.get('SELECT * FROM recurring WHERE id=$1 AND user_id=$2', [req.params.id, req.user.id]);
+    if (!existing) return res.status(404).json({ error: 'Recurring transaction not found' });
+
     const { description, amount, type, category, frequency, next_date, active } = req.body;
-    const amt = amount !== undefined ? parseFloat(amount) : undefined;
-    if (amt !== undefined && (!Number.isFinite(amt) || amt <= 0)) return res.status(400).json({ error: 'Invalid amount' });
+    if (frequency !== undefined && !VALID_FREQUENCIES.includes(frequency)) {
+      return res.status(400).json({ error: 'Invalid frequency' });
+    }
+    if (type !== undefined && !['income', 'expense'].includes(type)) {
+      return res.status(400).json({ error: 'Invalid type' });
+    }
+    const amt = amount !== undefined ? parseFloat(amount) : existing.amount;
+    if (!Number.isFinite(amt) || amt <= 0) return res.status(400).json({ error: 'Invalid amount' });
+
     const row = await db.get(
       'UPDATE recurring SET description=$1,amount=$2,type=$3,category=$4,frequency=$5,next_date=$6,active=$7 WHERE id=$8 AND user_id=$9 RETURNING *',
-      [description, amt, type, category, frequency, next_date, active ? 1 : 0, req.params.id, req.user.id]
+      [
+        description !== undefined ? description : existing.description,
+        amt,
+        type !== undefined ? type : existing.type,
+        category !== undefined ? category : existing.category,
+        frequency !== undefined ? frequency : existing.frequency,
+        next_date !== undefined ? next_date : existing.next_date,
+        active !== undefined ? (active ? 1 : 0) : existing.active,
+        req.params.id,
+        req.user.id
+      ]
     );
-    if (!row) return res.status(404).json({ error: 'Recurring transaction not found' });
     res.json(row);
   } catch (e) { safeError(res, e, 'Update recurring'); }
 });
