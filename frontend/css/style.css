@@ -2747,6 +2747,270 @@ body.privacy-mode .audit-score-num:hover { filter: none; }
   line-height: 1.5;
 }
 
+/* ─── Cash Flow Forecast & Predictive Radar Card ────────────────────────── */
+.cashflow-radar-card {
+  margin-bottom: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl, 18px);
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+.cashflow-header-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.cashflow-radar-icon {
+  font-size: 24px;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-lg, 12px);
+  background: rgba(99, 102, 241, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cashflow-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.cashflow-account-select {
+  background: var(--surface-sunken);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md, 10px);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  outline: none;
+  cursor: pointer;
+}
+.cashflow-days-toggle {
+  display: flex;
+  background: var(--surface-sunken);
+  border-radius: var(--r-md, 10px);
+  padding: 2px;
+  border: 1px solid var(--border);
+}
+.cashflow-days-toggle .pill-btn {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: var(--r-sm, 8px);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.cashflow-days-toggle .pill-btn.active {
+  background: var(--surface);
+  color: var(--text-primary);
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+.cashflow-status-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: var(--r-full, 999px);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.cashflow-status-badge.safe {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10B981;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+.cashflow-status-badge.warning {
+  background: rgba(245, 158, 11, 0.12);
+  color: #F59E0B;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+.cashflow-status-badge.danger {
+  background: rgba(239, 68, 68, 0.12);
+  color: #EF4444;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  animation: pulse-danger 2s infinite ease-in-out;
+}
+@keyframes pulse-danger {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.03); opacity: 0.9; }
+}
+
+.cashflow-radar-body {
+  margin-top: 18px;
+}
+.cashflow-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 20px;
+}
+@media (max-width: 900px) {
+  .cashflow-kpi-row { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px) {
+  .cashflow-kpi-row { grid-template-columns: 1fr; }
+}
+.cashflow-kpi {
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg, 14px);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+}
+.cf-kpi-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.cf-kpi-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 6px 0 2px;
+  letter-spacing: -0.5px;
+}
+.cf-kpi-sub {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.cashflow-chart-container {
+  position: relative;
+  height: 220px;
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.cashflow-radar-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.cashflow-insight-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(99, 102, 241, 0.06);
+  border: 1px solid rgba(99, 102, 241, 0.18);
+  border-radius: var(--r-md, 10px);
+  padding: 12px 16px;
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+.cashflow-insight-banner.danger {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.28);
+  color: #EF4444;
+}
+.cashflow-insight-banner.warning {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.28);
+  color: #F59E0B;
+}
+.cf-insight-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.cf-insight-text {
+  flex: 1;
+}
+
+.cashflow-events-container {
+  background: var(--surface-sunken);
+  border-radius: var(--r-md, 10px);
+  padding: 10px 14px;
+}
+.cf-events-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 8px;
+}
+.cf-events-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+.cf-event-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md, 10px);
+  padding: 6px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.cf-event-chip .chip-amt.income { color: #10B981; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+.cf-event-chip .chip-amt.expense { color: #F43F5E; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+.cf-event-chip .chip-days {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  background: var(--surface-sunken);
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+/* ─── Multi-Currency & FX Styles ────────────────────────────────────────── */
+.currency-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.currency-select {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 10px;
+  border-radius: var(--r-md, 10px);
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+.currency-select:focus {
+  border-color: var(--brand);
+}
+.fx-conversion-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--brand);
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  padding: 6px 12px;
+  border-radius: var(--r-md, 8px);
+}
+.converter-result-box {
+  margin: 16px 0;
+  padding: 16px;
+  background: var(--surface-sunken);
+  border-radius: var(--r-lg, 14px);
+  border: 1px solid var(--border);
+  text-align: center;
+}
+
 /* Privacy blur */
 body.privacy-mode .burn-stat-value { filter: blur(6px); user-select: none; }
 

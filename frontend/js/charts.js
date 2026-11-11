@@ -171,5 +171,135 @@ const Charts = {
         }
       }
     });
+  },
+
+  renderCashflowForecast(data) {
+    this.destroy('cashflow');
+    window._lastCashflowData = data;
+    const canvas = document.getElementById('cashflowForecastChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    if (!data || !data.timeline || !data.timeline.length) return;
+
+    const labels = data.timeline.map(t => {
+      const parts = t.date.split('-');
+      const d = new Date(parts[0], parts[1] - 1, parts[2]);
+      return d.toLocaleDateString('default', { month: 'short', day: 'numeric' });
+    });
+
+    const balances = data.timeline.map(t => t.balance);
+
+    let strokeColor = '#6366F1';
+    let gradTop = 'rgba(99, 102, 241, 0.28)';
+    let gradBottom = 'rgba(99, 102, 241, 0.0)';
+
+    if (data.status === 'danger') {
+      strokeColor = '#EF4444';
+      gradTop = 'rgba(239, 68, 68, 0.32)';
+      gradBottom = 'rgba(239, 68, 68, 0.0)';
+    } else if (data.status === 'warning') {
+      strokeColor = '#F59E0B';
+      gradTop = 'rgba(245, 158, 11, 0.28)';
+      gradBottom = 'rgba(245, 158, 11, 0.0)';
+    } else if (data.net_change >= 0) {
+      strokeColor = '#10B981';
+      gradTop = 'rgba(16, 185, 129, 0.28)';
+      gradBottom = 'rgba(16, 185, 129, 0.0)';
+    }
+
+    const pointRadii = data.timeline.map(t => (t.events && t.events.length) ? 5 : 0);
+    const pointHoverRadii = data.timeline.map(t => (t.events && t.events.length) ? 8 : 4);
+    const pointBgColors = data.timeline.map(t => {
+      if (t.events && t.events.length) {
+        const hasIncome = t.events.some(e => e.type === 'income');
+        return hasIncome ? '#10B981' : '#F43F5E';
+      }
+      return strokeColor;
+    });
+
+    charts.cashflow = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Projected Balance',
+          data: balances,
+          borderColor: strokeColor,
+          borderWidth: 2.5,
+          tension: 0.35,
+          fill: true,
+          backgroundColor: (ctx2) => {
+            const chart = ctx2.chart;
+            const { ctx: c, height: h } = chart;
+            const gradient = c.createLinearGradient(0, 0, 0, h || 220);
+            gradient.addColorStop(0, gradTop);
+            gradient.addColorStop(1, gradBottom);
+            return gradient;
+          },
+          pointRadius: pointRadii,
+          pointHoverRadius: pointHoverRadii,
+          pointBackgroundColor: pointBgColors,
+          pointBorderColor: '#FFFFFF',
+          pointBorderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#0F172A',
+            borderColor: '#1E293B',
+            borderWidth: 1,
+            titleColor: '#F8FAFC',
+            bodyColor: '#94A3B8',
+            bodyFont: { family: 'JetBrains Mono', size: 12 },
+            padding: 14,
+            cornerRadius: 10,
+            callbacks: {
+              label: (ctx) => {
+                const idx = ctx.dataIndex;
+                const pt = data.timeline[idx];
+                const bal = Number(ctx.raw);
+                const curr = currentCurrency();
+                const loc = CURRENCY_LOCALE[curr] || 'en-IN';
+                let lines = [' Balance: ' + curr + bal.toLocaleString(loc)];
+                if (pt && pt.events && pt.events.length) {
+                  for (const ev of pt.events) {
+                    const sign = ev.type === 'income' ? '+' : '-';
+                    lines.push(`  ${ev.type === 'income' ? '💼' : '⚡'} ${ev.description}: ${sign}${curr}${Number(ev.amount).toLocaleString(loc)}`);
+                  }
+                }
+                return lines;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: {
+              color: '#64748B',
+              font: { family: 'Inter', size: 11 },
+              maxTicksLimit: 10
+            },
+            grid: { display: false },
+            border: { display: false }
+          },
+          y: {
+            ticks: {
+              color: '#64748B',
+              font: { family: 'JetBrains Mono', size: 10 },
+              callback: (v) => currentCurrency() + (Math.abs(v) >= 1000 ? (v / 1000).toFixed(0) + 'k' : v)
+            },
+            grid: { color: 'rgba(226, 232, 240, 0.6)' },
+            border: { display: false }
+          }
+        }
+      }
+    });
   }
 };

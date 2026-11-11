@@ -41,6 +41,25 @@ const API = {
   put(path, body) { return this.request('PUT', path, body); },
   del(path, body) { return this.request('DELETE', path, body); },
 
+  async getCashflowForecast(days = 30, accountId = null, discretionary = true) {
+    let q = `?days=${days}&discretionary=${discretionary}`;
+    if (accountId) q += `&account_id=${accountId}`;
+    return this.get(`/cashflow-forecast${q}`);
+  },
+
+  async getCurrencies() {
+    return this.get('/currencies');
+  },
+
+  async getCurrencyRates(base) {
+    const q = base ? `?base=${base}` : '';
+    return this.get(`/currencies/rates${q}`);
+  },
+
+  async convertCurrency(amount, from, to, rate) {
+    return this.post('/currencies/convert', { amount, from, to, rate });
+  },
+
   // Same as get(), but also returns the X-Total-Count header — used only
   // by the paginated transactions list, so request()'s return shape
   // (plain parsed JSON) stays unchanged for every other call site.
