@@ -112,6 +112,14 @@ async function initDB() {
   // becomes unassigned ("No account") the same way deleting a budget
   // leaves its transactions untouched elsewhere in this file.
   await db.run(`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS account_id INTEGER REFERENCES accounts(id) ON DELETE SET NULL`);
+  await db.run(`ALTER TABLE recurring ADD COLUMN IF NOT EXISTS account_id INTEGER REFERENCES accounts(id) ON DELETE SET NULL`);
+  await db.run(`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS original_amount NUMERIC`);
+  await db.run(`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS original_currency TEXT`);
+  await db.run(`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS exchange_rate NUMERIC DEFAULT 1`);
+  await db.run(`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS currency TEXT`);
+  await db.run(`ALTER TABLE recurring ADD COLUMN IF NOT EXISTS original_amount NUMERIC`);
+  await db.run(`ALTER TABLE recurring ADD COLUMN IF NOT EXISTS original_currency TEXT`);
+  await db.run(`ALTER TABLE recurring ADD COLUMN IF NOT EXISTS exchange_rate NUMERIC DEFAULT 1`);
   // Free-text tags, stored as a native Postgres array rather than a join
   // table — tags are ad-hoc and per-user (no cross-user tag catalog to
   // normalize against), so an array column keeps writes to one row and
