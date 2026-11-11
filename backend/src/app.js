@@ -32,6 +32,7 @@ function createApp() {
   app.use('/api', require('./routes/aiTools'));
   app.use('/api', require('./routes/groups'));
   app.use('/api', require('./routes/reports'));
+  app.use('/api', require('./routes/currencies'));
 
   // Unknown API paths must answer JSON, not the SPA's index.html.
   app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));

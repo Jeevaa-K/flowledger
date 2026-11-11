@@ -2,6 +2,7 @@ const express = require('express');
 const { auth } = require('../middleware/auth');
 const { db } = require('../db');
 const { safeError, sanitizeTags, toDateString } = require('../utils');
+const { normalizeCurrency, convertCurrency } = require('../services/currency');
 const router = express.Router();
 
 // ── Transactions ──────────────────────────────────────────────
@@ -129,7 +130,7 @@ async function resolveAccountId(accountId, userId) {
 
 router.post('/transactions', auth, async (req, res) => {
   try {
-    const { description, amount, type, category, date, account_id, tags } = req.body;
+    const { description, amount, type, category, date, account_id, tags, currency, original_amount, exchange_rate } = req.body;
     if (!description || !amount || !type || !category || !date)
       return res.status(400).json({ error: 'All fields required' });
     if (description.length > 500) return res.status(400).json({ error: 'Description is too long' });
@@ -137,9 +138,28 @@ router.post('/transactions', auth, async (req, res) => {
     const amt = parseFloat(amount);
     if (!Number.isFinite(amt) || amt <= 0) return res.status(400).json({ error: 'Invalid amount' });
     const accId = await resolveAccountId(account_id, req.user.id);
+
+    // Multi-currency handling
+    const userRow = await db.get('SELECT currency FROM users WHERE id=$1', [req.user.id]);
+    const userBase = normalizeCurrency(userRow?.currency || 'INR');
+    const inputCurr = currency ? normalizeCurrency(currency) : userBase;
+
+    let baseAmount = amt;
+    let origAmount = (original_amount && Number.isFinite(parseFloat(original_amount))) ? parseFloat(original_amount) : amt;
+    let rate = 1.0;
+
+    if (inputCurr.code !== userBase.code) {
+      const conv = convertCurrency(origAmount, inputCurr.code, userBase.code, exchange_rate);
+      baseAmount = conv.converted;
+      rate = conv.rate;
+    } else if (exchange_rate && Number.isFinite(parseFloat(exchange_rate))) {
+      rate = parseFloat(exchange_rate);
+    }
+
     const row = await db.get(
-      'INSERT INTO transactions (user_id,description,amount,type,category,date,account_id,tags) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *',
-      [req.user.id, description, amt, type, category, date, accId, sanitizeTags(tags)]
+      `INSERT INTO transactions (user_id,description,amount,type,category,date,account_id,tags,original_amount,original_currency,exchange_rate)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+      [req.user.id, description, baseAmount, type, category, date, accId, sanitizeTags(tags), origAmount, inputCurr.code, rate]
     );
     res.status(201).json(row);
   } catch (e) {
@@ -254,9 +274,9 @@ router.put('/transactions/:id', auth, async (req, res) => {
     const existing = await db.get('SELECT * FROM transactions WHERE id=$1 AND user_id=$2', [req.params.id, req.user.id]);
     if (!existing) return res.status(404).json({ error: 'Transaction not found' });
 
-    const { description, amount, type, category, date, account_id, tags, notes } = req.body;
+    const { description, amount, type, category, date, account_id, tags, notes, currency, original_amount, exchange_rate } = req.body;
     if (type && !['income', 'expense'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
-    const amt = amount !== undefined ? parseFloat(amount) : parseFloat(existing.amount);
+    let amt = amount !== undefined ? parseFloat(amount) : parseFloat(existing.amount);
     if (!Number.isFinite(amt) || amt <= 0) return res.status(400).json({ error: 'Invalid amount' });
     if (description !== undefined && description.length > 500) return res.status(400).json({ error: 'Description is too long' });
 
@@ -268,11 +288,31 @@ router.put('/transactions/:id', auth, async (req, res) => {
     const finalDate = date !== undefined ? date : existing.date;
     const finalNotes = notes !== undefined ? notes : existing.notes;
 
+    // Currency calculation
+    let origAmt = original_amount !== undefined ? parseFloat(original_amount) : (existing.original_amount ? parseFloat(existing.original_amount) : amt);
+    let origCurr = currency !== undefined ? normalizeCurrency(currency).code : (existing.original_currency || null);
+    let rate = exchange_rate !== undefined ? parseFloat(exchange_rate) : (existing.exchange_rate ? parseFloat(existing.exchange_rate) : 1.0);
+
+    const userRow = await db.get('SELECT currency FROM users WHERE id=$1', [req.user.id]);
+    const userBase = normalizeCurrency(userRow?.currency || 'INR');
+
+    if (currency !== undefined || original_amount !== undefined || exchange_rate !== undefined) {
+      if (origCurr && origCurr !== userBase.code) {
+        const conv = convertCurrency(origAmt, origCurr, userBase.code, rate);
+        amt = conv.converted;
+        rate = conv.rate;
+      } else {
+        rate = 1.0;
+        origCurr = userBase.code;
+        origAmt = amt;
+      }
+    }
+
     const row = await db.get(
       `UPDATE transactions SET description=$1,amount=$2,type=$3,category=$4,date=$5,
-         account_id=$6, tags=$7, notes=$8
-       WHERE id=$9 AND user_id=$10 RETURNING *`,
-      [finalDesc, amt, finalType, finalCat, finalDate, accId, tagsVal, finalNotes, req.params.id, req.user.id]
+         account_id=$6, tags=$7, notes=$8, original_amount=$9, original_currency=$10, exchange_rate=$11
+       WHERE id=$12 AND user_id=$13 RETURNING *`,
+      [finalDesc, amt, finalType, finalCat, finalDate, accId, tagsVal, finalNotes, origAmt, origCurr, rate, req.params.id, req.user.id]
     );
     res.json(row);
   } catch (e) {
