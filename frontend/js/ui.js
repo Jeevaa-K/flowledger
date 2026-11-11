@@ -1,7 +1,36 @@
 // Locale per symbol so number grouping looks native for each currency
-// (₹ uses Indian lakh/crore grouping — 1,50,000 — the others use the
-// standard thousands grouping — 150,000).
-const CURRENCY_LOCALE = { '₹': 'en-IN', '$': 'en-US', '€': 'de-DE', '£': 'en-GB' };
+const CURRENCY_LOCALE = {
+  '₹': 'en-IN', 'INR': 'en-IN',
+  '$': 'en-US', 'USD': 'en-US',
+  '€': 'de-DE', 'EUR': 'de-DE',
+  '£': 'en-GB', 'GBP': 'en-GB',
+  'د.إ': 'ar-AE', 'AED': 'ar-AE',
+  'C$': 'en-CA', 'CAD': 'en-CA',
+  'A$': 'en-AU', 'AUD': 'en-AU',
+  'S$': 'en-SG', 'SGD': 'en-SG',
+  '¥': 'ja-JP', 'JPY': 'ja-JP',
+  'Fr': 'de-CH', 'CHF': 'de-CH'
+};
+
+const CURRENCY_SYMBOLS = {
+  'INR': '₹', 'USD': '$', 'EUR': '€', 'GBP': '£', 'AED': 'د.إ',
+  'CAD': 'C$', 'AUD': 'A$', 'SGD': 'S$', 'JPY': '¥', 'CHF': 'Fr'
+};
+
+function getCurrencySymbol(c) {
+  if (!c) return currentCurrency();
+  const upper = String(c).toUpperCase();
+  return CURRENCY_SYMBOLS[upper] || c;
+}
+
+function normalizeCurrCode(c) {
+  if (!c) return 'INR';
+  const clean = String(c).trim();
+  for (const [code, sym] of Object.entries(CURRENCY_SYMBOLS)) {
+    if (code === clean.toUpperCase() || sym === clean) return code;
+  }
+  return clean.toUpperCase();
+}
 
 // Reads the symbol from localStorage on every call (not cached) so a
 // profile change takes effect immediately without a page reload —
@@ -20,10 +49,10 @@ function getLocalDateString(d = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
-const fmt = n => {
-  const symbol = currentCurrency();
-  const locale = CURRENCY_LOCALE[symbol] || 'en-IN';
-  return symbol + Math.abs(n).toLocaleString(locale, {minimumFractionDigits:0, maximumFractionDigits:0});
+const fmt = (n, customCurrency = null) => {
+  const symbol = customCurrency ? getCurrencySymbol(customCurrency) : currentCurrency();
+  const locale = CURRENCY_LOCALE[symbol] || CURRENCY_LOCALE[customCurrency] || 'en-IN';
+  return symbol + Math.abs(n).toLocaleString(locale, {minimumFractionDigits:0, maximumFractionDigits:2});
 };
 
 const UI = {
@@ -197,7 +226,20 @@ const UI = {
     const saveBtn = document.getElementById('saveTxnBtn');
     if (saveBtn) saveBtn.textContent = isEdit ? 'Update Transaction' : 'Save Transaction';
     set('txnDesc',   txn ? txn.description : '');
-    set('txnAmount', txn ? txn.amount : '');
+
+    // Currency setup
+    const baseCode = normalizeCurrCode(currentCurrency());
+    const txnCurrCode = txn?.original_currency ? normalizeCurrCode(txn.original_currency) : baseCode;
+    set('txnCurrency', txnCurrCode);
+    const currSym = getCurrencySymbol(txnCurrCode);
+    const symEl = document.getElementById('txnCurrSymbol');
+    if (symEl) symEl.textContent = currSym;
+    set('txnAmount', txn ? (txn.original_amount !== null && txn.original_amount !== undefined ? txn.original_amount : txn.amount) : '');
+    const rateEl = document.getElementById('txnCustomRate');
+    if (rateEl) rateEl.value = (txn && txn.exchange_rate && Number(txn.exchange_rate) !== 1) ? txn.exchange_rate : '';
+    const fxEditRow = document.getElementById('fxRateEditRow');
+    if (fxEditRow) fxEditRow.style.display = 'none';
+
     set('txnDate',   txn ? txn.date : new Date().toISOString().slice(0,10));
     const targetType = txn ? txn.type : 'income';
     this.setType(targetType);
@@ -205,6 +247,7 @@ const UI = {
     const accSel = document.getElementById('txnAccount');
     if (accSel && txn?.account_id) accSel.value = txn.account_id;
     Tags.setPills(txn?.tags || []);
+    if (typeof App !== 'undefined' && App.updateFxPreview) App.updateFxPreview();
     document.getElementById('addModal')?.classList.add('open');
     setTimeout(() => document.getElementById('txnDesc')?.focus(), 100);
   },
@@ -402,6 +445,11 @@ const UI = {
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
     set('accountName',            account ? account.name : '');
     set('accountType',            account ? account.type : 'cash');
+    const userCurrCode = normalizeCurrCode(currentCurrency());
+    const accCurr = account && account.currency ? account.currency : userCurrCode;
+    set('accountCurrency', accCurr);
+    const symEl = document.getElementById('accountCurrencySymbol');
+    if (symEl) symEl.textContent = getCurrencySymbol(accCurr);
     set('accountStartingBalance', account ? account.starting_balance : '0');
     set('editAccountId',          account ? account.id : '');
     document.getElementById('accountModal')?.classList.add('open');
@@ -415,7 +463,7 @@ const UI = {
   // without each needing its own fetch).
   populateAccountSelects(accounts, filterEl='') {
     const active = accounts.filter(a => !a.archived);
-    const opts = active.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+    const opts = active.map(a => `<option value="${a.id}" data-currency="${a.currency || ''}">${a.name}${a.currency ? ` (${a.currency})` : ''}</option>`).join('');
 
     const txnSel = document.getElementById('txnAccount');
     if (txnSel) txnSel.innerHTML = opts || '<option value="">No accounts yet</option>';
@@ -441,21 +489,32 @@ const UI = {
     const grid    = document.getElementById('accountGrid');
     const summary = document.getElementById('accountSummary');
     if (!grid) return;
-    const totalBalance = accounts.reduce((s,a) => s + a.balance, 0);
+    const baseCurrCode = normalizeCurrCode(currentCurrency());
+    const totalBalance = accounts.reduce((s,a) => s + (a.base_balance !== undefined ? a.base_balance : a.balance), 0);
     const negativeCount = accounts.filter(a => a.balance < 0).length;
     if (summary) summary.innerHTML = `
-      <div class="bs-card"><div class="bs-label">Total Balance</div><div class="bs-val" style="color:${totalBalance>=0?'var(--income)':'var(--expense)'}">${fmt(totalBalance)}</div></div>
+      <div class="bs-card"><div class="bs-label">Total Balance (Net Liquid)</div><div class="bs-val" style="color:${totalBalance>=0?'var(--income)':'var(--expense)'}">${fmt(totalBalance)}</div></div>
       <div class="bs-card"><div class="bs-label">Accounts</div><div class="bs-val">${accounts.length}</div></div>
       <div class="bs-card"><div class="bs-label">Negative Balance</div><div class="bs-val" style="color:${negativeCount>0?'var(--expense)':'var(--income)'}">${negativeCount} account${negativeCount===1?'':'s'}</div></div>`;
     if (!accounts.length) { grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1">No accounts yet. Add one to start tracking balances!</div>'; return; }
     const typeEmoji = { cash:'💵', bank:'🏦', credit_card:'💳', wallet:'👛', other:'📦' };
     const typeLabel = { cash:'Cash', bank:'Bank', credit_card:'Credit Card', wallet:'Wallet', other:'Other' };
-    grid.innerHTML = accounts.map(a => `
+    grid.innerHTML = accounts.map(a => {
+      const isDiffCurr = a.currency && normalizeCurrCode(a.currency) !== baseCurrCode;
+      const accCurrSym = a.currency_symbol || getCurrencySymbol(a.currency);
+      const nativeBalDisplay = fmt(a.balance, a.currency);
+      const convertedDisplay = isDiffCurr && a.base_balance !== undefined
+        ? `<div style="font-size:12px;opacity:0.8;font-weight:500;margin-top:2px">≈ ${fmt(a.base_balance)}</div>`
+        : '';
+      const startBalDisplay = fmt(a.starting_balance, a.currency);
+      const currBadge = a.currency ? `<span style="font-size:10px;font-weight:700;background:var(--surface-sunken);padding:2px 6px;border-radius:6px;border:1px solid var(--border);color:var(--text-tertiary)">${a.currency}</span>` : '';
+
+      return `
       <div class="budget-card" style="${a.archived?'opacity:0.55':''}">
         <div class="budget-header">
           <div class="budget-cat-wrap">
             <div class="budget-cat-dot" style="background:${a.color||'#6366f1'}"></div>
-            <div class="budget-cat">${typeEmoji[a.type]||'📦'} ${a.name}</div>
+            <div class="budget-cat">${typeEmoji[a.type]||'📦'} ${a.name} ${currBadge}</div>
           </div>
           <div style="display:flex;gap:4px">
             <button class="txn-btn edit" data-action="edit-account" data-id="${a.id}" title="Edit">✎</button>
@@ -464,13 +523,17 @@ const UI = {
         </div>
         <div class="budget-amounts">
           <span>Type: <span>${typeLabel[a.type]||a.type}</span></span>
-          <span>Starting: <span>${fmt(a.starting_balance)}</span></span>
+          <span>Starting: <span>${startBalDisplay}</span></span>
         </div>
         <div class="budget-footer" style="margin-top:8px">
-          <div class="budget-percent" style="color:${a.balance>=0?'var(--income)':'var(--expense)'};font-size:20px">${fmt(a.balance)}</div>
+          <div class="budget-percent" style="color:${a.balance>=0?'var(--income)':'var(--expense)'};font-size:20px">
+            ${nativeBalDisplay}
+            ${convertedDisplay}
+          </div>
           <div class="budget-remaining">${a.archived ? 'Archived' : 'Current balance'}</div>
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   },
 
   renderAccountStrip(accounts) {
@@ -478,16 +541,24 @@ const UI = {
     const el   = document.getElementById('dashAccountStrip');
     if (!card || !el) return;
     const active = accounts.filter(a => !a.archived);
-    // Hidden entirely when there's only the single auto-created default
-    // account — showing a one-item "By Account" strip is just noise
-    // until the user actually has more than one account to compare.
     if (active.length < 2) { card.style.display = 'none'; return; }
     card.style.display = 'block';
-    el.innerHTML = active.map(a => `
+    const baseCurrCode = normalizeCurrCode(currentCurrency());
+    el.innerHTML = active.map(a => {
+      const isDiff = a.currency && normalizeCurrCode(a.currency) !== baseCurrCode;
+      const subVal = isDiff && a.base_balance !== undefined ? `<div style="font-size:11px;opacity:0.8">≈ ${fmt(a.base_balance)}</div>` : '';
+      return `
       <div style="flex:1;min-width:140px;padding:12px 14px;border-radius:10px;background:var(--surface-sunken);border-left:3px solid ${a.color||'var(--brand)'}">
-        <div style="font-size:12px;color:var(--text-tertiary);margin-bottom:4px">${a.name}</div>
-        <div style="font-size:16px;font-weight:600;color:${a.balance>=0?'var(--income)':'var(--expense)'}">${fmt(a.balance)}</div>
-      </div>`).join('');
+        <div style="font-size:12px;color:var(--text-tertiary);margin-bottom:4px;display:flex;justify-content:space-between">
+          <span>${a.name}</span>
+          ${a.currency ? `<span style="font-size:10px;font-weight:700">${a.currency}</span>` : ''}
+        </div>
+        <div style="font-size:16px;font-weight:600;color:${a.balance>=0?'var(--income)':'var(--expense)'}">
+          ${fmt(a.balance, a.currency)}
+          ${subVal}
+        </div>
+      </div>`;
+    }).join('');
   },
 
   toast(msg, type='success', duration=2800) {
@@ -540,6 +611,19 @@ const UI = {
       const tagsHtml = (t.tags && t.tags.length)
         ? `<div class="txn-tags">${t.tags.map(g => `<span class="txn-tag-chip">#${g}</span>`).join('')}</div>`
         : '';
+      let amountHtml = `${isIncome?'+':'-'}${fmt(t.amount)}`;
+      const baseCurrCode = normalizeCurrCode(currentCurrency());
+      if (t.original_currency && t.original_amount && normalizeCurrCode(t.original_currency) !== baseCurrCode) {
+        const origSym = getCurrencySymbol(t.original_currency);
+        const origAmtStr = Math.abs(t.original_amount).toLocaleString(CURRENCY_LOCALE[origSym] || 'en-US', {maximumFractionDigits:2});
+        amountHtml = `
+          <div style="display:flex;flex-direction:column;align-items:flex-end;line-height:1.2">
+            <span>${isIncome?'+':'-'}${origSym}${origAmtStr}</span>
+            <span style="font-size:11px;opacity:0.75;font-weight:500">≈ ${isIncome?'+':'-'}${fmt(t.amount)}</span>
+          </div>
+        `;
+      }
+
       return `<div class="txn-item" style="border-left-color:${borderColor}">
         <div class="txn-name-wrap">
           <div class="txn-dot" style="background:${color}"></div>
@@ -551,7 +635,7 @@ const UI = {
         </div>
         <div class="txn-cat-badge">${CAT_EMOJIS[t.category]||''} ${t.category}</div>
         <div class="txn-date-col">${t.date}</div>
-        <div class="txn-amount ${isIncome?'inc':'exp'}">${isIncome?'+':'-'}${fmt(t.amount)}</div>
+        <div class="txn-amount ${isIncome?'inc':'exp'}">${amountHtml}</div>
         <div class="txn-actions">
           <button class="txn-btn edit" data-action="edit-txn" data-id="${t.id}" aria-label="Edit ${t.description}">✎</button>
           <button class="txn-btn del"  data-action="del-txn"  data-id="${t.id}" aria-label="Delete ${t.description}">✕</button>

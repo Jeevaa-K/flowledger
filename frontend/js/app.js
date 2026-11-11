@@ -41,7 +41,10 @@ const State = {
   txnTotal: 0,
   aiModel: localStorage.getItem('fl_ai_model') || 'chatgpt',
   aiSessionId: null,
-  aiSessions: []
+  aiSessions: [],
+  cashflowDays: 30,
+  cashflowAccountId: null,
+  cashflowData: null
 };
 
 // ── App ────────────────────────────────────────────────────────
@@ -61,6 +64,8 @@ const App = {
     this.bindMobile();
     this.bindSearch();
     this.bindAISmartTools();
+    this.bindCashflowRadar();
+    this.bindCurrencyFeatures();
     this.updateNavCount();
     Notifications.init();
     Tags.init();
@@ -192,6 +197,7 @@ const App = {
       this.renderBudgetAlert(budgets);
       this.updateHealthScore(summary, budgets, State.accounts);
       this.loadBurnRate();
+      this.loadCashflowForecast();
       UI.renderTxnList(txns, 'recentTxns', 6, false);
       UI.renderTopCats(summary.byCategory || []);
 
@@ -378,11 +384,39 @@ const App = {
     if (btn) { btn.disabled = true; btn.dataset.origText = btn.textContent; btn.textContent = 'Saving...'; }
     try {
       let budgetToastShown = false;
+      const currEl = document.getElementById('txnCurrency');
+      const rateEl = document.getElementById('txnCustomRate');
+      const currency = currEl?.value || undefined;
+      const customRate = (rateEl?.value && !isNaN(parseFloat(rateEl.value))) ? parseFloat(rateEl.value) : undefined;
+
       if (UI.editId) {
-        await API.put(`/transactions/${UI.editId}`, { description: desc, amount, type, category, date, account_id, tags, notes });
+        await API.put(`/transactions/${UI.editId}`, {
+          description: desc,
+          amount,
+          type,
+          category,
+          date,
+          account_id,
+          tags,
+          notes,
+          currency,
+          original_amount: amount,
+          exchange_rate: customRate
+        });
         UI.toast('✓ Transaction updated', 'success');
       } else {
-        await API.post('/transactions', { description:desc, amount, type, category, date, account_id, tags });
+        await API.post('/transactions', {
+          description: desc,
+          amount,
+          type,
+          category,
+          date,
+          account_id,
+          tags,
+          currency,
+          original_amount: amount,
+          exchange_rate: customRate
+        });
         const isCurrentMonth = new Date(date).toISOString().slice(0,7) === new Date().toISOString().slice(0,7);
         if (type === 'expense' && isCurrentMonth) {
           budgetToastShown = await this.checkBudgetAfterSave(category);
@@ -468,7 +502,10 @@ const App = {
       State.accounts = await API.get('/accounts');
       UI.populateAccountSelects(State.accounts);
       UI.renderAccountStrip(State.accounts);
-      if (forceRerender) UI.renderAccounts(State.accounts);
+      if (forceRerender) {
+        UI.renderAccounts(State.accounts);
+        this.loadCashflowForecast();
+      }
     } catch (e) {
       console.error('Load accounts error:', e);
       if (forceRerender) UI.toast('⚠ Could not load accounts', 'error');
@@ -479,12 +516,14 @@ const App = {
     const nameEl = document.getElementById('accountName');
     const typeEl = document.getElementById('accountType');
     const balEl = document.getElementById('accountStartingBalance');
+    const currEl = document.getElementById('accountCurrency');
     const editIdEl = document.getElementById('editAccountId');
     if (!nameEl || !typeEl || !balEl || !editIdEl) { UI.toast('⚠ Something went wrong loading the form', 'error'); return; }
 
     const name = nameEl.value.trim();
     const type = typeEl.value;
     const starting_balance = parseFloat(balEl.value) || 0;
+    const currency = currEl?.value || 'INR';
     const editId = editIdEl.value;
     if (!name) { UI.toast('⚠ Enter an account name', 'error'); return; }
 
@@ -492,10 +531,10 @@ const App = {
     if (btn) { btn.disabled = true; btn.dataset.origText = btn.textContent; btn.textContent = 'Saving...'; }
     try {
       if (editId) {
-        await API.put(`/accounts/${editId}`, { name, type, starting_balance });
+        await API.put(`/accounts/${editId}`, { name, type, starting_balance, currency });
         UI.toast('✓ Account updated', 'success');
       } else {
-        await API.post('/accounts', { name, type, starting_balance });
+        await API.post('/accounts', { name, type, starting_balance, currency });
         UI.toast('✓ Account added', 'success');
       }
       UI.closeAccountModal();
@@ -2424,6 +2463,350 @@ const App = {
       // Silently hide the card if endpoint not available
       const card = document.getElementById('burnRateCard');
       if (card) card.style.display = 'none';
+    }
+  },
+
+  bindCashflowRadar() {
+    // Days toggle buttons (30 Days / 60 Days)
+    const toggle = document.getElementById('cashflowDaysToggle');
+    if (toggle) {
+      toggle.addEventListener('click', (e) => {
+        const btn = e.target.closest('.pill-btn');
+        if (!btn || !btn.dataset.days) return;
+        const days = parseInt(btn.dataset.days);
+        if (days === State.cashflowDays) return;
+        toggle.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        State.cashflowDays = days;
+        const horizon = document.getElementById('cfHorizonLabel');
+        if (horizon) horizon.textContent = `${days} Days`;
+        this.loadCashflowForecast();
+      });
+    }
+
+    // Account select dropdown
+    const accSelect = document.getElementById('cashflowAccountSelect');
+    if (accSelect) {
+      accSelect.addEventListener('change', (e) => {
+        const val = e.target.value;
+        State.cashflowAccountId = val ? parseInt(val) : null;
+        this.loadCashflowForecast();
+      });
+    }
+  },
+
+  async loadCashflowForecast() {
+    const card = document.getElementById('cashflowRadarCard');
+    if (!card) return;
+    try {
+      const days = State.cashflowDays || 30;
+      const accountId = State.cashflowAccountId || null;
+      const data = await API.getCashflowForecast(days, accountId);
+      if (!data) return;
+      State.cashflowData = data;
+
+      // 1. Populate account dropdown if needed
+      const accSelect = document.getElementById('cashflowAccountSelect');
+      if (accSelect && data.accounts) {
+        const currentVal = accSelect.value;
+        const options = ['<option value="">All Accounts (Net Liquid)</option>'];
+        for (const acc of data.accounts) {
+          const selected = String(acc.id) === String(accountId) ? 'selected' : '';
+          options.push(`<option value="${acc.id}" ${selected}>${acc.name} (${acc.type})</option>`);
+        }
+        accSelect.innerHTML = options.join('');
+      }
+
+      // 2. Status badge
+      const badge = document.getElementById('cashflowStatusBadge');
+      if (badge) {
+        badge.className = `cashflow-status-badge ${data.status}`;
+        badge.textContent = data.status_title || (data.status === 'danger' ? 'Overdraft Alert' : (data.status === 'warning' ? 'Tight Runway' : 'Healthy Runway'));
+      }
+
+      // 3. KPIs
+      const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+      setText('cfCurrentBalance', fmt(data.current_balance));
+      setText('cfProjectedBalance', fmt(data.projected_balance));
+
+      const netSub = document.getElementById('cfNetChangeSub');
+      if (netSub) {
+        const sign = data.net_change >= 0 ? '+' : '';
+        netSub.textContent = `${sign}${fmt(data.net_change)} net change`;
+        netSub.style.color = data.net_change >= 0 ? '#10B981' : '#F43F5E';
+      }
+
+      setText('cfLowestVal', fmt(data.lowest_point?.balance || 0));
+      const lowestDateEl = document.getElementById('cfLowestDate');
+      if (lowestDateEl && data.lowest_point?.date) {
+        const dParts = data.lowest_point.date.split('-');
+        const dObj = new Date(dParts[0], dParts[1] - 1, dParts[2]);
+        const formattedDate = dObj.toLocaleDateString('default', { month: 'short', day: 'numeric' });
+        lowestDateEl.textContent = `Trough on ${formattedDate}`;
+        if (data.lowest_point.balance < 0) {
+          lowestDateEl.style.color = '#EF4444';
+          lowestDateEl.textContent = `⚠️ Deficit on ${formattedDate}`;
+        } else {
+          lowestDateEl.style.color = '';
+        }
+      }
+
+      const flowEl = document.getElementById('cfScheduledFlow');
+      if (flowEl) {
+        flowEl.textContent = `↑ ${fmt(data.total_scheduled_income)} / ↓ ${fmt(data.total_scheduled_expense)}`;
+      }
+      setText('cfBurnEstimate', `Est. burn ${fmt(data.daily_discretionary_burn)}/day`);
+
+      // 4. Render Chart
+      Charts.renderCashflowForecast(data);
+
+      // 5. Insight banner
+      const insightBanner = document.getElementById('cashflowInsightBanner');
+      const insightText = document.getElementById('cfInsightText');
+      const insightIcon = document.getElementById('cfInsightIcon');
+      if (insightBanner && insightText) {
+        insightBanner.className = `cashflow-insight-banner ${data.status}`;
+        insightText.textContent = data.insight;
+        if (insightIcon) {
+          insightIcon.textContent = data.status === 'danger' ? '🚨' : (data.status === 'warning' ? '⚠️' : '💡');
+        }
+      }
+
+      // 6. Upcoming events strip
+      const eventsContainer = document.getElementById('cashflowEventsContainer');
+      const eventsStrip = document.getElementById('cfEventsStrip');
+      if (eventsContainer && eventsStrip) {
+        if (data.upcoming_events && data.upcoming_events.length) {
+          eventsContainer.style.display = 'block';
+          eventsStrip.innerHTML = data.upcoming_events.map(ev => {
+            const isInc = ev.type === 'income';
+            const sign = isInc ? '+' : '-';
+            const chipClass = isInc ? 'income' : 'expense';
+            const dParts = ev.date.split('-');
+            const dObj = new Date(dParts[0], dParts[1] - 1, dParts[2]);
+            const dFormatted = dObj.toLocaleDateString('default', { month: 'short', day: 'numeric' });
+            return `
+              <div class="cf-event-chip" title="${ev.description} on ${ev.date}">
+                <span>${isInc ? '💼' : '⚡'}</span>
+                <strong>${ev.description}</strong>
+                <span class="chip-amt ${chipClass}">${sign}${fmt(ev.amount)}</span>
+                <span class="chip-days">${ev.daysAway === 0 ? 'Today' : (ev.daysAway === 1 ? 'Tomorrow' : `In ${ev.daysAway}d`)} (${dFormatted})</span>
+              </div>
+            `;
+          }).join('');
+        } else {
+          eventsContainer.style.display = 'none';
+        }
+      }
+
+      // 7. Update Accounts page alert banner
+      const accAlert = document.getElementById('accountRadarAlert');
+      if (accAlert) {
+        if (data.status === 'danger') {
+          accAlert.style.display = 'block';
+          accAlert.className = 'account-radar-alert danger';
+          accAlert.innerHTML = `
+            <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:12px;color:#EF4444;font-size:13px;">
+              <span style="font-size:18px;">🚨</span>
+              <div style="flex:1;">
+                <strong>Overdraft Alert:</strong> In the next ${days} days, cash flow projects a deficit on <strong>${data.first_overdraft_date}</strong> (trough: ${fmt(data.lowest_point.balance)}).
+              </div>
+              <button class="pill-btn" data-action="goto-dashboard" style="background:#EF4444;color:#fff;border:none;cursor:pointer;padding:4px 10px;border-radius:6px;">View Radar</button>
+            </div>
+          `;
+        } else if (data.status === 'warning') {
+          accAlert.style.display = 'block';
+          accAlert.className = 'account-radar-alert warning';
+          accAlert.innerHTML = `
+            <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);border-radius:12px;color:#F59E0B;font-size:13px;">
+              <span style="font-size:18px;">⚠️</span>
+              <div style="flex:1;">
+                <strong>Tight Cash Warning:</strong> Balance will dip to ${fmt(data.lowest_point.balance)} on ${data.lowest_point.date}. Keep an eye on upcoming recurring bills.
+              </div>
+            </div>
+          `;
+        } else {
+          accAlert.style.display = 'none';
+        }
+      }
+
+      // 8. Push proactive notification bell alert if danger
+      if (data.status === 'danger' && typeof Notifications !== 'undefined') {
+        const notifId = 'cashflow-overdraft-' + (data.first_overdraft_date || 'risk');
+        if (State.lastOverdraftAlert !== notifId) {
+          State.lastOverdraftAlert = notifId;
+          Notifications.add({
+            id: notifId,
+            text: `Cash Flow Radar: Potential overdraft on ${data.first_overdraft_date} (${fmt(data.lowest_point.balance)})!`,
+            type: 'danger',
+            icon: '🚨'
+          });
+        }
+      }
+    } catch (e) {
+      console.error('Cash flow forecast error:', e);
+    }
+  },
+
+  bindCurrencyFeatures() {
+    // 1. Account currency dropdown change in Account Modal
+    const accCurr = document.getElementById('accountCurrency');
+    if (accCurr) {
+      accCurr.addEventListener('change', () => {
+        const sym = getCurrencySymbol(accCurr.value);
+        const symEl = document.getElementById('accountCurrencySymbol');
+        if (symEl) symEl.textContent = sym;
+      });
+    }
+
+    // 2. Transaction currency dropdown change in Transaction Modal
+    const txnCurr = document.getElementById('txnCurrency');
+    if (txnCurr) {
+      txnCurr.addEventListener('change', () => {
+        const sym = getCurrencySymbol(txnCurr.value);
+        const symEl = document.getElementById('txnCurrSymbol');
+        if (symEl) symEl.textContent = sym;
+        this.updateFxPreview();
+      });
+    }
+
+    // 3. Amount input in Transaction Modal
+    const txnAmt = document.getElementById('txnAmount');
+    if (txnAmt) {
+      txnAmt.addEventListener('input', () => this.updateFxPreview());
+    }
+
+    // 4. Account selection in Transaction Modal -> auto-set currency
+    const txnAcc = document.getElementById('txnAccount');
+    if (txnAcc) {
+      txnAcc.addEventListener('change', () => {
+        const selectedOpt = txnAcc.selectedOptions[0];
+        const accCurrency = selectedOpt?.dataset?.currency;
+        if (accCurrency && txnCurr) {
+          txnCurr.value = accCurrency;
+          const sym = getCurrencySymbol(accCurrency);
+          const symEl = document.getElementById('txnCurrSymbol');
+          if (symEl) symEl.textContent = sym;
+          this.updateFxPreview();
+        }
+      });
+    }
+
+    // 5. Custom FX Rate toggle & reset
+    const toggleRateBtn = document.getElementById('btnToggleCustomFxRate');
+    const fxRateRow = document.getElementById('fxRateEditRow');
+    if (toggleRateBtn && fxRateRow) {
+      toggleRateBtn.addEventListener('click', () => {
+        const isHidden = fxRateRow.style.display === 'none';
+        fxRateRow.style.display = isHidden ? 'block' : 'none';
+        toggleRateBtn.textContent = isHidden ? 'Hide Custom Rate' : 'Custom Rate';
+      });
+    }
+
+    const customRateInput = document.getElementById('txnCustomRate');
+    if (customRateInput) {
+      customRateInput.addEventListener('input', () => this.updateFxPreview());
+    }
+
+    const resetRateBtn = document.getElementById('btnResetFxRate');
+    if (resetRateBtn && customRateInput) {
+      resetRateBtn.addEventListener('click', () => {
+        customRateInput.value = '';
+        this.updateFxPreview();
+      });
+    }
+
+    // 6. Currency Converter Modal bindings
+    const openConvBtn = document.getElementById('openConverterBtn');
+    const convModal = document.getElementById('currencyConverterModal');
+    const closeConvBtn = document.getElementById('closeConverterModal');
+    if (openConvBtn && convModal) {
+      openConvBtn.addEventListener('click', () => {
+        convModal.classList.add('open');
+        this.updateConverterCalc();
+      });
+    }
+    if (closeConvBtn && convModal) {
+      closeConvBtn.addEventListener('click', () => {
+        convModal.classList.remove('open');
+      });
+    }
+
+    const convAmt = document.getElementById('convAmount');
+    const convFrom = document.getElementById('convFrom');
+    const convTo = document.getElementById('convTo');
+    const convSwap = document.getElementById('convSwapBtn');
+
+    [convAmt, convFrom, convTo].forEach(el => {
+      if (el) el.addEventListener('input', () => this.updateConverterCalc());
+    });
+
+    if (convSwap && convFrom && convTo) {
+      convSwap.addEventListener('click', () => {
+        const temp = convFrom.value;
+        convFrom.value = convTo.value;
+        convTo.value = temp;
+        this.updateConverterCalc();
+      });
+    }
+  },
+
+  async updateFxPreview() {
+    const currEl = document.getElementById('txnCurrency');
+    const amtEl = document.getElementById('txnAmount');
+    const previewEl = document.getElementById('txnFxPreview');
+    const previewText = document.getElementById('txnFxText');
+    const customRateEl = document.getElementById('txnCustomRate');
+    if (!currEl || !amtEl || !previewEl || !previewText) return;
+
+    const baseCurrCode = normalizeCurrCode(currentCurrency());
+    const selectedCurr = currEl.value || baseCurrCode;
+    const amount = parseFloat(amtEl.value) || 0;
+
+    if (normalizeCurrCode(selectedCurr) === baseCurrCode || amount <= 0) {
+      previewEl.style.display = 'none';
+      return;
+    }
+
+    previewEl.style.display = 'flex';
+    const customRate = (customRateEl && customRateEl.value && !isNaN(parseFloat(customRateEl.value)))
+      ? parseFloat(customRateEl.value)
+      : null;
+
+    try {
+      const res = await API.convertCurrency(amount, selectedCurr, baseCurrCode, customRate);
+      if (res && res.converted !== undefined) {
+        const baseSym = getCurrencySymbol(baseCurrCode);
+        const selSym = getCurrencySymbol(selectedCurr);
+        previewText.textContent = `≈ ${baseSym}${res.converted.toLocaleString(CURRENCY_LOCALE[baseSym]||'en-IN')} (1 ${selectedCurr} = ${baseSym}${res.rate})`;
+        if (customRateEl && !customRateEl.value) {
+          customRateEl.placeholder = res.rate;
+        }
+      }
+    } catch (e) {
+      console.warn('FX preview error:', e);
+    }
+  },
+
+  async updateConverterCalc() {
+    const amtEl = document.getElementById('convAmount');
+    const fromEl = document.getElementById('convFrom');
+    const toEl = document.getElementById('convTo');
+    const lineEl = document.getElementById('convRateLine');
+    const resEl = document.getElementById('convResultAmount');
+    if (!amtEl || !fromEl || !toEl || !lineEl || !resEl) return;
+
+    const amount = parseFloat(amtEl.value) || 0;
+    const from = fromEl.value;
+    const to = toEl.value;
+
+    try {
+      const data = await API.convertCurrency(amount, from, to);
+      const toSym = getCurrencySymbol(to);
+      lineEl.textContent = `1 ${from} = ${data.rate} ${to}`;
+      resEl.textContent = `${toSym}${data.converted.toLocaleString(CURRENCY_LOCALE[toSym] || 'en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    } catch (err) {
+      console.warn('Converter calc error:', err);
     }
   },
 

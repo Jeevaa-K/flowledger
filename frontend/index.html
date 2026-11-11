@@ -168,6 +168,10 @@
         🔮 Next month: <span id="forecastAmt">₹0</span>
       </div>
 
+      <button class="currency-converter-btn" id="openConverterBtn" title="Currency Converter & FX Rates" aria-label="Open currency converter" type="button" style="background:transparent;border:none;cursor:pointer;font-size:17px;padding:6px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text-secondary)">
+        💱
+      </button>
+
       <button class="privacy-toggle-btn" id="privacyModeBtn" title="Privacy Mode (Shift+P) — Hide sensitive amounts" aria-label="Toggle privacy mode">
         <svg class="eye-open-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
         <svg class="eye-closed-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
@@ -371,6 +375,72 @@
         </div>
       </div>
 
+      <!-- Cash Flow Radar & Predictive Runway Card -->
+      <div class="card cashflow-radar-card" id="cashflowRadarCard">
+        <div class="card-header">
+          <div class="cashflow-header-title-group">
+            <div class="cashflow-radar-icon">🔮</div>
+            <div>
+              <div class="card-title">Cash Flow &amp; Balance Radar</div>
+              <div class="card-subtitle">Forward-looking projection &amp; overdraft early warning</div>
+            </div>
+          </div>
+          <div class="cashflow-header-actions">
+            <select class="cashflow-account-select" id="cashflowAccountSelect" aria-label="Select account to project">
+              <option value="">All Accounts (Net Liquid)</option>
+            </select>
+            <div class="cashflow-days-toggle" id="cashflowDaysToggle">
+              <button class="pill-btn active" data-days="30">30 Days</button>
+              <button class="pill-btn" data-days="60">60 Days</button>
+            </div>
+            <span class="cashflow-status-badge safe" id="cashflowStatusBadge">Healthy Runway</span>
+          </div>
+        </div>
+
+        <div class="cashflow-radar-body">
+          <div class="cashflow-kpi-row">
+            <div class="cashflow-kpi">
+              <div class="cf-kpi-label">Current Balance</div>
+              <div class="cf-kpi-val" id="cfCurrentBalance">₹0</div>
+              <div class="cf-kpi-sub">Today's starting point</div>
+            </div>
+            <div class="cashflow-kpi">
+              <div class="cf-kpi-label">Projected In <span id="cfHorizonLabel">30 Days</span></div>
+              <div class="cf-kpi-val" id="cfProjectedBalance">₹0</div>
+              <div class="cf-kpi-sub" id="cfNetChangeSub">+₹0 net change</div>
+            </div>
+            <div class="cashflow-kpi">
+              <div class="cf-kpi-label">Lowest Projected Trough</div>
+              <div class="cf-kpi-val" id="cfLowestVal">₹0</div>
+              <div class="cf-kpi-sub" id="cfLowestDate">Safe margin</div>
+            </div>
+            <div class="cashflow-kpi">
+              <div class="cf-kpi-label">Upcoming Scheduled Flow</div>
+              <div class="cf-kpi-val" id="cfScheduledFlow">↑ ₹0 / ↓ ₹0</div>
+              <div class="cf-kpi-sub" id="cfBurnEstimate">Est. burn ₹0/day</div>
+            </div>
+          </div>
+
+          <!-- Interactive Chart -->
+          <div class="cashflow-chart-container">
+            <canvas id="cashflowForecastChart"></canvas>
+          </div>
+
+          <!-- Insight & Next Events Banner -->
+          <div class="cashflow-radar-footer">
+            <div class="cashflow-insight-banner" id="cashflowInsightBanner">
+              <span class="cf-insight-icon" id="cfInsightIcon">⚡</span>
+              <div class="cf-insight-text" id="cfInsightText">Calculating predictive cash runway...</div>
+            </div>
+
+            <!-- Mini Scheduled Upcoming Bills & Paychecks Strip -->
+            <div class="cashflow-events-container" id="cashflowEventsContainer" style="display:none">
+              <div class="cf-events-title">Upcoming Scheduled Events:</div>
+              <div class="cf-events-strip" id="cfEventsStrip"></div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- Burn Rate / Spending Velocity Card -->
       <div class="card burn-rate-card" id="burnRateCard" style="display:none">
@@ -701,6 +771,7 @@
         <div><h1 class="page-title">Accounts</h1><p class="page-sub">Track balances across cash, bank &amp; cards</p></div>
         <button class="btn-primary" id="openAccountModal">+ Add Account</button>
       </div>
+      <div class="account-radar-alert" id="accountRadarAlert" style="display:none;margin-bottom:18px;"></div>
       <div class="budget-summary" id="accountSummary"></div>
       <div class="budget-grid" id="accountGrid"></div>
     </section>
@@ -1348,8 +1419,37 @@
         <input type="text" id="txnDesc" placeholder="e.g. Monthly salary" />
       </div>
       <div class="form-group">
-        <label>Amount (₹)</label>
-        <div class="input-prefix"><span>₹</span><input type="number" id="txnAmount" placeholder="0.00" min="0" step="0.01" /></div>
+        <label id="txnAmountLabel">Amount</label>
+        <div class="currency-input-wrap" style="display:flex;gap:6px">
+          <select id="txnCurrency" class="currency-select" style="width:105px;font-weight:700;padding:8px 8px;border-radius:var(--r-md);background:var(--surface-sunken);border:1px solid var(--border);color:var(--text-primary);cursor:pointer;" aria-label="Transaction Currency">
+            <option value="INR" data-symbol="₹">₹ INR</option>
+            <option value="USD" data-symbol="$">$ USD</option>
+            <option value="EUR" data-symbol="€">€ EUR</option>
+            <option value="GBP" data-symbol="£">£ GBP</option>
+            <option value="AED" data-symbol="د.إ">د.إ AED</option>
+            <option value="CAD" data-symbol="C$">C$ CAD</option>
+            <option value="AUD" data-symbol="A$">A$ AUD</option>
+            <option value="SGD" data-symbol="S$">S$ SGD</option>
+            <option value="JPY" data-symbol="¥">¥ JPY</option>
+            <option value="CHF" data-symbol="Fr">Fr CHF</option>
+          </select>
+          <div class="input-prefix" style="flex:1">
+            <span id="txnCurrSymbol">₹</span>
+            <input type="number" id="txnAmount" placeholder="0.00" min="0" step="0.01" />
+          </div>
+        </div>
+        <!-- Live FX conversion preview -->
+        <div class="fx-conversion-preview" id="txnFxPreview" style="display:none;margin-top:6px;font-size:12px;color:var(--brand);background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);padding:6px 10px;border-radius:8px;align-items:center;justify-content:space-between">
+          <span id="txnFxText">≈ ₹0 (Rate: 1 USD = ₹84.50)</span>
+          <button type="button" class="btn-link" id="btnToggleCustomFxRate" style="font-size:11px;color:var(--brand);cursor:pointer">Custom Rate</button>
+        </div>
+        <div class="fx-rate-edit-row" id="fxRateEditRow" style="display:none;margin-top:6px;background:var(--surface-sunken);padding:6px 10px;border-radius:8px;border:1px solid var(--border)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <label style="font-size:11px;color:var(--text-tertiary);margin:0">Custom Rate:</label>
+            <input type="number" id="txnCustomRate" step="0.0001" placeholder="1.0000" style="font-size:12px;padding:3px 6px;width:90px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text-primary)" />
+            <button type="button" class="btn-ghost btn-sm" id="btnResetFxRate" style="font-size:10px;padding:2px 6px">Default</button>
+          </div>
+        </div>
       </div>
       <div class="form-group">
         <label>Date</label>
@@ -1432,8 +1532,23 @@
         </select>
       </div>
       <div class="form-group">
-        <label>Starting Balance (₹)</label>
-        <div class="input-prefix"><span>₹</span><input type="number" id="accountStartingBalance" placeholder="0.00" step="0.01" /></div>
+        <label>Currency</label>
+        <select id="accountCurrency">
+          <option value="INR">₹ INR (Indian Rupee)</option>
+          <option value="USD">$ USD (US Dollar)</option>
+          <option value="EUR">€ EUR (Euro)</option>
+          <option value="GBP">£ GBP (British Pound)</option>
+          <option value="AED">د.إ AED (UAE Dirham)</option>
+          <option value="CAD">C$ CAD (Canadian Dollar)</option>
+          <option value="AUD">A$ AUD (Australian Dollar)</option>
+          <option value="SGD">S$ SGD (Singapore Dollar)</option>
+          <option value="JPY">¥ JPY (Japanese Yen)</option>
+          <option value="CHF">Fr CHF (Swiss Franc)</option>
+        </select>
+      </div>
+      <div class="form-group span2">
+        <label id="accountStartingBalanceLabel">Starting Balance</label>
+        <div class="input-prefix"><span id="accountCurrencySymbol">₹</span><input type="number" id="accountStartingBalance" placeholder="0.00" step="0.01" /></div>
       </div>
     </div>
     <input type="hidden" id="editAccountId" />
@@ -1766,10 +1881,16 @@
         <div class="form-group span2">
           <label>Currency Symbol</label>
           <select id="profileCurrency">
-            <option value="₹">₹ Indian Rupee</option>
-            <option value="$">$ US Dollar</option>
-            <option value="€">€ Euro</option>
-            <option value="£">£ British Pound</option>
+            <option value="₹">₹ Indian Rupee (INR)</option>
+            <option value="$">$ US Dollar (USD)</option>
+            <option value="€">€ Euro (EUR)</option>
+            <option value="£">£ British Pound (GBP)</option>
+            <option value="د.إ">د.إ UAE Dirham (AED)</option>
+            <option value="C$">C$ Canadian Dollar (CAD)</option>
+            <option value="A$">A$ Australian Dollar (AUD)</option>
+            <option value="S$">S$ Singapore Dollar (SGD)</option>
+            <option value="¥">¥ Japanese Yen (JPY)</option>
+            <option value="Fr">Fr Swiss Franc (CHF)</option>
           </select>
         </div>
       </div>
@@ -2118,6 +2239,61 @@
         </button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- CURRENCY CONVERTER MODAL -->
+<div class="modal-overlay" id="currencyConverterModal" role="dialog" aria-modal="true" aria-labelledby="converterModalTitle">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-icon">💱</div>
+      <h2 class="modal-title" id="converterModalTitle">Currency Converter</h2>
+      <button class="modal-close" id="closeConverterModal">×</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group span2">
+        <label>Amount</label>
+        <input type="number" id="convAmount" placeholder="100.00" value="100" min="0" step="any" />
+      </div>
+      <div class="form-group">
+        <label>From</label>
+        <select id="convFrom">
+          <option value="USD" selected>$ USD (US Dollar)</option>
+          <option value="EUR">€ EUR (Euro)</option>
+          <option value="GBP">£ GBP (British Pound)</option>
+          <option value="INR">₹ INR (Indian Rupee)</option>
+          <option value="AED">د.إ AED (UAE Dirham)</option>
+          <option value="CAD">C$ CAD (Canadian Dollar)</option>
+          <option value="AUD">A$ AUD (Australian Dollar)</option>
+          <option value="SGD">S$ SGD (Singapore Dollar)</option>
+          <option value="JPY">¥ JPY (Japanese Yen)</option>
+          <option value="CHF">Fr CHF (Swiss Franc)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>To</label>
+        <select id="convTo">
+          <option value="INR" selected>₹ INR (Indian Rupee)</option>
+          <option value="USD">$ USD (US Dollar)</option>
+          <option value="EUR">€ EUR (Euro)</option>
+          <option value="GBP">£ GBP (British Pound)</option>
+          <option value="AED">د.إ AED (UAE Dirham)</option>
+          <option value="CAD">C$ CAD (Canadian Dollar)</option>
+          <option value="AUD">A$ AUD (Australian Dollar)</option>
+          <option value="SGD">S$ SGD (Singapore Dollar)</option>
+          <option value="JPY">¥ JPY (Japanese Yen)</option>
+          <option value="CHF">Fr CHF (Swiss Franc)</option>
+        </select>
+      </div>
+    </div>
+    <div class="converter-result-box" id="convResultBox" style="margin:16px 0;padding:16px;background:var(--surface-sunken);border-radius:12px;border:1px solid var(--border);text-align:center">
+      <div style="font-size:12px;color:var(--text-tertiary)" id="convRateLine">1 USD = 84.50 INR</div>
+      <div style="font-size:26px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--text-primary);margin:6px 0" id="convResultAmount">₹8,450.00</div>
+      <div style="font-size:11px;color:var(--text-secondary)">Calculated with live exchange rate</div>
+    </div>
+    <button class="btn-ghost full" id="convSwapBtn" type="button" style="display:flex;align-items:center;justify-content:center;gap:6px">
+      <span>⇄</span> Swap Currencies
+    </button>
   </div>
 </div>
 
