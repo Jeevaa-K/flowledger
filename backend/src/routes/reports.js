@@ -4,6 +4,7 @@ const { auth } = require('../middleware/auth');
 const { db, pool } = require('../db');
 const { csvField, safeError, pdfSafeText, toDateString } = require('../utils');
 const { groq, createGroqCompletion } = require('../services/ai');
+const { addPeriod } = require('../jobs/recurring');
 const router = express.Router();
 
 // ── CSV Export ────────────────────────────────────────────────
@@ -78,6 +79,260 @@ router.get('/burnrate', auth, async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
+// ── Cash Flow Forecast & Predictive Balance Radar ─────────────
+async function handleCashflowForecast(req, res) {
+  try {
+    const userId = req.user.id;
+    const days = Math.min(Math.max(parseInt(req.query.days) || 30, 7), 90);
+    const accountId = req.query.account_id ? parseInt(req.query.account_id) : null;
+    const includeDiscretionary = req.query.discretionary !== 'false';
+
+    // 1. Calculate starting balance
+    let startingBalance = 0;
+    let selectedAccount = null;
+
+    if (accountId) {
+      const acc = await db.get('SELECT * FROM accounts WHERE id=$1 AND user_id=$2', [accountId, userId]);
+      if (!acc) return res.status(404).json({ error: 'Account not found' });
+      selectedAccount = acc;
+
+      const netRow = await db.get(
+        `SELECT COALESCE(SUM(CASE WHEN type='income' THEN amount ELSE -amount END), 0) AS net
+         FROM transactions WHERE account_id=$1`,
+        [accountId]
+      );
+      startingBalance = Number(acc.starting_balance) + parseFloat(netRow?.net || 0);
+    } else {
+      // Net across all non-archived accounts + unassigned transactions
+      const accRows = await db.all(
+        'SELECT starting_balance FROM accounts WHERE user_id=$1 AND archived=false',
+        [userId]
+      );
+      const accountsStartingTotal = accRows.reduce((sum, a) => sum + Number(a.starting_balance || 0), 0);
+      const netRow = await db.get(
+        `SELECT COALESCE(SUM(CASE WHEN type='income' THEN amount ELSE -amount END), 0) AS net
+         FROM transactions WHERE user_id=$1`,
+        [userId]
+      );
+      startingBalance = accountsStartingTotal + parseFloat(netRow?.net || 0);
+    }
+
+    // 2. Calculate historical daily discretionary burn rate (past 30 days)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const thirtyDaysAgo = new Date(today);
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const todayStr = today.toISOString().slice(0, 10);
+    const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().slice(0, 10);
+
+    // Get active recurring rules
+    const recurringRules = await db.all(
+      'SELECT * FROM recurring WHERE user_id=$1 AND active=1',
+      [userId]
+    );
+
+    const applicableRecurring = accountId
+      ? recurringRules.filter(r => !r.account_id || r.account_id === accountId)
+      : recurringRules;
+
+    let discretionaryQuery = `
+      SELECT COALESCE(SUM(amount), 0) AS total_expense
+      FROM transactions
+      WHERE user_id=$1 AND type='expense' AND date >= $2 AND date <= $3
+    `;
+    const queryParams = [userId, thirtyDaysAgoStr, todayStr];
+    if (accountId) {
+      discretionaryQuery += ' AND account_id=$4';
+      queryParams.push(accountId);
+    }
+    const pastExpenseRow = await db.get(discretionaryQuery, queryParams);
+    const pastExpenseTotal = parseFloat(pastExpenseRow?.total_expense || 0);
+
+    // Avoid double counting recurring payments
+    let monthlyRecurringExpenseSum = 0;
+    for (const r of applicableRecurring) {
+      if (r.type === 'expense') {
+        const amt = parseFloat(r.amount || 0);
+        if (r.frequency === 'daily') monthlyRecurringExpenseSum += amt * 30;
+        else if (r.frequency === 'weekly') monthlyRecurringExpenseSum += amt * 4.3;
+        else if (r.frequency === 'monthly') monthlyRecurringExpenseSum += amt;
+        else if (r.frequency === 'yearly') monthlyRecurringExpenseSum += amt / 12;
+      }
+    }
+
+    const nonRecurringExpensePast30 = Math.max(0, pastExpenseTotal - monthlyRecurringExpenseSum);
+    const dailyDiscretionaryBurn = includeDiscretionary ? (nonRecurringExpensePast30 / 30) : 0;
+
+    // 3. Project recurring occurrences into the future [today -> today + days]
+    const endDate = new Date(today);
+    endDate.setDate(endDate.getDate() + days);
+
+    const scheduledEvents = [];
+    for (const r of applicableRecurring) {
+      const amt = parseFloat(r.amount);
+      if (!amt || isNaN(amt)) continue;
+      const anchorDay = parseInt(String(r.next_date).slice(8, 10), 10) || 1;
+
+      let cur = new Date(r.next_date + 'T00:00:00Z');
+      let safetyCounter = 0;
+      while (cur < today && safetyCounter < 365) {
+        safetyCounter++;
+        cur = addPeriod(cur, r.frequency, anchorDay);
+      }
+
+      while (cur <= endDate && safetyCounter < 500) {
+        safetyCounter++;
+        const eventDateStr = cur.toISOString().slice(0, 10);
+        const daysAway = Math.round((cur - today) / (1000 * 60 * 60 * 24));
+        scheduledEvents.push({
+          date: eventDateStr,
+          daysAway,
+          description: r.description,
+          amount: amt,
+          type: r.type,
+          category: r.category,
+          frequency: r.frequency,
+          recurring_id: r.id
+        });
+        cur = addPeriod(cur, r.frequency, anchorDay);
+      }
+    }
+
+    // Sort upcoming events chronologically
+    scheduledEvents.sort((a, b) => a.date.localeCompare(b.date));
+
+    // Group events by date
+    const eventsByDate = {};
+    for (const ev of scheduledEvents) {
+      if (!eventsByDate[ev.date]) eventsByDate[ev.date] = [];
+      eventsByDate[ev.date].push(ev);
+    }
+
+    // 4. Day-by-day simulation
+    const timeline = [];
+    let runningBalance = startingBalance;
+    let lowestPoint = { date: todayStr, balance: startingBalance, dayIndex: 0 };
+    let highestPoint = { date: todayStr, balance: startingBalance, dayIndex: 0 };
+    let totalScheduledIncome = 0;
+    let totalScheduledExpense = 0;
+    let totalDiscretionaryBurn = 0;
+    let firstOverdraftDate = null;
+
+    for (let i = 0; i <= days; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() + i);
+      const dStr = d.toISOString().slice(0, 10);
+
+      const dayEvents = eventsByDate[dStr] || [];
+      let dayInflow = 0;
+      let dayOutflow = 0;
+
+      for (const ev of dayEvents) {
+        if (ev.type === 'income') {
+          dayInflow += ev.amount;
+          totalScheduledIncome += ev.amount;
+        } else {
+          dayOutflow += ev.amount;
+          totalScheduledExpense += ev.amount;
+        }
+      }
+
+      let dayDiscretionary = 0;
+      if (i > 0 && dailyDiscretionaryBurn > 0) {
+        dayDiscretionary = dailyDiscretionaryBurn;
+        dayOutflow += dayDiscretionary;
+        totalDiscretionaryBurn += dayDiscretionary;
+      }
+
+      if (i > 0) {
+        runningBalance = runningBalance + dayInflow - dayOutflow;
+      }
+
+      const point = {
+        date: dStr,
+        dayIndex: i,
+        balance: Math.round(runningBalance * 100) / 100,
+        inflow: Math.round(dayInflow * 100) / 100,
+        outflow: Math.round(dayOutflow * 100) / 100,
+        events: dayEvents
+      };
+      timeline.push(point);
+
+      if (runningBalance < lowestPoint.balance) {
+        lowestPoint = { date: dStr, balance: Math.round(runningBalance * 100) / 100, dayIndex: i };
+      }
+      if (runningBalance > highestPoint.balance) {
+        highestPoint = { date: dStr, balance: Math.round(runningBalance * 100) / 100, dayIndex: i };
+      }
+      if (runningBalance < 0 && !firstOverdraftDate && i > 0) {
+        firstOverdraftDate = dStr;
+      }
+    }
+
+    const projectedEndingBalance = Math.round(runningBalance * 100) / 100;
+    const netChange = Math.round((projectedEndingBalance - startingBalance) * 100) / 100;
+
+    // 5. Radar status determination
+    let status = 'safe';
+    let statusTitle = 'Healthy Runway';
+    let insight = '';
+
+    const safetyThreshold = Math.max(startingBalance * 0.15, 1000);
+
+    if (lowestPoint.balance < 0) {
+      status = 'danger';
+      statusTitle = 'Overdraft Alert';
+      const eventOnOverdraft = scheduledEvents.find(e => e.date === firstOverdraftDate && e.type === 'expense');
+      insight = `Warning: Projected balance drops into deficit on ${firstOverdraftDate}${eventOnOverdraft ? ` around ${eventOnOverdraft.description}` : ''}. Plan an account top-up or defer non-essential expenses.`;
+    } else if (lowestPoint.balance < safetyThreshold && startingBalance > 0) {
+      status = 'warning';
+      statusTitle = 'Tight Cash Window';
+      insight = `Notice: Balance will reach a low of ${lowestPoint.balance.toLocaleString()} on ${lowestPoint.date}. Your cash cushion is narrow during this period.`;
+    } else {
+      status = 'safe';
+      statusTitle = 'Cash Flow Strong';
+      if (netChange >= 0) {
+        insight = `Looking good! Your cash reserves are projected to increase by +${netChange.toLocaleString()} over the next ${days} days with scheduled inflows.`;
+      } else {
+        insight = `Stable cash flow. Even with scheduled bills and estimated burn, your balance remains well above safety reserves throughout the next ${days} days.`;
+      }
+    }
+
+    // 6. User accounts summary for dropdown filter
+    const userAccounts = await db.all(
+      'SELECT id, name, type, color, starting_balance FROM accounts WHERE user_id=$1 AND archived=false ORDER BY created_at ASC',
+      [userId]
+    );
+
+    res.json({
+      days,
+      account_id: accountId,
+      selected_account: selectedAccount ? { id: selectedAccount.id, name: selectedAccount.name, type: selectedAccount.type } : null,
+      current_balance: Math.round(startingBalance * 100) / 100,
+      projected_balance: projectedEndingBalance,
+      net_change: netChange,
+      status,
+      status_title: statusTitle,
+      insight,
+      first_overdraft_date: firstOverdraftDate,
+      lowest_point: lowestPoint,
+      highest_point: highestPoint,
+      daily_discretionary_burn: Math.round(dailyDiscretionaryBurn * 100) / 100,
+      total_scheduled_income: Math.round(totalScheduledIncome * 100) / 100,
+      total_scheduled_expense: Math.round(totalScheduledExpense * 100) / 100,
+      total_discretionary_burn: Math.round(totalDiscretionaryBurn * 100) / 100,
+      upcoming_events: scheduledEvents.slice(0, 10),
+      timeline,
+      accounts: userAccounts
+    });
+  } catch (err) {
+    safeError(res, err, 'Cashflow forecast');
+  }
+}
+
+router.get('/reports/cashflow-forecast', auth, handleCashflowForecast);
+router.get('/cashflow-forecast', auth, handleCashflowForecast);
 
 
 // ── AI Financial Audit & Monthly Statement ───────────────────
