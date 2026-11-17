@@ -7,13 +7,14 @@ const apiKey = process.env.GROQ_API_KEY;
 console.log(apiKey ? '🔑 GROQ_API_KEY configured' : '⚠️  GROQ_API_KEY not set — AI features disabled');
 if (apiKey) { groq = new Groq({ apiKey }); console.log('✅ Groq AI enabled'); }
 
-// Candidate Groq models to try in fallback sequence if a specific model returns 404, 400, or is decommissioned
-// Uses top active open-source models on Groq
+// Candidate Groq models to try in fallback sequence
+// Primary: qwen/qwen3.8-27b (official active multimodal model on Groq, fast & reliable)
+// Followed by openai/gpt-oss-120b and other active fallbacks
 const GROQ_MODELS = [
   process.env.GROQ_MODEL,
+  'qwen/qwen3.8-27b',
   'openai/gpt-oss-120b',
   'openai/gpt-oss-20b',
-  'qwen/qwen3.8-27b',
   'llama-3.3-70b-versatile',
   'deepseek-r1-distill-llama-70b',
   'llama-3.1-8b-instant'
@@ -38,7 +39,6 @@ async function createGroqCompletion(params) {
       lastErr = err;
       const isNotFound =
         err.status === 404 ||
-        err.status === 400 ||
         err.code === 'model_not_found' ||
         err.code === 'model_decommissioned' ||
         (err.message && (
@@ -46,10 +46,11 @@ async function createGroqCompletion(params) {
           err.message.includes('not have access') ||
           err.message.includes('decommissioned') ||
           err.message.includes('no longer supported') ||
-          err.message.includes('deprecated')
+          err.message.includes('deprecated') ||
+          err.message.includes('model_not_found')
         ));
       if (isNotFound) {
-        console.warn(`⚠️ Groq model '${model}' not available (${err.code || err.status}), attempting next fallback model...`);
+        console.warn(`⚠️ Groq model '${model}' not available (${err.code || err.status}: ${err.message || ''}), attempting next fallback model...`);
         continue;
       }
       throw err;

@@ -1253,7 +1253,7 @@ const App = {
           <strong>Welcome to your AI Financial Advisor!</strong><br><br>
           Powered by open-source models with free Groq API keys. I have full context of your financial transactions, accounts, and group splits. Choose your preferred AI engine above:
           <ul style="margin: 8px 0 0 18px; line-height: 1.6;">
-            <li><strong>Strategic (120B)</strong>: Proactive wealth strategies, income compounding, and high-capacity advisory.</li>
+            <li><strong>Strategic AI</strong>: Proactive wealth strategies, income compounding, and personalized advisory.</li>
             <li><strong>Deep Reasoning</strong>: Methodical budget scrutiny, expense audits, and structured reasoning.</li>
             <li><strong>Groq Fast</strong>: Instant, rapid queries and balance math.</li>
           </ul>
@@ -1420,7 +1420,7 @@ const App = {
     if (label) {
       if (model === 'deepseek' || model === 'claude') label.textContent = 'Deep Reasoning Mode';
       else if (model === 'fast') label.textContent = 'Groq Fast Mode';
-      else label.textContent = 'Strategic 120B Mode';
+      else label.textContent = 'Strategic AI Mode';
     }
   },
 

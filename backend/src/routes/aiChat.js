@@ -9,18 +9,19 @@ const router = express.Router();
 
 /**
  * Returns true when the user message clearly expresses intent to ADD a
- * new transaction (not just query existing data).
+ * new transaction (not just query existing data or ask general savings questions).
  */
 function hasAddIntent(msg) {
-  return /\b(add|added|spent|spend|paid|pay|bought|buy|purchase|received|earn|earned|log|record|save|create|made a payment|transferred)\b/i.test(msg);
+  if (/\b(?:how to|idea|ways to|tips? for|advice on)\s+save\b/i.test(msg)) return false;
+  return /\b(add\s+(?:an?\s+)?(?:expense|income|transaction)|spent|spend|paid|bought|purchase|log\s+\d|record\s+\d|made a payment|transferred)\b/i.test(msg) ||
+         (/(?:₹|rs\.?|\$)\s*\d+/i.test(msg) && /\b(add|log|record|spent|paid)\b/i.test(msg));
 }
 
 /**
- * Returns true when the AI reply indicates it already handled the add
- * (words like "added", "recorded", "logged", "saved", "created", "done").
+ * Returns true when the AI reply indicates it already handled the add.
  */
 function replyIndicatesAdded(reply) {
-  return /\b(added|recorded|logged|saved|created|done|added it|i.ve added|i have added)\b/i.test(reply);
+  return /✅\s*Added:|\b(i have added|i've added|transaction (?:has been )?added|successfully (?:added|recorded|logged))\b/i.test(reply);
 }
 
 /**
@@ -235,9 +236,9 @@ router.post('/ai/chat', auth, async (req, res) => {
     }
 
     let personaRules = '';
-    let groqModelChoice = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
+    let groqModelChoice = process.env.GROQ_MODEL || 'qwen/qwen3.8-27b';
     if (activeModel === 'deepseek') {
-      groqModelChoice = process.env.GROQ_REASONING_MODEL || 'openai/gpt-oss-120b';
+      groqModelChoice = process.env.GROQ_REASONING_MODEL || 'qwen/qwen3.8-27b';
       personaRules = `You are DEEP REASONING AUDITOR, an advanced open-source precision financial auditor on FlowLedger.
 TONE: Exceptionally thoughtful, rigorous, structured, and analytical.
 STYLE:
@@ -247,13 +248,13 @@ STYLE:
 - Calculate concrete metrics: savings rate %, burn rate, and discretionary buffer.
 - Emphasize risk mitigation, debt elimination, and long-term financial stability.`;
     } else if (activeModel === 'fast') {
-      groqModelChoice = process.env.GROQ_FAST_MODEL || 'openai/gpt-oss-20b';
+      groqModelChoice = process.env.GROQ_FAST_MODEL || 'qwen/qwen3.8-27b';
       personaRules = `You are ULTRA-FAST ASSISTANT, an open-source, ultra-responsive financial assistant.
 TONE: Crisp, direct, concise (under 80 words).
 STYLE: Give immediate numerical answers, calculations, and punchy bullet points without pleasantries or fluff.`;
     } else {
-      // default: 120B open source model
-      personaRules = `You are FLOWLEDGER AI (120B), an elite open-source financial strategist and wealth architect on FlowLedger.
+      // default: Qwen 27B high-performance model
+      personaRules = `You are FLOWLEDGER AI ADVISOR, an elite open-source financial strategist and wealth architect on FlowLedger.
 TONE: Proactive, strategic, empowering, and motivating.
 STYLE:
 - Frame finances through opportunities: smart compounding, optimized cash flow, investment principles, and budget milestones.
