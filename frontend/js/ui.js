@@ -504,13 +504,13 @@ const UI = {
       const accCurrSym = a.currency_symbol || getCurrencySymbol(a.currency);
       const nativeBalDisplay = fmt(a.balance, a.currency);
       const convertedDisplay = isDiffCurr && a.base_balance !== undefined
-        ? `<div style="font-size:12px;opacity:0.8;font-weight:500;margin-top:2px">≈ ${fmt(a.base_balance)}</div>`
+        ? `<div class="acc-card-converted acc-card-bal" style="font-size:12px;opacity:0.8;font-weight:500;margin-top:2px">≈ ${fmt(a.base_balance)}</div>`
         : '';
       const startBalDisplay = fmt(a.starting_balance, a.currency);
       const currBadge = a.currency ? `<span style="font-size:10px;font-weight:700;background:var(--surface-sunken);padding:2px 6px;border-radius:6px;border:1px solid var(--border);color:var(--text-tertiary)">${a.currency}</span>` : '';
 
       return `
-      <div class="budget-card" style="${a.archived?'opacity:0.55':''}">
+      <div class="budget-card account-card" style="${a.archived?'opacity:0.55':''}">
         <div class="budget-header">
           <div class="budget-cat-wrap">
             <div class="budget-cat-dot" style="background:${a.color||'#6366f1'}"></div>
@@ -523,11 +523,11 @@ const UI = {
         </div>
         <div class="budget-amounts">
           <span>Type: <span>${typeLabel[a.type]||a.type}</span></span>
-          <span>Starting: <span>${startBalDisplay}</span></span>
+          <span>Starting: <span class="acc-card-bal acc-starting-bal">${startBalDisplay}</span></span>
         </div>
         <div class="budget-footer" style="margin-top:8px">
-          <div class="budget-percent" style="color:${a.balance>=0?'var(--income)':'var(--expense)'};font-size:20px">
-            ${nativeBalDisplay}
+          <div class="budget-percent acc-card-bal" style="color:${a.balance>=0?'var(--income)':'var(--expense)'};font-size:20px">
+            <span class="acc-balance-num">${nativeBalDisplay}</span>
             ${convertedDisplay}
           </div>
           <div class="budget-remaining">${a.archived ? 'Archived' : 'Current balance'}</div>
@@ -546,14 +546,14 @@ const UI = {
     const baseCurrCode = normalizeCurrCode(currentCurrency());
     el.innerHTML = active.map(a => {
       const isDiff = a.currency && normalizeCurrCode(a.currency) !== baseCurrCode;
-      const subVal = isDiff && a.base_balance !== undefined ? `<div style="font-size:11px;opacity:0.8">≈ ${fmt(a.base_balance)}</div>` : '';
+      const subVal = isDiff && a.base_balance !== undefined ? `<div class="acc-card-converted acc-card-bal" style="font-size:11px;opacity:0.8">≈ ${fmt(a.base_balance)}</div>` : '';
       return `
       <div style="flex:1;min-width:140px;padding:12px 14px;border-radius:10px;background:var(--surface-sunken);border-left:3px solid ${a.color||'var(--brand)'}">
         <div style="font-size:12px;color:var(--text-tertiary);margin-bottom:4px;display:flex;justify-content:space-between">
           <span>${a.name}</span>
           ${a.currency ? `<span style="font-size:10px;font-weight:700">${a.currency}</span>` : ''}
         </div>
-        <div style="font-size:16px;font-weight:600;color:${a.balance>=0?'var(--income)':'var(--expense)'}">
+        <div class="acc-card-bal" style="font-size:16px;font-weight:600;color:${a.balance>=0?'var(--income)':'var(--expense)'}">
           ${fmt(a.balance, a.currency)}
           ${subVal}
         </div>

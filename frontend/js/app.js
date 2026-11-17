@@ -2609,7 +2609,7 @@ const App = {
             <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:12px;color:#EF4444;font-size:13px;">
               <span style="font-size:18px;">🚨</span>
               <div style="flex:1;">
-                <strong>Overdraft Alert:</strong> In the next ${days} days, cash flow projects a deficit on <strong>${data.first_overdraft_date}</strong> (trough: ${fmt(data.lowest_point.balance)}).
+                <strong>Overdraft Alert:</strong> In the next ${days} days, cash flow projects a deficit on <strong>${data.first_overdraft_date}</strong> (trough: <span class="acc-card-bal">${fmt(data.lowest_point.balance)}</span>).
               </div>
               <button class="pill-btn" data-action="goto-dashboard" style="background:#EF4444;color:#fff;border:none;cursor:pointer;padding:4px 10px;border-radius:6px;">View Radar</button>
             </div>
@@ -2621,7 +2621,7 @@ const App = {
             <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);border-radius:12px;color:#F59E0B;font-size:13px;">
               <span style="font-size:18px;">⚠️</span>
               <div style="flex:1;">
-                <strong>Tight Cash Warning:</strong> Balance will dip to ${fmt(data.lowest_point.balance)} on ${data.lowest_point.date}. Keep an eye on upcoming recurring bills.
+                <strong>Tight Cash Warning:</strong> Balance will dip to <span class="acc-card-bal">${fmt(data.lowest_point.balance)}</span> on ${data.lowest_point.date}. Keep an eye on upcoming recurring bills.
               </div>
             </div>
           `;
