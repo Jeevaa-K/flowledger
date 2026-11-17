@@ -115,6 +115,7 @@ const App = {
       this.loadDashboard();
     });
     this.on('quickAdd', 'click', () => UI.openAddModal());
+    this.on('mobileFabAdd', 'click', () => UI.openAddModal());
     this.on('exportBtn', 'click', () => API.exportCSV());
     this.on('getTipBtn', 'click', () => this.getQuickTip());
   },
