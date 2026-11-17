@@ -39,7 +39,7 @@ const State = {
   txnPage: 1,
   txnPageSize: 50,
   txnTotal: 0,
-  aiModel: localStorage.getItem('fl_ai_model') || 'chatgpt',
+  aiModel: (localStorage.getItem('fl_ai_model') === 'chatgpt' || localStorage.getItem('fl_ai_model') === 'claude') ? 'llama' : (localStorage.getItem('fl_ai_model') || 'llama'),
   aiSessionId: null,
   aiSessions: [],
   cashflowDays: 30,
@@ -1250,10 +1250,10 @@ const App = {
       <div class="msg-content">
         <div class="msg-bubble">
           <strong>Welcome to your AI Financial Advisor!</strong><br><br>
-          I have full context of your financial transactions, accounts, and group splits. Choose your preferred AI engine above:
+          Powered by open-source models with free Groq API keys. I have full context of your financial transactions, accounts, and group splits. Choose your preferred AI engine above:
           <ul style="margin: 8px 0 0 18px; line-height: 1.6;">
-            <li><strong>ChatGPT (GPT-4o)</strong>: Proactive wealth strategies, income compounding, and practical advice.</li>
-            <li><strong>Claude 3.5 Sonnet</strong>: Methodical budget scrutiny, expense audits, and structured plans.</li>
+            <li><strong>Llama 3.3 (70B)</strong>: Proactive wealth strategies, income compounding, and practical advice.</li>
+            <li><strong>DeepSeek R1</strong>: Methodical budget scrutiny, expense audits, and structured reasoning.</li>
             <li><strong>Groq Fast</strong>: Instant, rapid queries and balance math.</li>
           </ul>
         </div>
@@ -1319,7 +1319,7 @@ const App = {
       }
       listEl.innerHTML = State.aiSessions.map(s => {
         const isActive = State.aiSessionId === s.id;
-        const icon = s.model === 'claude' ? '🟣' : s.model === 'fast' ? '⚡' : '🟢';
+        const icon = (s.model === 'deepseek' || s.model === 'claude') ? '🐋' : s.model === 'fast' ? '⚡' : '🦙';
         const d = s.updated_at ? new Date(s.updated_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }) : '';
         return `
           <div class="ai-session-item ${isActive ? 'active' : ''}" data-session-id="${s.id}">
@@ -1417,9 +1417,9 @@ const App = {
       banner.className = `chat-model-banner ${model}`;
     }
     if (label) {
-      if (model === 'claude') label.textContent = 'Claude 3.5 Sonnet Mode';
+      if (model === 'deepseek' || model === 'claude') label.textContent = 'DeepSeek R1 Mode';
       else if (model === 'fast') label.textContent = 'Groq Fast Mode';
-      else label.textContent = 'ChatGPT (GPT-4o) Mode';
+      else label.textContent = 'Llama 3.3 (70B) Mode';
     }
   },
 
@@ -1428,7 +1428,7 @@ const App = {
     if (!c) return;
     const isAssistant = role === 'assistant';
     const activeModel = model || State.aiModel;
-    const avatarText = isAssistant ? (activeModel === 'claude' ? 'CL' : activeModel === 'fast' ? '⚡' : 'GPT') : 'You';
+    const avatarText = isAssistant ? ((activeModel === 'deepseek' || activeModel === 'claude') ? 'R1' : activeModel === 'fast' ? '⚡' : '🦙') : 'You';
     const formattedHtml = isAssistant ? this.formatMarkdown(content) : content.replace(/\n/g, '<br>');
 
     const d = document.createElement('div');
@@ -1461,7 +1461,7 @@ const App = {
     const c = document.getElementById('chatMessages');
     if (!c) return;
     const activeModel = State.aiModel;
-    const avatarText = activeModel === 'claude' ? 'CL' : activeModel === 'fast' ? '⚡' : 'GPT';
+    const avatarText = (activeModel === 'deepseek' || activeModel === 'claude') ? 'R1' : activeModel === 'fast' ? '⚡' : '🦙';
     const d = document.createElement('div');
     d.className = 'chat-msg assistant'; d.id = 'typingIndicator';
     d.innerHTML = `
@@ -2028,7 +2028,7 @@ const App = {
       }
     });
 
-    // Model Selector Buttons (ChatGPT, Claude, Fast)
+    // Model Selector Buttons (Llama, DeepSeek, Fast)
     document.querySelectorAll('.ai-model-btn').forEach(b => {
       b.addEventListener('click', () => {
         this.selectAiModel(b.dataset.model);

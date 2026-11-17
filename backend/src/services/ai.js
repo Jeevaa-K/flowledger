@@ -8,13 +8,13 @@ console.log(apiKey ? '🔑 GROQ_API_KEY configured' : '⚠️  GROQ_API_KEY not 
 if (apiKey) { groq = new Groq({ apiKey }); console.log('✅ Groq AI enabled'); }
 
 // Candidate Groq models to try in fallback sequence if a specific model returns 404 or decommissioned
+// Uses top open-source models with free Groq API keys (Meta Llama & DeepSeek)
 const GROQ_MODELS = [
   process.env.GROQ_MODEL,
-  'openai/gpt-oss-120b',
-  'openai/gpt-oss-20b',
-  'qwen/qwen3.8-27b',
   'llama-3.3-70b-versatile',
-  'llama-3.1-8b-instant'
+  'deepseek-r1-distill-llama-70b',
+  'llama-3.1-8b-instant',
+  'qwen/qwen3.8-27b'
 ].filter(Boolean);
 
 async function createGroqCompletion(params) {

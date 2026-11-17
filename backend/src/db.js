@@ -61,7 +61,7 @@ async function initDB() {
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
-    model TEXT DEFAULT 'chatgpt',
+    model TEXT DEFAULT 'llama',
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
   )`);
@@ -69,13 +69,13 @@ async function initDB() {
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     session_id INTEGER REFERENCES ai_sessions(id) ON DELETE CASCADE,
-    model TEXT DEFAULT 'chatgpt',
+    model TEXT DEFAULT 'llama',
     role TEXT NOT NULL,
     content TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT NOW()
   )`);
   await db.run(`ALTER TABLE ai_chats ADD COLUMN IF NOT EXISTS session_id INTEGER REFERENCES ai_sessions(id) ON DELETE CASCADE`);
-  await db.run(`ALTER TABLE ai_chats ADD COLUMN IF NOT EXISTS model TEXT DEFAULT 'chatgpt'`);
+  await db.run(`ALTER TABLE ai_chats ADD COLUMN IF NOT EXISTS model TEXT DEFAULT 'llama'`);
   await db.run(`CREATE TABLE IF NOT EXISTS recurring (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

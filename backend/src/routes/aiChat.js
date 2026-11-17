@@ -217,7 +217,9 @@ router.post('/ai/chat', auth, async (req, res) => {
       groupsLine = groupSummaries.join(' | ');
     }
 
-    let activeModel = req.body.model || 'chatgpt';
+    let activeModel = req.body.model || 'llama';
+    if (activeModel === 'chatgpt') activeModel = 'llama';
+    if (activeModel === 'claude') activeModel = 'deepseek';
     let sessionId = req.body.session_id ? parseInt(req.body.session_id) : null;
 
     if (!sessionId) {
@@ -233,27 +235,29 @@ router.post('/ai/chat', auth, async (req, res) => {
     }
 
     let personaRules = '';
-    let groqModelChoice = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
-    if (activeModel === 'claude') {
-      personaRules = `You are CLAUDE 3.5 SONNET, an elite financial auditor and budget strategist on FlowLedger.
-TONE: Exceptionally thoughtful, rigorous, structured, and objective.
+    let groqModelChoice = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+    if (activeModel === 'deepseek') {
+      groqModelChoice = process.env.GROQ_REASONING_MODEL || 'deepseek-r1-distill-llama-70b';
+      personaRules = `You are DEEPSEEK R1, an advanced open-source reasoning model and precision financial auditor on FlowLedger.
+TONE: Exceptionally thoughtful, rigorous, structured, and analytical.
 STYLE:
-- Use structured markdown formatting (e.g. ### Key Insights, ### Analysis, ### Recommendations).
+- Provide deep, step-by-step reasoning on spending habits, budget leaks, and financial health.
+- Use structured markdown formatting (e.g. ### Key Insights, ### Expense Scrutiny, ### Step-by-Step Action Plan).
 - Scrutinize specific budget categories and cite exact rupee numbers.
-- Calculate concrete metrics: savings rate %, burn rate, and discretionary spending buffer.
-- Emphasize financial resilience, debt avoidance, and pragmatic risk mitigation.`;
+- Calculate concrete metrics: savings rate %, burn rate, and discretionary buffer.
+- Emphasize risk mitigation, debt elimination, and long-term financial stability.`;
     } else if (activeModel === 'fast') {
-      groqModelChoice = process.env.GROQ_FAST_MODEL || 'openai/gpt-oss-20b';
-      personaRules = `You are a high-speed financial assistant.
+      groqModelChoice = process.env.GROQ_FAST_MODEL || 'llama-3.1-8b-instant';
+      personaRules = `You are LLAMA 3.1 FAST, an open-source, ultra-responsive financial assistant.
 TONE: Crisp, direct, concise (under 80 words).
 STYLE: Give immediate numerical answers, calculations, and punchy bullet points without pleasantries or fluff.`;
     } else {
-      // default: chatgpt / gpt-4o
-      personaRules = `You are CHATGPT (GPT-4o), an encouraging, visionary financial strategist and wealth architect on FlowLedger.
-TONE: Proactive, strategic, accessible, and motivating.
+      // default: llama 3.3 (70b) open source
+      personaRules = `You are LLAMA 3.3 (70B), an elite open-source financial strategist and wealth architect on FlowLedger.
+TONE: Proactive, strategic, empowering, and motivating.
 STYLE:
-- Frame finances through opportunities: compounding, optimized cash flow, smart investing, and goal milestones.
-- Present actionable "Quick Wins" alongside mid-to-long term wealth strategies.
+- Frame finances through opportunities: smart compounding, optimized cash flow, investment principles, and budget milestones.
+- Present actionable "Quick Wins" alongside mid-to-long term wealth-building roadmaps.
 - Use clean bullet points and bold financial metrics.`;
     }
 
@@ -351,10 +355,13 @@ router.get('/ai/sessions', auth, async (req, res) => {
 
 router.post('/ai/sessions', auth, async (req, res) => {
   try {
-    const { title = 'New Conversation', model = 'chatgpt' } = req.body;
+    const { title = 'New Conversation', model = 'llama' } = req.body;
+    let normalizedModel = model;
+    if (normalizedModel === 'chatgpt') normalizedModel = 'llama';
+    if (normalizedModel === 'claude') normalizedModel = 'deepseek';
     const session = await db.get(
       `INSERT INTO ai_sessions (user_id, title, model) VALUES ($1, $2, $3) RETURNING *`,
-      [req.user.id, title.slice(0, 80), model]
+      [req.user.id, title.slice(0, 80), normalizedModel]
     );
     res.json(session);
   } catch (e) { safeError(res, e, 'Create AI session'); }
