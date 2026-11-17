@@ -235,10 +235,10 @@ router.post('/ai/chat', auth, async (req, res) => {
     }
 
     let personaRules = '';
-    let groqModelChoice = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+    let groqModelChoice = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
     if (activeModel === 'deepseek') {
-      groqModelChoice = process.env.GROQ_REASONING_MODEL || 'deepseek-r1-distill-llama-70b';
-      personaRules = `You are DEEPSEEK R1, an advanced open-source reasoning model and precision financial auditor on FlowLedger.
+      groqModelChoice = process.env.GROQ_REASONING_MODEL || 'openai/gpt-oss-120b';
+      personaRules = `You are DEEP REASONING AUDITOR, an advanced open-source precision financial auditor on FlowLedger.
 TONE: Exceptionally thoughtful, rigorous, structured, and analytical.
 STYLE:
 - Provide deep, step-by-step reasoning on spending habits, budget leaks, and financial health.
@@ -247,13 +247,13 @@ STYLE:
 - Calculate concrete metrics: savings rate %, burn rate, and discretionary buffer.
 - Emphasize risk mitigation, debt elimination, and long-term financial stability.`;
     } else if (activeModel === 'fast') {
-      groqModelChoice = process.env.GROQ_FAST_MODEL || 'llama-3.1-8b-instant';
-      personaRules = `You are LLAMA 3.1 FAST, an open-source, ultra-responsive financial assistant.
+      groqModelChoice = process.env.GROQ_FAST_MODEL || 'openai/gpt-oss-20b';
+      personaRules = `You are ULTRA-FAST ASSISTANT, an open-source, ultra-responsive financial assistant.
 TONE: Crisp, direct, concise (under 80 words).
 STYLE: Give immediate numerical answers, calculations, and punchy bullet points without pleasantries or fluff.`;
     } else {
-      // default: llama 3.3 (70b) open source
-      personaRules = `You are LLAMA 3.3 (70B), an elite open-source financial strategist and wealth architect on FlowLedger.
+      // default: 120B open source model
+      personaRules = `You are FLOWLEDGER AI (120B), an elite open-source financial strategist and wealth architect on FlowLedger.
 TONE: Proactive, strategic, empowering, and motivating.
 STYLE:
 - Frame finances through opportunities: smart compounding, optimized cash flow, investment principles, and budget milestones.
