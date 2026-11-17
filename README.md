@@ -17,6 +17,34 @@ npm run dev              # http://localhost:3001  (Windows: double-click start.b
 cd backend && npm test   # no database required (the DB layer is mocked)
 ```
 
+## Hybrid App (PWA & Mobile)
+
+FlowLedger is built as a **hybrid application** with two deployment modes:
+
+### 1. Progressive Web App (PWA)
+- **Install anywhere**: Open in Chrome, Edge, Safari, or mobile browser, and click **📲 Install App** (or "Add to Home Screen").
+- **Offline support**: Pre-caches static application shell and assets via Service Worker (`sw.js`).
+- **Web App Manifest**: Full standalone app window experience with shortcuts and branding.
+
+### 2. Native Mobile (Capacitor for Android / iOS)
+The project is pre-configured with Capacitor (`capacitor.config.json`):
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Add Android or iOS native platform project
+npm run cap:add:android
+npm run cap:add:ios
+
+# 3. Sync frontend assets into native project
+npm run cap:sync
+
+# 4. Open in Android Studio / Xcode to build APK or IPA
+npm run cap:open:android
+npm run cap:open:ios
+```
+*(In mobile webview, you can point to your backend API via `localStorage.setItem('fl_api_url', 'https://your-backend-url')` if hosted remotely).*
+
 ## Project layout
 ```
 backend/

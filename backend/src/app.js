@@ -38,9 +38,21 @@ function createApp() {
   app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 
   const frontendPath = path.join(__dirname, '..', '..', 'frontend');
+  app.get('/sw.js', (req, res) => {
+    res.setHeader('Service-Worker-Allowed', '/');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.sendFile(path.join(frontendPath, 'sw.js'));
+  });
+  app.get('/manifest.json', (req, res) => {
+    res.setHeader('Content-Type', 'application/manifest+json');
+    res.sendFile(path.join(frontendPath, 'manifest.json'));
+  });
   app.get('/favicon.png', (req, res) => {
+    res.sendFile(path.join(frontendPath, 'favicon.png'));
+  });
+  app.get('/favicon.svg', (req, res) => {
     res.setHeader('Content-Type', 'image/svg+xml');
-    res.send(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="24" fill="#6366f1"/><text y="130" font-size="80" font-family="Arial" font-weight="bold" text-anchor="middle" x="96" fill="white">FL</text></svg>`);
+    res.sendFile(path.join(frontendPath, 'favicon.svg'));
   });
   app.use(express.static(frontendPath));
   app.get('*', (req, res) => res.sendFile(path.join(frontendPath, 'index.html')));

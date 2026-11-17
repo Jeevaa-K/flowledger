@@ -513,8 +513,9 @@ body.sidebar-compact .balance-widget .bw-amount {
 
 /* ─── Topbar ─────────────────────────────────────────────────────────────── */
 .topbar {
-  height: 64px; display: flex; align-items: center; gap: 16px;
-  padding: 0 28px;
+  height: calc(64px + env(safe-area-inset-top, 0px));
+  display: flex; align-items: center; gap: 16px;
+  padding: env(safe-area-inset-top, 0px) 28px 0 28px;
   background: rgba(255,255,255,0.82);
   backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border);
@@ -522,6 +523,14 @@ body.sidebar-compact .balance-widget .bw-amount {
   transition: background 0.3s, border-color 0.3s;
 }
 body.dark .topbar { background: rgba(14,21,37,0.82); }
+
+.pwa-install-action {
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.pwa-install-action:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--brand-glow);
+}
 
 .hamburger {
   display: none; background: none; border: none;

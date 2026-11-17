@@ -1,8 +1,13 @@
 // The session is an httpOnly cookie set by the server, so JavaScript never
-// sees (or stores) the auth token. The app must be served by the backend.
-const BASE = '/api';
-
+// sees (or stores) the auth token.
+// In native hybrid apps (Capacitor), backend URL can be configured via fl_api_url.
 const API = {
+  getBase() {
+    const custom = localStorage.getItem('fl_api_url') || (window.FLOWLEDGER_API_URL || null);
+    if (custom) return custom.replace(/\/+$/, '') + '/api';
+    return '/api';
+  },
+
   headers() {
     return { 'Content-Type': 'application/json' };
   },
@@ -14,11 +19,12 @@ const API = {
   },
 
   async request(method, path, body) {
-    const opts = { method, headers: this.headers() };
+    const opts = { method, headers: this.headers(), credentials: 'include' };
     if (body) opts.body = JSON.stringify(body);
     let r;
+    const base = this.getBase();
     try {
-      r = await fetch(BASE + path, opts);
+      r = await fetch(base + path, opts);
     } catch {
       // fetch() throws (not a rejected HTTP status) when there's no network at all
       throw new Error("You're offline — check your connection and try again.");
@@ -64,7 +70,7 @@ const API = {
   // by the paginated transactions list, so request()'s return shape
   // (plain parsed JSON) stays unchanged for every other call site.
   async getWithCount(path) {
-    const r = await fetch(BASE + path, { headers: this.headers() });
+    const r = await fetch(this.getBase() + path, { headers: this.headers(), credentials: 'include' });
     if (r.status === 401) {
       this.handleUnauthorized();
       return { data: [], total: 0 };

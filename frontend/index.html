@@ -2,10 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FlowLedger — Smart Expense Tracker</title>
-  <meta name="description" content="Track income and expenses, set budgets, hit savings goals, and get AI-powered financial insights with FlowLedger — a fast, privacy-respecting expense tracker." />
-  <meta name="color-scheme" content="light" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>FlowLedger — Smart Expense Tracker & Financial Advisor</title>
+  <meta name="description" content="Track income and expenses, set budgets, hit savings goals, and get AI-powered financial insights with FlowLedger — a fast, privacy-respecting hybrid expense tracker." />
+  <meta name="color-scheme" content="light dark" />
+
+  <!-- Mobile & PWA meta tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="FlowLedger" />
+  <meta name="theme-color" content="#6366F1" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="application-name" content="FlowLedger" />
 
   <!-- Open Graph / social preview -->
   <meta property="og:type" content="website" />
@@ -16,19 +24,19 @@
   <meta name="twitter:title" content="FlowLedger — Smart Expense Tracker" />
   <meta name="twitter:description" content="Track income and expenses, set budgets, hit savings goals, and get AI-powered financial insights." />
 
-  <!-- Favicons -->
+  <!-- Favicons & App Icons -->
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png" />
   <link rel="icon" href="favicon-16.png" sizes="16x16" type="image/png" />
   <link rel="apple-touch-icon" href="favicon-192.png" />
+  <link rel="apple-touch-icon" sizes="192x192" href="favicon-192.png" />
+  <link rel="apple-touch-icon" sizes="512x512" href="favicon-512.png" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
   <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#6366F1" />
-  <meta name="mobile-web-app-capable" content="yes" />
   <script src="js/chart.min.js"></script>
 
 </head>
@@ -164,6 +172,9 @@
     </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topbarDate"></div>
+      <button class="pwa-install-action" id="pwaInstallBtn" title="Install FlowLedger as native app" style="display:none;align-items:center;gap:6px;padding:6px 12px;background:var(--brand);color:#fff;border:none;border-radius:var(--r-full);font-size:12px;font-weight:600;cursor:pointer;">
+        📲 Install App
+      </button>
       <div class="forecast-badge" id="forecastBadge" style="display:none">
         🔮 Next month: <span id="forecastAmt">₹0</span>
       </div>
@@ -2306,6 +2317,6 @@
 <script src="js/qrcode.min.js"></script>
 <script src="js/groups.js"></script>
 <script src="js/app.js"></script>
-<script src="js/sw-cleanup.js"></script>
+<script src="js/pwa.js"></script>
 </body>
 </html>

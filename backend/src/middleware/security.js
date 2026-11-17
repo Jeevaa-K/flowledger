@@ -5,25 +5,30 @@ const { allowedOrigins } = require('../config');
 
 // Scripts: same-origin files + cdnjs only — no inline script execution.
 // (Styles still allow 'unsafe-inline' because the UI uses style="" attributes.)
+// Hybrid & PWA: allows service worker, web manifest, and Capacitor native origins.
 const securityHeaders = helmet({
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'"],
+      defaultSrc: ["'self'", 'capacitor://localhost', 'http://localhost'],
       scriptSrc: ["'self'", 'https://cdnjs.cloudflare.com'],
       scriptSrcAttr: ["'none'"],
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com'],
       imgSrc: ["'self'", 'data:', 'blob:'],
-      connectSrc: ["'self'"]
+      connectSrc: ["'self'", 'capacitor://localhost', 'http://localhost', 'https:'],
+      manifestSrc: ["'self'"],
+      workerSrc: ["'self'"]
     }
   },
   crossOriginEmbedderPolicy: false
 });
 
-// An origin is trusted if it is this very server (same-origin) or is listed
-// in ALLOWED_ORIGINS. Nothing else gets CORS headers.
+// An origin is trusted if it is this very server (same-origin), listed in ALLOWED_ORIGINS,
+// or a native hybrid app container (Capacitor/Cordova webview).
 function isAllowedOrigin(origin, req) {
+  if (!origin) return true;
   if (allowedOrigins.includes(origin)) return true;
+  if (origin === 'capacitor://localhost' || origin === 'http://localhost' || origin === 'https://localhost') return true;
   try { return new URL(origin).host === req.headers.host; }
   catch { return false; }
 }
