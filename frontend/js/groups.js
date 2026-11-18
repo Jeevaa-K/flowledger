@@ -119,14 +119,14 @@ const Groups = {
       <div class="card group-card" style="cursor:pointer;transition:transform 0.15s" data-action="open-group" data-id="${g.id}">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
           <div>
-            <div style="font-size:17px;font-weight:700;color:var(--text-primary)">${g.name}</div>
+            <div style="font-size:17px;font-weight:700;color:var(--text-primary)">${escapeHtml(g.name)}</div>
             <div style="font-size:12px;color:var(--text-secondary);margin-top:2px">${g.description || 'Shared Expense Ledger'}</div>
           </div>
           <span class="res-badge">👥 ${g.member_count} Members</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px solid var(--border-soft)">
           <span style="font-size:12px;color:var(--text-secondary)">Total Spent:</span>
-          <strong style="font-size:15px;color:var(--text-primary)">${fmt(g.total_expenses || 0)}</strong>
+          <strong style="font-size:15px;color:var(--text-primary)" class="group-total-amt">${fmt(g.total_expenses || 0)}</strong>
         </div>
       </div>
     `).join('');
@@ -219,7 +219,7 @@ const Groups = {
                     🔴 <strong style="color:var(--expense)">${s.from_name}</strong> owes <strong style="color:var(--income)">${s.to_name}</strong>
                   </div>
                 </div>
-                <div style="font-size:22px;font-weight:800;color:var(--text-primary)">
+                <div class="settlement-amount" style="font-size:22px;font-weight:800;color:var(--text-primary)">
                   ${fmt(s.amount)}
                 </div>
                 <div class="settlement-actions-row">
@@ -265,7 +265,7 @@ const Groups = {
               ${isSettle ? '🤝' : '💸'}
             </div>
             <div class="txn-info" style="flex:1">
-              <div class="txn-desc" style="font-weight:600">${e.description}</div>
+              <div class="txn-desc" style="font-weight:600">${escapeHtml(e.description)}</div>
               <div class="txn-meta" style="font-size:12px;color:var(--text-secondary)">
                 <span>Paid by <strong>${e.payer_name}</strong></span> • <span>${e.date}</span>
                 <div style="font-size:11px;color:var(--text-tertiary);margin-top:2px">Splits: ${splitsSummary}</div>
@@ -362,7 +362,7 @@ const Groups = {
     const payerSel = document.getElementById('gExpPayerSelect');
     if (payerSel && this.activeGroupData.members) {
       payerSel.innerHTML = this.activeGroupData.members.map(m =>
-        `<option value="${m.id}">${m.name}</option>`
+        `<option value="${m.id}">${escapeHtml(m.name)}</option>`
       ).join('');
     }
 
@@ -409,8 +409,8 @@ const Groups = {
     const toSel   = document.getElementById('settleToSelect');
     const members = this.activeGroupData.members;
 
-    if (fromSel) fromSel.innerHTML = members.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
-    if (toSel)   toSel.innerHTML   = members.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+    if (fromSel) fromSel.innerHTML = members.map(m => `<option value="${m.id}">${escapeHtml(m.name)}</option>`).join('');
+    if (toSel)   toSel.innerHTML   = members.map(m => `<option value="${m.id}">${escapeHtml(m.name)}</option>`).join('');
 
     // Pre-select debtor/creditor if arguments provided or from first settlement
     if (prefillFromId && prefillToId && prefillAmount) {

@@ -115,6 +115,27 @@ const Recurring = {
       const card = document.getElementById('subDetectedCard');
       if (card) card.style.display = 'none';
     });
+
+    // Delegated event listener for all dynamic buttons in recurring/subscriptions view
+    document.addEventListener('click', (e) => {
+      const target = e.target.closest('[data-action]');
+      if (!target) return;
+      const action = target.dataset.action;
+      if (action === 'rec-open-add') {
+        this.openAddForDate(target.dataset.date || '');
+      } else if (action === 'rec-quick-log') {
+        const id = parseInt(target.dataset.id, 10);
+        const date = target.dataset.date || '';
+        if (id) this.quickLogTxn(id, date);
+      } else if (action === 'rec-edit-txn') {
+        const id = parseInt(target.dataset.id, 10);
+        const date = target.dataset.date || '';
+        if (id) this.openInTxnModal(id, date);
+      } else if (action === 'rec-add-detected') {
+        const idx = parseInt(target.dataset.index, 10);
+        if (!isNaN(idx)) this.addDetected(idx);
+      }
+    });
   },
 
   switchTab(tab) {
@@ -501,7 +522,7 @@ const Recurring = {
         <div class="sub-feed-empty">
           <div class="sub-feed-empty-icon">📅</div>
           <div>${emptyMsg}</div>
-          <button class="sub-feed-btn primary" style="margin-top:6px" onclick="Recurring.openAddForDate('${targetDateStr}')">
+          <button class="sub-feed-btn primary" style="margin-top:6px" data-action="rec-open-add" data-date="${targetDateStr}">
             + Add Subscription
           </button>
         </div>
@@ -547,10 +568,10 @@ const Recurring = {
               ${isExp ? '-' : '+'}${fmt(item.amount)}
             </div>
             <div class="sub-feed-actions">
-              <button class="sub-feed-btn primary" title="Instant Log to Transactions" onclick="Recurring.quickLogTxn(${item.id}, '${dateStr}')">
+              <button class="sub-feed-btn primary" title="Instant Log to Transactions" data-action="rec-quick-log" data-id="${item.id}" data-date="${dateStr}">
                 ⚡ Log
               </button>
-              <button class="sub-feed-btn" title="Review in Form" onclick="Recurring.openInTxnModal(${item.id}, '${dateStr}')">
+              <button class="sub-feed-btn" title="Review in Form" data-action="rec-edit-txn" data-id="${item.id}" data-date="${dateStr}">
                 ✏️ Edit
               </button>
             </div>
@@ -784,7 +805,7 @@ const Recurring = {
           </div>
           <div class="ds-right">
             <div class="ds-amt">${fmt(d.amount)}</div>
-            <button class="ds-btn" onclick="Recurring.addDetected(${idx})">+ Track</button>
+            <button class="ds-btn" data-action="rec-add-detected" data-index="${idx}">+ Track</button>
           </div>
         </div>
       `;

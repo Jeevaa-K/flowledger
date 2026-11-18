@@ -1,3 +1,15 @@
+// HTML Sanitizer to prevent XSS in dynamic innerHTML injections
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+if (typeof window !== 'undefined') window.escapeHtml = escapeHtml;
+
 // Locale per symbol so number grouping looks native for each currency
 const CURRENCY_LOCALE = {
   '₹': 'en-IN', 'INR': 'en-IN',
@@ -514,7 +526,7 @@ const UI = {
         <div class="budget-header">
           <div class="budget-cat-wrap">
             <div class="budget-cat-dot" style="background:${a.color||'#6366f1'}"></div>
-            <div class="budget-cat">${typeEmoji[a.type]||'📦'} ${a.name} ${currBadge}</div>
+            <div class="budget-cat">${typeEmoji[a.type]||'📦'} ${escapeHtml(a.name)} ${currBadge}</div>
           </div>
           <div style="display:flex;gap:4px">
             <button class="txn-btn edit" data-action="edit-account" data-id="${a.id}" title="Edit">✎</button>
@@ -550,7 +562,7 @@ const UI = {
       return `
       <div style="flex:1;min-width:140px;padding:12px 14px;border-radius:10px;background:var(--surface-sunken);border-left:3px solid ${a.color||'var(--brand)'}">
         <div style="font-size:12px;color:var(--text-tertiary);margin-bottom:4px;display:flex;justify-content:space-between">
-          <span>${a.name}</span>
+          <span>${escapeHtml(a.name)}</span>
           ${a.currency ? `<span style="font-size:10px;font-weight:700">${a.currency}</span>` : ''}
         </div>
         <div class="acc-card-bal" style="font-size:16px;font-weight:600;color:${a.balance>=0?'var(--income)':'var(--expense)'}">
@@ -628,17 +640,17 @@ const UI = {
         <div class="txn-name-wrap">
           <div class="txn-dot" style="background:${color}"></div>
           <div class="txn-meta-col">
-            <div class="txn-name">${t.description} ${splitBadge}</div>
-            <div class="txn-date">${t.category} · ${t.date}</div>
+            <div class="txn-name">${escapeHtml(t.description)} ${splitBadge}</div>
+            <div class="txn-date">${escapeHtml(t.category)} · ${t.date}</div>
             ${tagsHtml}
           </div>
         </div>
-        <div class="txn-cat-badge">${CAT_EMOJIS[t.category]||''} ${t.category}</div>
+        <div class="txn-cat-badge">${CAT_EMOJIS[t.category]||''} ${escapeHtml(t.category)}</div>
         <div class="txn-date-col">${t.date}</div>
         <div class="txn-amount ${isIncome?'inc':'exp'}">${amountHtml}</div>
         <div class="txn-actions">
-          <button class="txn-btn edit" data-action="edit-txn" data-id="${t.id}" aria-label="Edit ${t.description}">✎</button>
-          <button class="txn-btn del"  data-action="del-txn"  data-id="${t.id}" aria-label="Delete ${t.description}">✕</button>
+          <button class="txn-btn edit" data-action="edit-txn" data-id="${t.id}" aria-label="Edit ${escapeHtml(t.description)}">✎</button>
+          <button class="txn-btn del"  data-action="del-txn"  data-id="${t.id}" aria-label="Delete ${escapeHtml(t.description)}">✕</button>
         </div>
       </div>`;
     }).join('');
@@ -664,7 +676,7 @@ const UI = {
         <div class="budget-header">
           <div class="budget-cat-wrap">
             <div class="budget-cat-dot" style="background:${CAT_COLORS[b.category]||'#94A3B8'}"></div>
-            <div class="budget-cat">${CAT_EMOJIS[b.category]||''} ${b.category}</div>
+            <div class="budget-cat">${CAT_EMOJIS[b.category]||''} ${escapeHtml(b.category)}</div>
           </div>
           <button class="budget-delete" data-action="del-budget" data-id="${b.id}">✕</button>
         </div>
@@ -738,7 +750,7 @@ const UI = {
         <div style="font-size:26px;margin-bottom:10px">${emojis[i % emojis.length]}</div>
         <div class="goal-header">
           <div>
-            <div class="goal-name">${g.name}</div>
+            <div class="goal-name">${escapeHtml(g.name)}</div>
             <div class="goal-date">${g.date ? 'Target: ' + getLocalDateString(g.date) : 'No deadline'}</div>
           </div>
           <div style="display:flex;gap:4px">
@@ -753,7 +765,7 @@ const UI = {
         <div class="goal-bar-bg"><div class="goal-bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
           <div class="goal-percent" style="color:${barColor}">${pct}% complete</div>
-          <div style="font-size:12px;color:var(--text-tertiary)">${remaining > 0 ? fmt(remaining)+' to go' : '🎉 Goal reached!'}</div>
+          <div class="goal-remaining" style="font-size:12px;color:var(--text-tertiary)">${remaining > 0 ? fmt(remaining)+' to go' : '🎉 Goal reached!'}</div>
         </div>
         <button class="tip-btn" style="margin-top:12px" data-action="add-savings" data-id="${g.id}">+ Add Savings</button>
       </div>`;
