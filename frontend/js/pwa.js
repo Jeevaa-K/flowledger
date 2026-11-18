@@ -52,9 +52,28 @@
   });
 
   // 4. Online / Offline status monitoring
-  window.addEventListener('offline', () => {
+  window.addEventListener('offline', async () => {
     if (window.UI && typeof window.UI.toast === 'function') {
-      window.UI.toast('⚡ You are offline. Cached data is available.', 'warning');
+      let hasCachedData = false;
+      try {
+        if ('caches' in window) {
+          const cacheKeys = await caches.keys();
+          for (const key of cacheKeys) {
+            const cache = await caches.open(key);
+            const requests = await cache.keys();
+            if (requests.some(r => r.url.includes('/api/'))) {
+              hasCachedData = true;
+              break;
+            }
+          }
+        }
+      } catch (_) {}
+
+      if (hasCachedData) {
+        window.UI.toast('⚡ You are offline. Cached data is available.', 'warning');
+      } else {
+        window.UI.toast('⚡ You are offline. Check your internet connection.', 'warning');
+      }
     }
   });
 

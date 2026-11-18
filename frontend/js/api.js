@@ -1,25 +1,70 @@
-// The session is an httpOnly cookie set by the server, so JavaScript never
-// sees (or stores) the auth token.
+// The session uses httpOnly cookies on the web and Capacitor Preferences / Authorization Bearer token in native apps.
 // In native hybrid apps (Capacitor), backend URL can be configured via fl_api_url.
 const API = {
+  _token: null,
+
+  isNative() {
+    return !!(window.Capacitor && (typeof window.Capacitor.isNativePlatform === 'function' ? window.Capacitor.isNativePlatform() : true));
+  },
+
+  async getToken() {
+    if (this._token) return this._token;
+    if (window.Capacitor?.Plugins?.Preferences) {
+      try {
+        const { value } = await window.Capacitor.Plugins.Preferences.get({ key: 'fl_token' });
+        if (value) { this._token = value; return value; }
+      } catch (_) {}
+    }
+    this._token = localStorage.getItem('fl_token') || null;
+    return this._token;
+  },
+
+  async setToken(token) {
+    if (!token) return;
+    this._token = token;
+    if (window.Capacitor?.Plugins?.Preferences) {
+      try {
+        await window.Capacitor.Plugins.Preferences.set({ key: 'fl_token', value: token });
+      } catch (_) {}
+    }
+    try { localStorage.setItem('fl_token', token); } catch (_) {}
+  },
+
+  async clearToken() {
+    this._token = null;
+    if (window.Capacitor?.Plugins?.Preferences) {
+      try {
+        await window.Capacitor.Plugins.Preferences.remove({ key: 'fl_token' });
+      } catch (_) {}
+    }
+    try { localStorage.removeItem('fl_token'); } catch (_) {}
+  },
+
   getBase() {
     const custom = localStorage.getItem('fl_api_url') || (window.FLOWLEDGER_API_URL || null);
     if (custom) return custom.replace(/\/+$/, '') + '/api';
     return '/api';
   },
 
-  headers() {
-    return { 'Content-Type': 'application/json' };
+  async headers() {
+    const h = { 'Content-Type': 'application/json' };
+    const token = await this.getToken();
+    if (token) {
+      h['Authorization'] = `Bearer ${token}`;
+    }
+    return h;
   },
 
   // Session expired or missing: drop the cached profile and show the login screen.
   handleUnauthorized() {
+    this.clearToken();
     localStorage.removeItem('fl_user');
     window.location.reload();
   },
 
   async request(method, path, body) {
-    const opts = { method, headers: this.headers(), credentials: 'include' };
+    const headers = await this.headers();
+    const opts = { method, headers, credentials: 'include' };
     if (body) opts.body = JSON.stringify(body);
     let r;
     const base = this.getBase();
@@ -28,6 +73,10 @@ const API = {
     } catch {
       // fetch() throws (not a rejected HTTP status) when there's no network at all
       throw new Error("You're offline — check your connection and try again.");
+    }
+    const tokenHeader = r.headers.get('x-auth-token');
+    if (tokenHeader) {
+      await this.setToken(tokenHeader);
     }
     if (r.status === 401) {
       this.handleUnauthorized();
@@ -70,7 +119,8 @@ const API = {
   // by the paginated transactions list, so request()'s return shape
   // (plain parsed JSON) stays unchanged for every other call site.
   async getWithCount(path) {
-    const r = await fetch(this.getBase() + path, { headers: this.headers(), credentials: 'include' });
+    const headers = await this.headers();
+    const r = await fetch(this.getBase() + path, { headers, credentials: 'include' });
     if (r.status === 401) {
       this.handleUnauthorized();
       return { data: [], total: 0 };
@@ -120,17 +170,21 @@ const API = {
 
   async exportCSV(queryString = '') {
     try {
-      // The session cookie authenticates the download; nothing sensitive in the URL.
-      const res = await fetch(BASE + '/export/csv', { headers: this.headers() });
+      const base = this.getBase();
+      const url = base + '/export/csv' + (queryString ? '?' + queryString : '');
+      const res = await fetch(url, {
+        headers: this.headers(),
+        credentials: 'include'
+      });
       if (!res.ok) throw new Error('Export failed');
       const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
+      const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
+      a.href = blobUrl;
       a.download = queryString ? `transactions-export-${new Date().toISOString().slice(0, 10)}.csv` : 'expenses.csv';
       document.body.appendChild(a); a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      URL.revokeObjectURL(blobUrl);
     } catch (e) {
       if (typeof UI !== 'undefined' && UI.toast) {
         UI.toast('CSV export failed: ' + e.message, 'error');

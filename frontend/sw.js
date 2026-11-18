@@ -1,11 +1,15 @@
 // FlowLedger Progressive Web App Service Worker
-const CACHE_NAME = 'flowledger-pwa-v1.0.0';
+const VERSION = '2.1.0';
+const CACHE_NAME = `flowledger-v${VERSION}`;
 
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
   '/css/style.css',
   '/js/chart.min.js',
+  '/js/charts.js',
+  '/js/qrcode.min.js',
+  '/js/import.js',
   '/js/api.js',
   '/js/auth.js',
   '/js/ui.js',
@@ -51,17 +55,32 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // API Requests: Network-first
+  // API Requests: Stale-While-Revalidate with offline fallback
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
-      fetch(req).catch(() => {
-        return new Response(
-          JSON.stringify({ offline: true, error: "You are currently offline. Check your internet connection." }),
-          {
-            status: 503,
-            headers: { 'Content-Type': 'application/json' }
-          }
-        );
+      caches.open(CACHE_NAME).then(async cache => {
+        const cachedRes = await cache.match(req);
+
+        const fetchPromise = fetch(req)
+          .then(networkRes => {
+            if (networkRes && networkRes.status === 200) {
+              cache.put(req, networkRes.clone());
+            }
+            return networkRes;
+          })
+          .catch(() => {
+            if (!cachedRes) {
+              return new Response(
+                JSON.stringify({ offline: true, error: "You are currently offline. Check your internet connection." }),
+                {
+                  status: 503,
+                  headers: { 'Content-Type': 'application/json' }
+                }
+              );
+            }
+          });
+
+        return cachedRes || fetchPromise;
       })
     );
     return;

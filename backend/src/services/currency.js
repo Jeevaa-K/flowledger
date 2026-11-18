@@ -1,4 +1,5 @@
 // ── Currency and Foreign Exchange (FX) Service ───────────────────────
+const { db } = require('../db');
 
 const CURRENCIES = {
   INR: { code: 'INR', symbol: '₹', name: 'Indian Rupee', flag: '🇮🇳', locale: 'en-IN' },
@@ -49,6 +50,89 @@ function normalizeCurrency(input) {
   const clean = String(input).trim().toLowerCase();
   const code = SYMBOL_TO_CODE[clean] || (CURRENCIES[clean.toUpperCase()] ? clean.toUpperCase() : 'INR');
   return CURRENCIES[code] || CURRENCIES.INR;
+}
+
+/**
+ * Load cached FX rates from database
+ */
+async function loadCachedFxRates() {
+  try {
+    const row = await db.get('SELECT rates, fetched_at FROM fx_rates WHERE base=$1', ['USD']);
+    if (row && row.rates) {
+      const parsed = typeof row.rates === 'string' ? JSON.parse(row.rates) : row.rates;
+      cachedRatesUsd = { ...DEFAULT_RATES_USD, ...parsed, USD: 1.0 };
+      lastFetchedAt = row.fetched_at instanceof Date ? row.fetched_at.toISOString() : String(row.fetched_at);
+      return true;
+    }
+  } catch (_) {
+    // DB not ready or running unit test mock
+  }
+  return false;
+}
+
+/**
+ * Refresh live market rates from Frankfurter or open exchange rate API
+ */
+async function refreshFxRates() {
+  try {
+    let freshRates = null;
+    const fetchedTime = new Date().toISOString();
+
+    // 1. Primary: Frankfurter API (free, reliable ECB data)
+    try {
+      const res = await fetch('https://api.frankfurter.app/latest?from=USD');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.rates && typeof data.rates === 'object') {
+          freshRates = data.rates;
+        }
+      }
+    } catch (_) {}
+
+    // 2. Secondary fallback API
+    if (!freshRates) {
+      try {
+        const res = await fetch('https://open.er-api.com/v6/latest/USD');
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.rates && typeof data.rates === 'object') {
+            freshRates = data.rates;
+          }
+        }
+      } catch (_) {}
+    }
+
+    if (freshRates) {
+      cachedRatesUsd = { ...DEFAULT_RATES_USD, ...freshRates, USD: 1.0 };
+      lastFetchedAt = fetchedTime;
+      try {
+        await db.run(
+          `INSERT INTO fx_rates (base, rates, fetched_at) VALUES ('USD', $1, $2)
+           ON CONFLICT (base) DO UPDATE SET rates = EXCLUDED.rates, fetched_at = EXCLUDED.fetched_at`,
+          [JSON.stringify(cachedRatesUsd), fetchedTime]
+        );
+        console.log(`✅ FX rates updated from live API (fetched_at: ${fetchedTime})`);
+      } catch (_) {}
+    }
+  } catch (err) {
+    console.warn('⚠️ Unable to refresh FX rates from API, using fallback rates:', err.message);
+  }
+}
+
+// Scheduled daily refresh & startup loader (unref so tests/server can exit cleanly)
+if (process.env.NODE_ENV !== 'test') {
+  (async () => {
+    const hasCached = await loadCachedFxRates();
+    const isStale = !lastFetchedAt || (Date.now() - new Date(lastFetchedAt).getTime() > 24 * 60 * 60 * 1000);
+    if (!hasCached || isStale) {
+      await refreshFxRates();
+    }
+  })().catch(() => {});
+
+  const dailyTimer = setInterval(() => {
+    refreshFxRates().catch(() => {});
+  }, 24 * 60 * 60 * 1000);
+  if (dailyTimer.unref) dailyTimer.unref();
 }
 
 /**
@@ -123,6 +207,8 @@ module.exports = {
   normalizeCurrency,
   getExchangeRate,
   convertCurrency,
-  getAllRates
+  getAllRates,
+  loadCachedFxRates,
+  refreshFxRates
 };
 
