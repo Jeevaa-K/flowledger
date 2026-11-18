@@ -502,7 +502,7 @@ const UI = {
     const summary = document.getElementById('accountSummary');
     if (!grid) return;
     const baseCurrCode = normalizeCurrCode(currentCurrency());
-    const totalBalance = accounts.reduce((s,a) => s + (a.base_balance !== undefined ? a.base_balance : a.balance), 0);
+    const totalBalance = accounts.reduce((s,a) => s + (parseFloat(a.base_balance !== undefined ? a.base_balance : a.balance) || 0), 0);
     const negativeCount = accounts.filter(a => a.balance < 0).length;
     if (summary) summary.innerHTML = `
       <div class="bs-card"><div class="bs-label">Total Balance (Net Liquid)</div><div class="bs-val" style="color:${totalBalance>=0?'var(--income)':'var(--expense)'}">${fmt(totalBalance)}</div></div>
@@ -660,18 +660,21 @@ const UI = {
     const grid    = document.getElementById('budgetGrid');
     const summary = document.getElementById('budgetSummary');
     if (!grid) return;
-    const totalLimit = budgets.reduce((s,b) => s + b.monthly_limit, 0);
-    const totalSpent = budgets.reduce((s,b) => s + b.spent, 0);
-    const overBudget = budgets.filter(b => b.percent >= 100).length;
+    const totalLimit = (budgets || []).reduce((s,b) => s + (parseFloat(b.monthly_limit) || 0), 0);
+    const totalSpent = (budgets || []).reduce((s,b) => s + (parseFloat(b.spent) || 0), 0);
+    const overBudget = (budgets || []).filter(b => (parseFloat(b.percent) || 0) >= 100).length;
     if (summary) summary.innerHTML = `
       <div class="bs-card"><div class="bs-label">Total Budget</div><div class="bs-val">${fmt(totalLimit)}</div></div>
       <div class="bs-card"><div class="bs-label">Total Spent</div><div class="bs-val" style="color:var(--expense)">${fmt(totalSpent)}</div></div>
       <div class="bs-card"><div class="bs-label">Over Budget</div><div class="bs-val" style="color:${overBudget>0?'var(--expense)':'var(--income)'}">${overBudget} categor${overBudget===1?'y':'ies'}</div></div>`;
     if (!budgets.length) { grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1">No budgets yet. Set one to start tracking!</div>'; return; }
     grid.innerHTML = budgets.map(b => {
-      const color     = b.percent >= 100 ? 'var(--expense)' : b.percent >= 80 ? 'var(--warning)' : 'var(--income)';
-      const barBg     = b.percent >= 100 ? 'var(--expense)' : b.percent >= 80 ? 'var(--warning)'  : 'var(--income)';
-      const remaining = b.monthly_limit - b.spent;
+      const limit     = parseFloat(b.monthly_limit) || 0;
+      const spent     = parseFloat(b.spent) || 0;
+      const percent   = Number.isFinite(b.percent) ? b.percent : (limit > 0 ? Math.min(Math.round((spent / limit) * 100), 100) : 0);
+      const color     = percent >= 100 ? 'var(--expense)' : percent >= 80 ? 'var(--warning)' : 'var(--income)';
+      const barBg     = percent >= 100 ? 'var(--expense)' : percent >= 80 ? 'var(--warning)'  : 'var(--income)';
+      const remaining = limit - spent;
       return `<div class="budget-card">
         <div class="budget-header">
           <div class="budget-cat-wrap">
@@ -681,12 +684,12 @@ const UI = {
           <button class="budget-delete" data-action="del-budget" data-id="${b.id}">✕</button>
         </div>
         <div class="budget-amounts">
-          <span>Spent: <span>${fmt(b.spent)}</span></span>
-          <span>Limit: <span>${fmt(b.monthly_limit)}</span></span>
+          <span>Spent: <span>${fmt(spent)}</span></span>
+          <span>Limit: <span>${fmt(limit)}</span></span>
         </div>
-        <div class="budget-bar-bg"><div class="budget-bar-fill" style="width:${b.percent}%;background:${barBg}"></div></div>
+        <div class="budget-bar-bg"><div class="budget-bar-fill" style="width:${percent}%;background:${barBg}"></div></div>
         <div class="budget-footer">
-          <div class="budget-percent" style="color:${color}">${b.percent}%</div>
+          <div class="budget-percent" style="color:${color}">${percent}%</div>
           <div class="budget-remaining" style="color:${remaining>=0?'var(--income)':'var(--expense)'}">${remaining>=0?fmt(remaining)+' left':fmt(Math.abs(remaining))+' over'}</div>
         </div>
       </div>`;

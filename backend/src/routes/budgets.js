@@ -16,7 +16,8 @@ router.get('/budgets', auth, async (req, res) => {
         [req.user.id, b.category, month]
       );
       const spent = parseFloat(row?.t || 0);
-      return { ...b, spent, percent: Math.min(Math.round((spent / b.monthly_limit) * 100), 100) };
+      const limit = parseFloat(b.monthly_limit || 0);
+      return { ...b, monthly_limit: limit, spent, percent: limit > 0 ? Math.min(Math.round((spent / limit) * 100), 100) : 0 };
     }));
     res.json(result);
   } catch (e) { safeError(res, e, 'List budgets'); }
