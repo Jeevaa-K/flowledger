@@ -1,6 +1,17 @@
 @echo off
 setlocal
 
+:: ==============================================================================
+:: WARNING: LOCAL DEVELOPMENT ONLY!
+:: DO NOT RUN THIS SCRIPT IN A PRODUCTION ENVIRONMENT.
+:: This script temporarily alters pg_hba.conf to reset the local Postgres password.
+:: ==============================================================================
+
+if /I "%NODE_ENV%"=="production" (
+    echo [ERROR] Refusing to run in production environment!
+    exit /b 1
+)
+
 :: Check if running with Administrator privileges
 net session >nul 2>&1
 if %errorLevel% neq 0 (

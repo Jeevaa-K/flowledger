@@ -178,7 +178,14 @@ const Auth = {
     this.setError('registerError', '');
     if (!name || !email || !password) { this.setError('registerError', 'Please fill in all fields'); return; }
     if (password !== confirm)          { this.setError('registerError', 'Passwords do not match'); return; }
-    if (password.length < 6)           { this.setError('registerError', 'Password must be at least 6 characters'); return; }
+    if (password.length < 8) {
+      this.setError('registerError', 'Password must be at least 8 characters');
+      return;
+    }
+    if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+      this.setError('registerError', 'Password must include at least one letter and one number');
+      return;
+    }
     const btn = document.getElementById('registerBtn');
     btn.textContent = 'Creating account...'; btn.disabled = true;
     try {
@@ -196,17 +203,11 @@ const Auth = {
   async tryDemo() {
     this.setError('loginError', '');
     try {
-      let data;
-      try {
-        data = await API.post('/auth/login', { email: 'demo@flowledger.app', password: 'demo123456' });
-      } catch {
-        data = await API.post('/auth/register', { name: 'Demo User', email: 'demo@flowledger.app', password: 'demo123456' });
-      }
+      const data = await API.post('/auth/demo');
       this.storeSession(data, false);
-      // See the comment in login() above.
       window.location.reload();
     } catch (e) {
-      this.setError('loginError', 'Demo failed: ' + e.message.replace(/^\d+:\s*/, ''));
+      this.setError('loginError', e.message.replace(/^\d+:\s*/, ''));
     }
   },
 
@@ -236,9 +237,8 @@ const Auth = {
 
   async logout() {
     if (!confirm('Log out of FlowLedger?')) return;
-    // Ask the server to clear the httpOnly session cookie.
-    try { await fetch('/api/auth/logout', { method: 'POST', headers: API.headers() }); } catch {}
-    localStorage.removeItem('fl_token');
+    try { await API.post('/auth/logout'); } catch {}
+    await API.clearToken();
     localStorage.removeItem('fl_user');
     localStorage.removeItem('fl_remember');
     window.location.reload();

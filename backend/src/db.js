@@ -164,8 +164,46 @@ async function initDB() {
     member_id INTEGER NOT NULL REFERENCES group_members(id) ON DELETE CASCADE,
     split_amount NUMERIC NOT NULL
   )`);
+  await db.run(`ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER DEFAULT 1`);
+  await db.run(`ALTER TABLE users ADD COLUMN IF NOT EXISTS timezone TEXT DEFAULT 'Asia/Kolkata'`);
+  await db.run(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_lower_email ON users (LOWER(email))`);
+  await db.run(`CREATE TABLE IF NOT EXISTS password_resets (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash TEXT NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    used BOOLEAN DEFAULT false,
+    created_at TIMESTAMP DEFAULT NOW()
+  )`);
+  await db.run(`CREATE INDEX IF NOT EXISTS idx_password_resets_hash ON password_resets (token_hash)`);
+  await db.run(`ALTER TABLE recurring ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT '₹'`);
+  await db.run(`ALTER TABLE recurring ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}'`);
+  await db.run(`CREATE TABLE IF NOT EXISTS fx_rates (
+    base VARCHAR(10) PRIMARY KEY,
+    rates TEXT NOT NULL,
+    fetched_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`);
   await migrateDefaultAccounts();
+  await migrateDefaultRecurringAccounts();
   console.log('✅ Database tables ready');
+}
+
+// Backfill existing recurring rules with user's default account if unassigned
+async function migrateDefaultRecurringAccounts() {
+  try {
+    const recurringNeedingAccount = await db.all(`
+      SELECT r.id, r.user_id FROM recurring r
+      WHERE r.account_id IS NULL
+    `);
+    for (const { id, user_id } of recurringNeedingAccount) {
+      const defaultAcc = await db.get(`SELECT id FROM accounts WHERE user_id=$1 ORDER BY id ASC LIMIT 1`, [user_id]);
+      if (defaultAcc) {
+        await db.run(`UPDATE recurring SET account_id=$1 WHERE id=$2`, [defaultAcc.id, id]);
+      }
+    }
+  } catch (err) {
+    console.warn('Recurring accounts migration warning:', err.message);
+  }
 }
 
 // One-time backfill: any user who has transactions but no accounts yet

@@ -13,8 +13,16 @@ if (!JWT_SECRET) {
   console.error('❌ FATAL: JWT_SECRET environment variable is not set. Refusing to start.');
   process.exit(1);
 }
-if (JWT_SECRET.length < 32) {
-  console.error('❌ FATAL: JWT_SECRET is too short (min 32 characters). Refusing to start.');
+const INSECURE_JWT_DEFAULTS = new Set([
+  'CHANGE_ME_generate_with_openssl_rand_hex_64',
+  'change_me_to_a_long_random_string_of_32_plus_chars',
+  'secret',
+  'jwt_secret',
+  'your_secret_key_here'
+]);
+
+if (isProd && (INSECURE_JWT_DEFAULTS.has(JWT_SECRET) || /change_me/i.test(JWT_SECRET))) {
+  console.error('❌ FATAL: Default or placeholder JWT_SECRET detected in production. Generate a secure secret using: openssl rand -hex 64');
   process.exit(1);
 }
 

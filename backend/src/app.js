@@ -3,7 +3,7 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 const { isProd } = require('./config');
 const {
-  securityHeaders, corsMiddleware, originGuard, apiLimiter
+  securityHeaders, corsMiddleware, originGuard, apiLimiter, aiLimiter
 } = require('./middleware/security');
 
 function createApp() {
@@ -16,10 +16,20 @@ function createApp() {
   app.use(corsMiddleware);
   app.use(originGuard);
   app.use(cookieParser());
-  app.use(express.json({ limit: '10mb' })); // receipt images arrive as base64
+
+  // 100kb global json limit; 10MB only on receipt scan route for image uploads
+  const standardJson = express.json({ limit: '100kb' });
+  const receiptJson = express.json({ limit: '10mb' });
+  app.use((req, res, next) => {
+    if (req.path === '/api/ai/scan-receipt') {
+      return receiptJson(req, res, next);
+    }
+    standardJson(req, res, next);
+  });
 
   app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
   app.use('/api/', apiLimiter);
+  app.use('/api/ai', aiLimiter);
 
   app.use('/api', require('./routes/auth'));
   app.use('/api', require('./routes/transactions'));

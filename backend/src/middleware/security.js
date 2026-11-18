@@ -23,14 +23,26 @@ const securityHeaders = helmet({
   crossOriginEmbedderPolicy: false
 });
 
-// An origin is trusted if it is this very server (same-origin), listed in ALLOWED_ORIGINS,
+// Explicit allowed origins for web, Capacitor native hybrid apps, and configured domains
+const EXPLICIT_ALLOWED_ORIGINS = [
+  'capacitor://localhost',
+  'http://localhost',
+  'https://localhost',
+  ...allowedOrigins
+];
+
+// An origin is trusted if it is this very server (same-origin), listed in EXPLICIT_ALLOWED_ORIGINS,
 // or a native hybrid app container (Capacitor/Cordova webview).
 function isAllowedOrigin(origin, req) {
   if (!origin) return true;
-  if (allowedOrigins.includes(origin)) return true;
-  if (origin === 'capacitor://localhost' || origin === 'http://localhost' || origin === 'https://localhost') return true;
-  try { return new URL(origin).host === req.headers.host; }
-  catch { return false; }
+  if (EXPLICIT_ALLOWED_ORIGINS.includes(origin)) return true;
+  try {
+    const originHost = new URL(origin).host;
+    if (originHost && req && req.headers && req.headers.host && originHost === req.headers.host) {
+      return true;
+    }
+  } catch {}
+  return false;
 }
 
 const corsMiddleware = cors((req, cb) => {
@@ -38,8 +50,8 @@ const corsMiddleware = cors((req, cb) => {
   cb(null, {
     origin: !origin || isAllowedOrigin(origin, req),
     credentials: true,
-    // Needed so the browser lets fetch() read the pagination header.
-    exposedHeaders: ['X-Total-Count']
+    // Expose pagination header and native auth token header for Capacitor apps
+    exposedHeaders: ['X-Total-Count', 'X-Auth-Token']
   });
 });
 
@@ -68,4 +80,13 @@ const apiLimiter = rateLimit({
   message: { error: 'Too many requests. Please slow down.' }
 });
 
-module.exports = { securityHeaders, corsMiddleware, originGuard, authLimiter, apiLimiter };
+const aiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 20, // 20 requests per minute
+  keyGenerator: (req) => req.user?.id ? String(req.user.id) : (req.ip || 'anonymous'),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many AI requests. Please wait a minute and try again.' }
+});
+
+module.exports = { securityHeaders, corsMiddleware, originGuard, authLimiter, apiLimiter, aiLimiter };

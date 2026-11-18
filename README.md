@@ -7,7 +7,7 @@ assistant ("NOVA"). Node/Express + PostgreSQL backend, vanilla-JS frontend.
 ## Run locally
 ```bash
 cd backend
-cp .env.example .env     # then set JWT_SECRET and DATABASE_URL
+cp .env.example .env     # then set JWT_SECRET (generate with: openssl rand -hex 64) and DATABASE_URL
 npm install
 npm run dev              # http://localhost:3001  (Windows: double-click start.bat)
 ```
