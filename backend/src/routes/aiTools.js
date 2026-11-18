@@ -1,7 +1,8 @@
 const express = require('express');
 const { auth } = require('../middleware/auth');
-const { groq, createGroqCompletion } = require('../services/ai');
+const { groq, createGroqCompletion, cleanLLMOutput } = require('../services/ai');
 const { db } = require('../db');
+const { getUserToday } = require('../utils');
 const router = express.Router();
 
 // ── AI Natural Language Quick Add ─────────────────────────────
@@ -21,7 +22,7 @@ router.post('/ai/parse-text', auth, async (req, res) => {
     const validCats = Array.from(new Set([...catList, ...defaultCats]));
 
     const accounts = await db.all(`SELECT id, name, type FROM accounts WHERE user_id=$1 AND archived=false`, [req.user.id]);
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getUserToday(req.user?.timezone);
 
     const systemPrompt = `You are a financial entity extraction engine. Parse the user's transaction input into structured JSON.
 Today's date is: ${today}.
@@ -59,7 +60,7 @@ Example output:
       temperature: 0.1
     });
 
-    const parsed = JSON.parse(completion.choices[0].message.content || '{}');
+    const parsed = JSON.parse(cleanLLMOutput(completion.choices[0]?.message?.content || '{}'));
     res.json({ success: true, result: parsed });
   } catch (e) {
     console.error('AI parse-text error:', e.message);
@@ -83,7 +84,7 @@ Example output:
         type: isIncome ? 'income' : 'expense',
         category: cat,
         account_id: null,
-        date: new Date().toISOString().slice(0, 10),
+        date: getUserToday(req.user?.timezone),
         tags: ['quick-add']
       };
       return res.json({ success: true, result: fallbackResult });
@@ -352,10 +353,7 @@ Return ONLY a valid JSON object with the following fields:
           max_tokens: 1500,
           temperature: 0.1
         });
-        let content = completion.choices[0]?.message?.content || '';
-        if (content.includes('</think>')) {
-          content = content.split('</think>')[1].trim();
-        }
+        let content = cleanLLMOutput(completion.choices[0]?.message?.content || '');
         if (content) {
           jsonResult = JSON.parse(content);
           if (jsonResult) break;
@@ -368,7 +366,11 @@ Return ONLY a valid JSON object with the following fields:
 
     if (!jsonResult) {
       if (lastErr && (lastErr.status === 401 || (lastErr.message && lastErr.message.includes('invalid_api_key')))) {
-        return res.status(401).json({ error: 'Groq API key is invalid or expired. Please update GROQ_API_KEY in backend/.env' });
+        console.error('Groq API authentication failed (401) during receipt scan:', lastErr.message);
+        if (process.env.NODE_ENV !== 'production') {
+          return res.status(401).json({ error: 'Groq API key is invalid or expired. Please update GROQ_API_KEY in backend/.env' });
+        }
+        return res.status(503).json({ error: 'AI is temporarily unavailable. Please try again later.' });
       }
       throw lastErr || new Error('Failed to process image');
     }
