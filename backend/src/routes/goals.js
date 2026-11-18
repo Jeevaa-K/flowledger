@@ -38,14 +38,26 @@ router.post('/goals', auth, async (req, res) => {
 router.put('/goals/:id', auth, async (req, res) => {
   try {
     const { name, target, saved, date } = req.body;
-    if (name && name.length > 100) return res.status(400).json({ error: 'Goal name too long' });
-    const targetNum = target !== undefined ? parseFloat(target) : undefined;
-    if (targetNum !== undefined && (!Number.isFinite(targetNum) || targetNum <= 0)) return res.status(400).json({ error: 'Invalid target amount' });
-    const savedNum = saved !== undefined ? parseFloat(saved) : undefined;
-    if (savedNum !== undefined && (!Number.isFinite(savedNum) || savedNum < 0)) return res.status(400).json({ error: 'Invalid saved amount' });
+    if (name !== undefined && (!name || name.trim().length > 100)) {
+      return res.status(400).json({ error: 'Goal name must be between 1 and 100 characters' });
+    }
+    const targetNum = target !== undefined ? parseFloat(target) : null;
+    if (target !== undefined && (!Number.isFinite(targetNum) || targetNum <= 0)) {
+      return res.status(400).json({ error: 'Invalid target amount' });
+    }
+    const savedNum = saved !== undefined ? parseFloat(saved) : null;
+    if (saved !== undefined && (!Number.isFinite(savedNum) || savedNum < 0)) {
+      return res.status(400).json({ error: 'Invalid saved amount' });
+    }
+
     const row = await db.get(
-      'UPDATE goals SET name=$1,target=$2,saved=$3,target_date=$4 WHERE id=$5 AND user_id=$6 RETURNING *',
-      [name, targetNum, savedNum, date || null, req.params.id, req.user.id]
+      `UPDATE goals SET 
+         name = COALESCE($1, name),
+         target = COALESCE($2, target),
+         saved = COALESCE($3, saved),
+         target_date = COALESCE($4, target_date)
+       WHERE id=$5 AND user_id=$6 RETURNING *`,
+      [name ? name.trim() : null, targetNum, savedNum, date || null, req.params.id, req.user.id]
     );
     if (!row) return res.status(404).json({ error: 'Goal not found' });
     res.json(mapGoalRow(row));

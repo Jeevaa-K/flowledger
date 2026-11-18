@@ -1,5 +1,6 @@
 const cron = require('node-cron');
 const { db } = require('../db');
+const { getUserToday } = require('../utils');
 
 // Advances a date by one period, clamping to the last valid day of the
 // target month instead of letting JS overflow (e.g. Jan 31 + 1 month
@@ -31,33 +32,55 @@ function addPeriod(date, frequency, anchorDay) {
 }
 
 async function processDueRecurring() {
-  const today = new Date().toISOString().slice(0, 10);
   try {
-    const due = await db.all('SELECT * FROM recurring WHERE active=1 AND next_date<=$1', [today]);
-    for (const r of due) {
-      // anchorDay is fixed from the rule's ORIGINAL next_date — not re-derived
-      // after each step — so a clamp in a short month (Feb 28) doesn't
-      // permanently shrink a "31st of the month" rule.
-      const anchorDay = parseInt(String(r.next_date).slice(8, 10), 10);
+    // Join with users table to query timezone and default currency/account
+    const due = await db.all(`
+      SELECT r.*, u.timezone, u.currency as user_currency
+      FROM recurring r
+      JOIN users u ON r.user_id = u.id
+      WHERE r.active=1
+    `);
 
-      // Generate one transaction per missed period (backfill) rather than a
-      // single insert dated "today". Cap at 365 iterations so an unknown
-      // frequency or a very old start date can't loop forever.
+    for (const r of due) {
+      const today = getUserToday(r.timezone || 'Asia/Kolkata');
+      const nextDateStr = String(r.next_date).slice(0, 10);
+      if (nextDateStr > today) continue;
+
+      const anchorDay = parseInt(nextDateStr.slice(8, 10), 10);
+
+      // Determine fallback account if not set
+      let targetAccountId = r.account_id;
+      if (!targetAccountId) {
+        const defAcc = await db.get(`SELECT id FROM accounts WHERE user_id=$1 ORDER BY id ASC LIMIT 1`, [r.user_id]);
+        targetAccountId = defAcc?.id || null;
+      }
+
       let currentDue = new Date(r.next_date);
       let iterations = 0;
       while (currentDue.toISOString().slice(0, 10) <= today && iterations < 365) {
         iterations++;
         const txDate = currentDue.toISOString().slice(0, 10);
         await db.run(
-          'INSERT INTO transactions (user_id,description,amount,type,category,date) VALUES ($1,$2,$3,$4,$5,$6)',
-          [r.user_id, r.description, r.amount, r.type, r.category, txDate]
+          `INSERT INTO transactions (user_id, description, amount, type, category, date, account_id, original_currency, tags) 
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          [
+            r.user_id,
+            r.description,
+            r.amount,
+            r.type,
+            r.category,
+            txDate,
+            targetAccountId,
+            r.currency || r.user_currency || '₹',
+            r.tags || []
+          ]
         );
         currentDue = addPeriod(currentDue, r.frequency, anchorDay);
       }
 
       await db.run('UPDATE recurring SET next_date=$1 WHERE id=$2', [currentDue.toISOString().slice(0, 10), r.id]);
     }
-    if (due.length) console.log(`✅ Processed ${due.length} recurring transactions`);
+    if (due.length) console.log(`✅ Processed recurring checks across ${due.length} active rule(s)`);
   } catch (e) { console.error('Cron error:', e.message); }
 }
 

@@ -1,7 +1,7 @@
 const express = require('express');
 const { auth } = require('../middleware/auth');
 const { db } = require('../db');
-const { safeError } = require('../utils');
+const { safeError, getUserToday } = require('../utils');
 const router = express.Router();
 
 // ── Group Expense Splitting API ────────────────────────────────
@@ -163,11 +163,63 @@ router.post('/groups/:id/expenses', auth, async (req, res) => {
     return res.status(400).json({ error: 'Description, amount, and payer are required' });
   }
 
+  const totalAmt = parseFloat(amount);
+  if (!Number.isFinite(totalAmt) || totalAmt <= 0) {
+    return res.status(400).json({ error: 'Expense amount must be a positive number' });
+  }
+
   try {
     const group = await db.get(`SELECT id FROM groups WHERE id=$1 AND user_id=$2`, [groupId, req.user.id]);
     if (!group) return res.status(404).json({ error: 'Group not found' });
 
-    const totalAmt = parseFloat(amount);
+    // Verify payer exists in this group
+    const payerMember = await db.get(
+      `SELECT id FROM group_members WHERE id=$1 AND group_id=$2`,
+      [parseInt(payer_id), groupId]
+    );
+    if (!payerMember) {
+      return res.status(400).json({ error: 'Payer does not belong to this group' });
+    }
+
+    const members = await db.all(`SELECT id FROM group_members WHERE group_id=$1`, [groupId]);
+    const validMemberIds = new Set(members.map(m => m.id));
+
+    // Calculate or validate splits
+    let splitList = Array.isArray(splits) ? splits : [];
+    if (!splitList.length) {
+      // Equal split among all group members in integer minor units (paise)
+      // base = floor(total / n), remainder = total % n, give 1 extra paisa to the first remainder people
+      const totalPaise = Math.round(totalAmt * 100);
+      const n = members.length;
+      const basePaise = Math.floor(totalPaise / n);
+      const remainder = totalPaise % n;
+      splitList = members.map((m, idx) => ({
+        member_id: m.id,
+        split_amount: (basePaise + (idx < remainder ? 1 : 0)) / 100
+      }));
+    } else {
+      // Validate each split member exists in this group and amounts are positive
+      let totalSplitPaise = 0;
+      for (const s of splitList) {
+        const mid = parseInt(s.member_id);
+        const sAmt = parseFloat(s.split_amount);
+        if (!validMemberIds.has(mid)) {
+          return res.status(400).json({ error: `Member ID ${mid} does not belong to this group` });
+        }
+        if (!Number.isFinite(sAmt) || sAmt < 0) {
+          return res.status(400).json({ error: 'Split amount must be non-negative' });
+        }
+        totalSplitPaise += Math.round(sAmt * 100);
+      }
+      // Check sum(splits) equals total amount in integer paise
+      const expectedTotalPaise = Math.round(totalAmt * 100);
+      if (totalSplitPaise !== expectedTotalPaise) {
+        return res.status(400).json({
+          error: `Sum of splits (${(totalSplitPaise / 100).toFixed(2)}) must exactly equal total amount (${totalAmt.toFixed(2)})`
+        });
+      }
+    }
+
     const expDate = date || new Date().toISOString().slice(0, 10);
 
     const expense = await db.get(
@@ -175,15 +227,6 @@ router.post('/groups/:id/expenses', auth, async (req, res) => {
        VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
       [groupId, parseInt(payer_id), description.trim(), totalAmt, category || 'Other', expDate]
     );
-
-    // Save splits
-    let splitList = Array.isArray(splits) ? splits : [];
-    if (!splitList.length) {
-      // Equal split among all group members by default
-      const members = await db.all(`SELECT id FROM group_members WHERE group_id=$1`, [groupId]);
-      const share = Number((totalAmt / members.length).toFixed(2));
-      splitList = members.map(m => ({ member_id: m.id, split_amount: share }));
-    }
 
     for (const s of splitList) {
       await db.run(
@@ -206,6 +249,14 @@ router.post('/groups/:id/settle', auth, async (req, res) => {
   if (!from_id || !to_id || !amount) {
     return res.status(400).json({ error: 'Payer, recipient, and amount required' });
   }
+  if (parseInt(from_id) === parseInt(to_id)) {
+    return res.status(400).json({ error: 'Payer and recipient cannot be the same member' });
+  }
+
+  const settleAmt = parseFloat(amount);
+  if (!Number.isFinite(settleAmt) || settleAmt <= 0) {
+    return res.status(400).json({ error: 'Settlement amount must be greater than zero' });
+  }
 
   try {
     const group = await db.get(`SELECT id FROM groups WHERE id=$1 AND user_id=$2`, [groupId, req.user.id]);
@@ -213,9 +264,8 @@ router.post('/groups/:id/settle', auth, async (req, res) => {
 
     const fromMember = await db.get(`SELECT name FROM group_members WHERE id=$1 AND group_id=$2`, [parseInt(from_id), groupId]);
     const toMember = await db.get(`SELECT name FROM group_members WHERE id=$1 AND group_id=$2`, [parseInt(to_id), groupId]);
-    if (!fromMember || !toMember) return res.status(404).json({ error: 'Members not found' });
+    if (!fromMember || !toMember) return res.status(404).json({ error: 'Members not found in this group' });
 
-    const settleAmt = parseFloat(amount);
     const expDate = date || new Date().toISOString().slice(0, 10);
     const desc = `Settlement: ${fromMember.name} paid ${toMember.name}`;
 

@@ -29,9 +29,16 @@ router.get('/export/csv', auth, async (req, res) => {
 router.get('/burnrate', auth, async (req, res) => {
   try {
     const userId = req.user.id;
-    const now    = new Date();
-    const month  = parseInt(req.query.month) || (now.getMonth() + 1);
-    const year   = parseInt(req.query.year)  || now.getFullYear();
+    const now = new Date();
+    const month = req.query.month !== undefined ? parseInt(req.query.month, 10) : (now.getMonth() + 1);
+    const year = req.query.year !== undefined ? parseInt(req.query.year, 10) : now.getFullYear();
+
+    if (!Number.isInteger(month) || month < 1 || month > 12) {
+      return res.status(400).json({ error: 'Invalid month (must be an integer between 1 and 12)' });
+    }
+    if (!Number.isInteger(year) || year < 2000 || year > 2100) {
+      return res.status(400).json({ error: 'Invalid year (must be an integer between 2000 and 2100)' });
+    }
 
     // Total income & expense for the requested month
     const summaryRes = await pool.query(
@@ -76,7 +83,7 @@ router.get('/burnrate', auth, async (req, res) => {
     });
   } catch(e) {
     console.error('Burn rate error:', e);
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 });
 
