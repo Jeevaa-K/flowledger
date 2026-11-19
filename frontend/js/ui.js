@@ -8,7 +8,11 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
-if (typeof window !== 'undefined') window.escapeHtml = escapeHtml;
+const html = (s, ...v) => s.reduce((o, str, i) => o + str + (i < v.length ? escapeHtml(v[i]) : ''), '');
+if (typeof window !== 'undefined') {
+  window.escapeHtml = escapeHtml;
+  window.html = html;
+}
 
 // Locale per symbol so number grouping looks native for each currency
 const CURRENCY_LOCALE = {
@@ -113,13 +117,13 @@ const UI = {
     container.innerHTML = this.splitRows.map((r, i) => `
       <div class="split-row" data-index="${i}">
         <select class="split-cat-select" data-index="${i}">
-          ${cats.map(c => `<option value="${c}" ${c === r.category ? 'selected' : ''}>${c}</option>`).join('')}
+          ${cats.map(c => `<option value="${escapeHtml(c)}" ${c === r.category ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('')}
         </select>
         <div class="input-prefix" style="max-width:140px">
           <span>₹</span>
           <input type="number" class="split-amt-input" data-index="${i}" placeholder="0.00" min="0" step="0.01" value="${r.amount !== '' && r.amount !== undefined ? r.amount : ''}" />
         </div>
-        <input type="text" class="split-note-input" data-index="${i}" placeholder="Detail/Note (optional)" value="${r.note || ''}" style="flex:1" />
+        <input type="text" class="split-note-input" data-index="${i}" placeholder="Detail/Note (optional)" value="${escapeHtml(r.note || '')}" style="flex:1" />
         <button type="button" class="btn-ghost split-del-btn" data-index="${i}" title="Remove part" ${this.splitRows.length <= 2 ? 'disabled style="opacity:0.35;cursor:not-allowed"' : ''}>✕</button>
       </div>
     `).join('');
@@ -217,11 +221,11 @@ const UI = {
     const picker = document.getElementById('catPicker');
     const select = document.getElementById('txnCategory');
     if (!select) return;
-    select.innerHTML = cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+    select.innerHTML = cats.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
     select.value = current;
     if (picker) picker.innerHTML = cats.map(c=>`
-      <button type="button" class="cat-chip${c===current?' active':''}" data-action="select-cat" data-cat="${c}">
-        ${CAT_EMOJIS[c]||'•'} ${c}
+      <button type="button" class="cat-chip${c===current?' active':''}" data-action="select-cat" data-cat="${escapeHtml(c)}">
+        ${CAT_EMOJIS[c]||'•'} ${escapeHtml(c)}
       </button>`).join('');
   },
 
@@ -364,7 +368,7 @@ const UI = {
     const accSel = document.getElementById('asSourceAccount');
     if (accSel && typeof State !== 'undefined' && Array.isArray(State.accounts)) {
       const active = State.accounts.filter(a => !a.archived);
-      let opts = active.map(a => `<option value="${a.id}">${a.name} (${fmt(a.balance || 0)})</option>`).join('');
+      let opts = active.map(a => `<option value="${a.id}">${escapeHtml(a.name)} (${fmt(a.balance || 0)})</option>`).join('');
       opts += '<option value="">(None - Don\'t change account balance)</option>';
       accSel.innerHTML = opts;
     }
@@ -475,7 +479,7 @@ const UI = {
   // without each needing its own fetch).
   populateAccountSelects(accounts, filterEl='') {
     const active = accounts.filter(a => !a.archived);
-    const opts = active.map(a => `<option value="${a.id}" data-currency="${a.currency || ''}">${a.name}${a.currency ? ` (${a.currency})` : ''}</option>`).join('');
+    const opts = active.map(a => `<option value="${a.id}" data-currency="${a.currency || ''}">${escapeHtml(a.name)}${a.currency ? ` (${escapeHtml(a.currency)})` : ''}</option>`).join('');
 
     const txnSel = document.getElementById('txnAccount');
     if (txnSel) txnSel.innerHTML = opts || '<option value="">No accounts yet</option>';
@@ -492,7 +496,7 @@ const UI = {
 
     const asSel = document.getElementById('asSourceAccount');
     if (asSel) {
-      const asOpts = active.map(a => `<option value="${a.id}">${a.name} (${fmt(a.balance || 0)})</option>`).join('');
+      const asOpts = active.map(a => `<option value="${a.id}">${escapeHtml(a.name)} (${fmt(a.balance || 0)})</option>`).join('');
       asSel.innerHTML = asOpts + '<option value="">(None - Don\'t change account balance)</option>';
     }
   },
@@ -627,7 +631,7 @@ const UI = {
         ? `<span class="txn-split-chip" title="Part of a split transaction">Split</span>`
         : '';
       const tagsHtml = (t.tags && t.tags.length)
-        ? `<div class="txn-tags">${t.tags.map(g => `<span class="txn-tag-chip">#${g}</span>`).join('')}</div>`
+        ? `<div class="txn-tags">${t.tags.map(g => `<span class="txn-tag-chip">#${escapeHtml(g)}</span>`).join('')}</div>`
         : '';
       let amountHtml = `${isIncome?'+':'-'}${fmt(t.amount)}`;
       const baseCurrCode = normalizeCurrCode(currentCurrency());
@@ -709,7 +713,7 @@ const UI = {
     el.innerHTML = cats.slice(0,5).map(c => `
       <div class="top-cat-row">
         <div class="tc-dot" style="background:${CAT_COLORS[c.category]||'#A79C8C'}"></div>
-        <div class="tc-name">${CAT_EMOJIS[c.category]||''} ${c.category}</div>
+        <div class="tc-name">${CAT_EMOJIS[c.category]||''} ${escapeHtml(c.category)}</div>
         <div class="tc-bar-bg"><div class="tc-bar-fill" style="width:${Math.round(c.total/max*100)}%;background:${CAT_COLORS[c.category]||'#A79C8C'}"></div></div>
         <div class="tc-amount">${fmt(c.total)}</div>
       </div>`).join('') || '<div class="empty-state">No data yet.</div>';
@@ -722,7 +726,7 @@ const UI = {
     el.innerHTML = cats.slice(0,8).map(c => `
       <div class="cat-row">
         <div class="cat-dot" style="background:${CAT_COLORS[c.category]||'#A79C8C'}"></div>
-        <div class="cat-name">${CAT_EMOJIS[c.category]||''} ${c.category}</div>
+        <div class="cat-name">${CAT_EMOJIS[c.category]||''} ${escapeHtml(c.category)}</div>
         <div class="cat-bar-bg"><div class="cat-bar-fill" style="width:${Math.round(c.total/max*100)}%;background:${CAT_COLORS[c.category]||'#A79C8C'}"></div></div>
         <div class="cat-amount">${fmt(c.total)}</div>
       </div>`).join('') || '<div class="empty-state">No expense data yet.</div>';

@@ -1863,13 +1863,55 @@
           <button class="eye-btn" type="button" data-action="toggle-pwd" data-target="loginPassword" aria-label="Show password"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
         </div>
       </div>
-      <div class="auth-remember">
+      <div class="auth-remember" style="display:flex;justify-content:space-between;align-items:center">
         <label><input type="checkbox" id="rememberMe" /> Remember me</label>
+        <button type="button" class="btn-link" id="showForgotBtn" data-action="auth-tab-forgot" style="background:none;border:none;color:var(--brand);font-size:12px;cursor:pointer;padding:0">Forgot password?</button>
       </div>
       <div class="auth-error" id="loginError" role="alert"></div>
       <button class="auth-btn" id="loginBtn">Login →</button>
       <div class="auth-demo">
         <button class="demo-btn" type="button" data-action="try-demo">Try Demo (no account needed)</button>
+      </div>
+    </div>
+
+    <!-- Forgot Password Form -->
+    <div id="formForgot" role="tabpanel" style="display:none">
+      <div style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;line-height:1.4">
+        Enter your email address and we'll send you a link to reset your password.
+      </div>
+      <div class="auth-form-group">
+        <label for="forgotEmail">Email</label>
+        <input type="email" id="forgotEmail" placeholder="you@example.com" autocomplete="email" />
+      </div>
+      <div class="auth-error" id="forgotError" role="alert"></div>
+      <div class="auth-success" id="forgotSuccess" style="color:var(--income);font-size:12px;margin-bottom:12px;display:none" role="status"></div>
+      <button class="auth-btn" id="forgotBtn">Send Reset Link →</button>
+      <div style="text-align:center;margin-top:14px">
+        <button type="button" class="btn-link" data-action="auth-tab-login" style="background:none;border:none;color:var(--text-tertiary);font-size:12px;cursor:pointer">← Back to Login</button>
+      </div>
+    </div>
+
+    <!-- Reset Password Form -->
+    <div id="formReset" role="tabpanel" style="display:none">
+      <div style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;line-height:1.4">
+        Enter your new password below to reset your account credentials.
+      </div>
+      <input type="hidden" id="resetToken" />
+      <div class="auth-form-group">
+        <label for="resetNewPassword">New Password <span style="color:#A79C8C;font-size:11px">(min 8 chars, 1 letter, 1 number)</span></label>
+        <div style="position:relative">
+          <input type="password" id="resetNewPassword" placeholder="••••••••" autocomplete="new-password" />
+          <button class="eye-btn" type="button" data-action="toggle-pwd" data-target="resetNewPassword" aria-label="Show password"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        </div>
+      </div>
+      <div class="auth-form-group">
+        <label for="resetConfirmPassword">Confirm New Password</label>
+        <input type="password" id="resetConfirmPassword" placeholder="••••••••" autocomplete="new-password" />
+      </div>
+      <div class="auth-error" id="resetError" role="alert"></div>
+      <button class="auth-btn" id="resetBtn">Set New Password →</button>
+      <div style="text-align:center;margin-top:14px">
+        <button type="button" class="btn-link" data-action="auth-tab-login" style="background:none;border:none;color:var(--text-tertiary);font-size:12px;cursor:pointer">← Back to Login</button>
       </div>
     </div>
 

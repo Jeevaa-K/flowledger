@@ -16,6 +16,18 @@ const PRECACHE_ASSETS = [
   '/js/groups.js',
   '/js/recurring.js',
   '/js/app.js',
+  '/js/main.js',
+  '/js/modules/ai.js',
+  '/js/modules/budgets.js',
+  '/js/modules/dashboard.js',
+  '/js/modules/goals.js',
+  '/js/modules/notifications.js',
+  '/js/modules/profile.js',
+  '/js/modules/reports.js',
+  '/js/modules/state.js',
+  '/js/modules/subscriptions.js',
+  '/js/modules/tags.js',
+  '/js/modules/transactions.js',
   '/js/pwa.js',
   '/manifest.json',
   '/favicon.svg',
@@ -55,32 +67,17 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // API Requests: Stale-While-Revalidate with offline fallback
+  // API Requests: Network-only, fall back to 503 JSON when offline (never cache financial data)
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
-      caches.open(CACHE_NAME).then(async cache => {
-        const cachedRes = await cache.match(req);
-
-        const fetchPromise = fetch(req)
-          .then(networkRes => {
-            if (networkRes && networkRes.status === 200) {
-              cache.put(req, networkRes.clone());
-            }
-            return networkRes;
-          })
-          .catch(() => {
-            if (!cachedRes) {
-              return new Response(
-                JSON.stringify({ offline: true, error: "You are currently offline. Check your internet connection." }),
-                {
-                  status: 503,
-                  headers: { 'Content-Type': 'application/json' }
-                }
-              );
-            }
-          });
-
-        return cachedRes || fetchPromise;
+      fetch(req).catch(() => {
+        return new Response(
+          JSON.stringify({ offline: true, error: "You are currently offline. Check your internet connection." }),
+          {
+            status: 503,
+            headers: { 'Content-Type': 'application/json' }
+          }
+        );
       })
     );
     return;

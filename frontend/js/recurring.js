@@ -551,12 +551,12 @@ const Recurring = {
             <div class="sub-feed-icon">${meta.icon}</div>
             <div class="sub-feed-info">
               <div class="sub-feed-name" style="${isPaused ? 'text-decoration:line-through;opacity:0.6' : ''}">
-                ${item.description}
+                ${escapeHtml(item.description)}
                 ${isPaused ? '<span style="font-size:10px;color:var(--text-tertiary);margin-left:4px">(Paused)</span>' : ''}
               </div>
               <div class="sub-feed-meta">
                 <span class="sub-feed-day-tag">${monthName.slice(0, 3)} ${o.day}</span>
-                <span>${item.category}</span>
+                <span>${escapeHtml(item.category)}</span>
                 <span>·</span>
                 ${statusBadge}
               </div>
@@ -679,7 +679,7 @@ const Recurring = {
           <div class="rc-top">
             <div class="rc-logo-group">
               <span class="rc-icon">${meta.icon}</span>
-              <span class="rc-name" title="${r.description}">${r.description}</span>
+              <span class="rc-name" title="${escapeHtml(r.description)}">${escapeHtml(r.description)}</span>
             </div>
             <span class="rc-badge ${badgeClass}">${badgeText}</span>
           </div>
@@ -717,10 +717,10 @@ const Recurring = {
           <div class="ds-logo" style="margin-right:4px">${meta.icon}</div>
           <div class="rec-info">
             <div class="rec-name" style="display:flex;align-items:center">
-              <span>${r.description}</span>
+              <span>${escapeHtml(r.description)}</span>
               <span class="sub-status-pill ${r.active ? 'active' : 'paused'}">${r.active ? 'Active' : 'Paused'}</span>
             </div>
-            <div class="rec-meta">${freqLabel[r.frequency] || r.frequency} · Next: ${r.next_date} · ${r.category}</div>
+            <div class="rec-meta">${freqLabel[r.frequency] || escapeHtml(r.frequency)} · Next: ${escapeHtml(r.next_date)} · ${escapeHtml(r.category)}</div>
           </div>
           <div class="rec-amount ${r.type === 'income' ? 'inc' : 'exp'}">${r.type === 'income' ? '+' : '-'}${fmt(r.amount)}</div>
           <div class="rec-actions">
@@ -799,8 +799,8 @@ const Recurring = {
           <div class="ds-left">
             <div class="ds-logo">${meta.icon}</div>
             <div class="ds-info">
-              <div class="ds-name">${d.description}</div>
-              <div class="ds-meta">${d.category} · Next: ${d.next_date}</div>
+              <div class="ds-name">${escapeHtml(d.description)}</div>
+              <div class="ds-meta">${escapeHtml(d.category)} · Next: ${escapeHtml(d.next_date)}</div>
             </div>
           </div>
           <div class="ds-right">

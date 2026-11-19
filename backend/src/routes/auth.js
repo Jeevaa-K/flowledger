@@ -1,10 +1,13 @@
 const express = require('express');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { JWT_SECRET, COOKIE_NAME } = require('../config');
 const { authLimiter } = require('../middleware/security');
 const { EMAIL_RE, safeError, isValidPassword } = require('../utils');
-const { pool, db } = require('../db');
+const { pool, db, withTransaction } = require('../db');
 const { auth, issueSession, clearSession } = require('../middleware/auth');
+const { sendPasswordResetEmail } = require('../services/email');
 const router = express.Router();
 
 // ── Auth Routes ───────────────────────────────────────────────
@@ -32,7 +35,7 @@ router.post('/auth/register', authLimiter, async (req, res) => {
 
     // Every user starts with one default account so the account picker is never empty
     await db.run(`INSERT INTO accounts (user_id, name, type) VALUES ($1, 'Main Account', 'cash')`, [user.id]);
-    issueSession(res, user);
+    issueSession(res, user, req);
     res.status(201).json({ user });
   } catch (e) {
     if (e.code === '23505') {
@@ -50,7 +53,7 @@ router.post('/auth/login', authLimiter, async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Invalid email or password' });
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ error: 'Invalid email or password' });
-    issueSession(res, user);
+    issueSession(res, user, req);
     res.json({ user: { id: user.id, name: user.name, email: user.email, currency: user.currency, theme: user.theme } });
   } catch (e) { safeError(res, e, 'Login'); }
 });
@@ -72,7 +75,7 @@ router.post('/auth/demo', authLimiter, async (req, res) => {
       );
       await db.run(`INSERT INTO accounts (user_id, name, type) VALUES ($1, 'Main Account', 'cash')`, [user.id]);
     }
-    issueSession(res, user);
+    issueSession(res, user, req);
     res.json({ user: { id: user.id, name: user.name, email: user.email, currency: user.currency, theme: user.theme } });
   } catch (e) { safeError(res, e, 'Demo login'); }
 });
@@ -86,7 +89,7 @@ router.post('/auth/logout', async (req, res) => {
         await db.run('UPDATE users SET token_version = token_version + 1 WHERE id=$1', [decoded.id]);
       }
     }
-  } catch {}
+  } catch (e) { console.warn('Logout token check failed:', e.message); }
   clearSession(res);
   res.json({ success: true });
 });
@@ -115,19 +118,22 @@ router.put('/auth/profile', auth, async (req, res) => {
       const toCode = normalizeCurrency(newCurr).code;
       if (fromCode !== toCode) {
         const txns = await db.all('SELECT id, amount, original_amount, original_currency FROM transactions WHERE user_id=$1', [req.user.id]);
-        for (const t of txns) {
-          const origAmt = t.original_amount !== null ? parseFloat(t.original_amount) : parseFloat(t.amount);
-          const origCurr = t.original_currency || fromCode;
-          const conv = convertCurrency(origAmt, origCurr, toCode);
-          await db.run('UPDATE transactions SET amount=$1, exchange_rate=$2 WHERE id=$3', [conv.amount, conv.rate, t.id]);
-        }
         const accs = await db.all('SELECT id, starting_balance, currency FROM accounts WHERE user_id=$1', [req.user.id]);
-        for (const a of accs) {
-          if (!a.currency || a.currency === oldCurr) {
-            const conv = convertCurrency(parseFloat(a.starting_balance), fromCode, toCode);
-            await db.run('UPDATE accounts SET starting_balance=$1 WHERE id=$2', [conv.amount, a.id]);
+
+        await withTransaction(async (client) => {
+          for (const t of txns) {
+            const origAmt = t.original_amount !== null ? parseFloat(t.original_amount) : parseFloat(t.amount);
+            const origCurr = t.original_currency || fromCode;
+            const conv = convertCurrency(origAmt, origCurr, toCode);
+            await client.query('UPDATE transactions SET amount=$1, exchange_rate=$2 WHERE id=$3', [conv.converted, conv.rate, t.id]);
           }
-        }
+          for (const a of accs) {
+            if (!a.currency || a.currency === oldCurr) {
+              const conv = convertCurrency(parseFloat(a.starting_balance), fromCode, toCode);
+              await client.query('UPDATE accounts SET starting_balance=$1 WHERE id=$2', [conv.converted, a.id]);
+            }
+          }
+        });
       }
     }
 
@@ -163,7 +169,7 @@ router.put('/auth/password', auth, async (req, res) => {
       [newHash, req.user.id]
     );
     // Issue refreshed cookie with bumped token_version for the current browser session
-    issueSession(res, updated);
+    issueSession(res, updated, req);
     res.json({ success: true, message: 'Password updated. Other sessions have been signed out.' });
   } catch (e) { safeError(res, e, 'Change password'); }
 });
@@ -187,11 +193,9 @@ router.post('/auth/forgot', authLimiter, async (req, res) => {
         [user.id, tokenHash, expiresAt]
       );
 
-      // In production with email provider (e.g. Resend/Nodemailer), email is sent.
-      // In development or when email service is unconfigured, log the link safely.
-      if (process.env.NODE_ENV !== 'production') {
-        console.log(`[DEV ONLY] Password reset token for ${email}: ${rawToken}`);
-      }
+      const origin = req.get('origin') || process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+      const resetUrl = `${origin.replace(/\/+$/, '')}/?reset=${rawToken}`;
+      await sendPasswordResetEmail({ to: email.toLowerCase().trim(), resetUrl });
     }
 
     // Always return uniform message to prevent user enumeration
@@ -218,17 +222,16 @@ router.post('/auth/reset', authLimiter, async (req, res) => {
     }
 
     const newHash = await bcrypt.hash(newPassword, 10);
-    await db.run('BEGIN');
-    await db.run(
-      `UPDATE users SET password=$1, token_version = token_version + 1 WHERE id=$2`,
-      [newHash, resetRecord.user_id]
-    );
-    await db.run(`UPDATE password_resets SET used=true WHERE id=$1`, [resetRecord.id]);
-    await db.run('COMMIT');
+    await withTransaction(async (client) => {
+      await client.query(
+        `UPDATE users SET password=$1, token_version = token_version + 1 WHERE id=$2`,
+        [newHash, resetRecord.user_id]
+      );
+      await client.query(`UPDATE password_resets SET used=true WHERE id=$1`, [resetRecord.id]);
+    });
 
     res.json({ success: true, message: 'Password has been reset successfully. Please login with your new password.' });
   } catch (e) {
-    await db.run('ROLLBACK').catch(() => {});
     safeError(res, e, 'Reset password');
   }
 });

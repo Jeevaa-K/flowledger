@@ -74,7 +74,7 @@ export const AIModule = {
         return `
           <div class="ai-session-item ${isActive ? 'active' : ''}" data-session-id="${s.id}">
             <div class="ai-session-meta">
-              <div class="ai-session-title">${icon} ${s.title || 'Conversation'}</div>
+              <div class="ai-session-title">${icon} ${escapeHtml(s.title || 'Conversation')}</div>
               <div class="ai-session-date">${d} · ${s.message_count || 0} msgs</div>
             </div>
             <button class="ai-session-del" data-action="del-session" data-session-id="${s.id}" title="Delete conversation">✕</button>
@@ -179,7 +179,7 @@ export const AIModule = {
     const isAssistant = role === 'assistant';
     const activeModel = model || State.aiModel;
     const avatarText = isAssistant ? ((activeModel === 'deepseek' || activeModel === 'claude') ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v11m0 0h10m-10 0a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2m-10 0V9m10 5V9m0 0H9"/></svg>' : activeModel === 'fast' ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="15" x2="8.01" y2="15"/><line x1="16" y1="15" x2="16.01" y2="15"/></svg>') : 'You';
-    const formattedHtml = isAssistant ? this.formatMarkdown(content) : content.replace(/\n/g, '<br>');
+    const formattedHtml = isAssistant ? this.formatMarkdown(content) : escapeHtml(content).replace(/\n/g, '<br>');
 
     const d = document.createElement('div');
     d.className = `chat-msg ${role}`;
@@ -563,7 +563,7 @@ export const AIModule = {
             const itemsWrap = document.getElementById('resLineItemsWrap');
             if (itemsWrap) {
               if (currentExtractedData.line_items && currentExtractedData.line_items.length) {
-                itemsWrap.innerHTML = '<strong>Items:</strong> ' + currentExtractedData.line_items.slice(0, 5).join(', ');
+                itemsWrap.innerHTML = '<strong>Items:</strong> ' + currentExtractedData.line_items.slice(0, 5).map(escapeHtml).join(', ');
               } else {
                 itemsWrap.innerHTML = '';
               }
@@ -749,7 +749,7 @@ export const AIModule = {
           if (accSpan) {
             if (currentSmsParsedData.account_id && Array.isArray(State.accounts)) {
               const matchedAcc = State.accounts.find(acc => acc.id === currentSmsParsedData.account_id);
-              accSpan.innerHTML = matchedAcc ? `<strong style="color:var(--brand)">✓ ${matchedAcc.name}</strong>` : 'Detected';
+              accSpan.innerHTML = matchedAcc ? `<strong style="color:var(--brand)">✓ ${escapeHtml(matchedAcc.name)}</strong>` : 'Detected';
             } else {
               accSpan.textContent = 'None matched (will use default)';
             }

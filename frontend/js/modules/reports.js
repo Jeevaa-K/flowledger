@@ -241,7 +241,7 @@ export const ReportsModule = {
       ? byCategory.map((c, i) => `
           <div class="audit-cat-row">
             <div style="width:10px;height:10px;border-radius:50%;background:${catColors[i % catColors.length]};flex-shrink:0"></div>
-            <div style="flex:1;font-size:13px;font-weight:600;color:var(--text-primary)">${c.category}</div>
+            <div style="flex:1;font-size:13px;font-weight:600;color:var(--text-primary)">${escapeHtml(c.category)}</div>
             <div class="audit-num" style="font-size:12px;color:var(--text-secondary);min-width:60px;text-align:right">${fmt(c.total)}</div>
             <div class="audit-cat-bar-track" style="width:80px">
               <div class="audit-cat-bar-fill" style="width:${c.percent}%;background:${catColors[i % catColors.length]}"></div>
@@ -256,8 +256,8 @@ export const ReportsModule = {
             <div style="display:flex;align-items:center;gap:8px">
               <div style="width:22px;height:22px;border-radius:var(--r-sm,6px);background:var(--surface-sunken);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text-secondary)">${i + 1}</div>
               <div>
-                <div style="font-weight:600;color:var(--text-primary)">${t.description}</div>
-                <div style="font-size:11px;color:var(--text-tertiary)">${t.category} · ${t.date}</div>
+                <div style="font-weight:600;color:var(--text-primary)">${escapeHtml(t.description)}</div>
+                <div style="font-size:11px;color:var(--text-tertiary)">${escapeHtml(t.category)} · ${escapeHtml(t.date)}</div>
               </div>
             </div>
             <div class="red audit-num" style="font-weight:700">${fmt(t.amount)}</div>

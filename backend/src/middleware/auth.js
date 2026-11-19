@@ -10,7 +10,8 @@ function cookieOptions() {
   return { httpOnly: true, secure: cookieSecure, sameSite: 'lax', path: '/' };
 }
 
-function issueSession(res, user) {
+function issueSession(res, user, req = null) {
+  const request = req || res.req;
   const token = jwt.sign(
     {
       id: user.id,
@@ -22,8 +23,14 @@ function issueSession(res, user) {
     { expiresIn: `${SESSION_DAYS}d` }
   );
   res.cookie(COOKIE_NAME, token, { ...cookieOptions(), maxAge: MAX_AGE_MS });
-  // Expose token in header so Capacitor/mobile native apps can store and send Authorization: Bearer
-  res.set('X-Auth-Token', token);
+  // Expose token in header ONLY when the client says it is native (X-Client: native)
+  const isNative = request && (
+    (typeof request.get === 'function' && request.get('X-Client') === 'native') ||
+    request.headers?.['x-client'] === 'native'
+  );
+  if (isNative) {
+    res.set('X-Auth-Token', token);
+  }
   return token;
 }
 

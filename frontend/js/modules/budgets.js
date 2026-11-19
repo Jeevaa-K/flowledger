@@ -66,7 +66,7 @@ export const BudgetsModule = {
   renderBudgetSuggestions(data) {
     const { suggestions, totalSuggested, totalCurrent, aiSummary } = data;
     const bannerText = document.getElementById('autoBudgetAiText');
-    if (bannerText) bannerText.innerHTML = (aiSummary || 'Personalized budget targets calculated based on spending history.').replace(/\n/g, '<br>');
+    if (bannerText) bannerText.innerHTML = escapeHtml(aiSummary || 'Personalized budget targets calculated based on spending history.').replace(/\n/g, '<br>');
 
     const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
     setText('abStatCategories', (suggestions || []).length);
@@ -94,13 +94,13 @@ export const BudgetsModule = {
           <div class="ab-cat-cell">
             <div class="ab-cat-badge" style="background:${color}"></div>
             <div>
-              <div class="ab-cat-name">${emoji} ${s.category}</div>
+              <div class="ab-cat-name">${emoji} ${escapeHtml(s.category)}</div>
               <div class="ab-cat-meta">${s.avgMonthlySpend > 0 ? `Avg: ${fmt(s.avgMonthlySpend)}/mo` : 'No history yet'}</div>
             </div>
           </div>
           <div class="ab-reason-cell">
             <span class="ab-trend-pill ${s.trend}">${trendLabel}</span>
-            <span>${s.reason}</span>
+            <span>${escapeHtml(s.reason)}</span>
           </div>
           <div class="ab-input-cell">
             <div class="ab-input-wrap">

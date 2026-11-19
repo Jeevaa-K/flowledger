@@ -84,8 +84,8 @@ export const Notifications = {
       <div class="notif-item" data-action="${i.action || 'goto-budgets'}">
         <div class="notif-icon ${i.level}">${i.icon}</div>
         <div class="notif-body">
-          <div class="notif-title">${i.title}</div>
-          <div class="notif-sub">${i.sub}</div>
+          <div class="notif-title">${escapeHtml(i.title)}</div>
+          <div class="notif-sub">${escapeHtml(i.sub)}</div>
         </div>
       </div>`).join('');
   }

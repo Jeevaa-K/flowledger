@@ -120,7 +120,7 @@ const Groups = {
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
           <div>
             <div style="font-size:17px;font-weight:700;color:var(--text-primary)">${escapeHtml(g.name)}</div>
-            <div style="font-size:12px;color:var(--text-secondary);margin-top:2px">${g.description || 'Shared Expense Ledger'}</div>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:2px">${escapeHtml(g.description || 'Shared Expense Ledger')}</div>
           </div>
           <span class="res-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12" style="vertical-align:middle;margin-right:4px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>${g.member_count} Members</span>
         </div>
@@ -216,7 +216,7 @@ const Groups = {
               <div class="settlement-card">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start">
                   <div style="font-size:13px;font-weight:600;color:var(--text-primary)">
-                    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--expense);margin-right:6px"></span><strong style="color:var(--expense)">${s.from_name}</strong> owes <strong style="color:var(--income)">${s.to_name}</strong>
+                    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--expense);margin-right:6px"></span><strong style="color:var(--expense)">${escapeHtml(s.from_name)}</strong> owes <strong style="color:var(--income)">${escapeHtml(s.to_name)}</strong>
                   </div>
                 </div>
                 <div class="settlement-amount" style="font-size:22px;font-weight:800;color:var(--text-primary)">
@@ -226,8 +226,8 @@ const Groups = {
                   <button class="settle-action-btn pay-qr-btn" data-action="open-settle-qr"
                     data-from-id="${s.from_id}"
                     data-to-id="${s.to_id}"
-                    data-from-name="${s.from_name}"
-                    data-to-name="${s.to_name}"
+                    data-from-name="${escapeHtml(s.from_name)}"
+                    data-to-name="${escapeHtml(s.to_name)}"
                     data-amount="${s.amount}"
                     title="Generate instant UPI payment QR code">
                     <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13" style="vertical-align:middle;margin-right:4px"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></span>Scan to Pay
@@ -257,7 +257,7 @@ const Groups = {
 
       list.innerHTML = expenses.map(e => {
         const isSettle = e.is_settlement;
-        const splitsSummary = e.splits.map(s => `${s.member_name}: ${fmt(s.split_amount)}`).join(', ');
+        const splitsSummary = e.splits.map(s => `${escapeHtml(s.member_name)}: ${fmt(s.split_amount)}`).join(', ');
 
         return `
           <div class="txn-item" style="padding:12px 14px">
@@ -267,7 +267,7 @@ const Groups = {
             <div class="txn-info" style="flex:1">
               <div class="txn-desc" style="font-weight:600">${escapeHtml(e.description)}</div>
               <div class="txn-meta" style="font-size:12px;color:var(--text-secondary)">
-                <span>Paid by <strong>${e.payer_name}</strong></span> • <span>${e.date}</span>
+                <span>Paid by <strong>${escapeHtml(e.payer_name)}</strong></span> • <span>${escapeHtml(e.date)}</span>
                 <div style="font-size:11px;color:var(--text-tertiary);margin-top:2px">Splits: ${splitsSummary}</div>
               </div>
             </div>

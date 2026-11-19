@@ -277,14 +277,14 @@ export const TransactionsModule = {
 
     bar.style.display = 'flex';
     const parts = [];
-    if (filters.search) parts.push(`matching "<strong>${filters.search}</strong>"`);
-    if (filters.type) parts.push(`type: <strong>${filters.type}</strong>`);
-    if (filters.category) parts.push(`category: <strong>${filters.category}</strong>`);
-    if (filters.from && filters.to) parts.push(`date: <strong>${filters.from} to ${filters.to}</strong>`);
-    else if (filters.from) parts.push(`after: <strong>${filters.from}</strong>`);
-    else if (filters.to) parts.push(`before: <strong>${filters.to}</strong>`);
-    if (filters.min_amount) parts.push(`min: <strong>₹${filters.min_amount}</strong>`);
-    if (filters.max_amount) parts.push(`max: <strong>₹${filters.max_amount}</strong>`);
+    if (filters.search) parts.push(`matching "<strong>${escapeHtml(filters.search)}</strong>"`);
+    if (filters.type) parts.push(`type: <strong>${escapeHtml(filters.type)}</strong>`);
+    if (filters.category) parts.push(`category: <strong>${escapeHtml(filters.category)}</strong>`);
+    if (filters.from && filters.to) parts.push(`date: <strong>${escapeHtml(filters.from)} to ${escapeHtml(filters.to)}</strong>`);
+    else if (filters.from) parts.push(`after: <strong>${escapeHtml(filters.from)}</strong>`);
+    else if (filters.to) parts.push(`before: <strong>${escapeHtml(filters.to)}</strong>`);
+    if (filters.min_amount) parts.push(`min: <strong>₹${escapeHtml(filters.min_amount)}</strong>`);
+    if (filters.max_amount) parts.push(`max: <strong>₹${escapeHtml(filters.max_amount)}</strong>`);
 
     const filterDesc = parts.length > 0 ? parts.join(', ') : 'Applied filters';
     const sumOnPage = (txns || []).reduce((acc, t) => acc + (t.type === 'expense' ? -parseFloat(t.amount) : parseFloat(t.amount)), 0);

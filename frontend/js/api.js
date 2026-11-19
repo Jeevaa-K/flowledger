@@ -8,6 +8,7 @@ const API = {
   },
 
   async getToken() {
+    if (!this.isNative()) return null;
     if (this._token) return this._token;
     if (window.Capacitor?.Plugins?.Preferences) {
       try {
@@ -20,7 +21,7 @@ const API = {
   },
 
   async setToken(token) {
-    if (!token) return;
+    if (!token || !this.isNative()) return;
     this._token = token;
     if (window.Capacitor?.Plugins?.Preferences) {
       try {
@@ -48,9 +49,12 @@ const API = {
 
   async headers() {
     const h = { 'Content-Type': 'application/json' };
-    const token = await this.getToken();
-    if (token) {
-      h['Authorization'] = `Bearer ${token}`;
+    if (this.isNative()) {
+      h['X-Client'] = 'native';
+      const token = await this.getToken();
+      if (token) {
+        h['Authorization'] = `Bearer ${token}`;
+      }
     }
     return h;
   },
@@ -173,7 +177,7 @@ const API = {
       const base = this.getBase();
       const url = base + '/export/csv' + (queryString ? '?' + queryString : '');
       const res = await fetch(url, {
-        headers: this.headers(),
+        headers: await this.headers(),
         credentials: 'include'
       });
       if (!res.ok) throw new Error('Export failed');

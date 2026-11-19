@@ -168,8 +168,8 @@ export const App = {
           <div class="search-item" data-action="goto-transactions">
             <div style="width:8px;height:8px;border-radius:50%;background:${Charts.getCatColor(t.category)};flex-shrink:0"></div>
             <div style="flex:1;min-width:0">
-              <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.description}</div>
-              <div style="font-size:11px;color:#A79C8C">${t.category} · ${t.date}</div>
+              <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(t.description)}</div>
+              <div style="font-size:11px;color:#A79C8C">${escapeHtml(t.category)} · ${escapeHtml(t.date)}</div>
             </div>
             <div style="font-size:13px;font-family:'JetBrains Mono',monospace;color:${t.type === 'income' ? '#3E6154' : '#A6402F'}">${t.type === 'income' ? '+' : '-'}${fmt(t.amount)}</div>
           </div>`).join('');
@@ -280,8 +280,12 @@ export const App = {
         document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
         t.classList.add('active');
         const sel = document.getElementById('txnCategory');
-        if (![...sel.options].find(o => o.value === t.dataset.cat))
-          sel.innerHTML += `<option value="${t.dataset.cat}">${t.dataset.cat}</option>`;
+        if (![...sel.options].find(o => o.value === t.dataset.cat)) {
+          const opt = document.createElement('option');
+          opt.value = t.dataset.cat;
+          opt.textContent = t.dataset.cat;
+          sel.appendChild(opt);
+        }
         sel.value = t.dataset.cat;
       }
       else if (a === 'edit-txn') this.editTxn(id);

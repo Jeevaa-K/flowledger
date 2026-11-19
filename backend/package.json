@@ -4,7 +4,9 @@
   "description": "FlowLedger API — auth, AI assistant, group splits, PDF/CSV reports",
   "main": "server.js",
   "private": true,
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon -e js,json,env server.js",
@@ -22,6 +24,7 @@
     "jsonwebtoken": "^9.0.2",
     "langfuse": "^3.0.0",
     "node-cron": "^3.0.3",
+    "nodemailer": "^10.6.0",
     "pdfkit": "^0.15.0",
     "pg": "^8.22.0"
   },
@@ -32,6 +35,8 @@
   },
   "jest": {
     "testEnvironment": "node",
-    "setupFiles": ["<rootDir>/tests/setup.js"]
+    "setupFiles": [
+      "<rootDir>/tests/setup.js"
+    ]
   }
 }

@@ -46,7 +46,7 @@ export const Tags = {
     if (!sel) return;
     const current = sel.value;
     sel.innerHTML = '<option value="">All Tags</option>' +
-      this.known.map(t => `<option value="${t}">#${t}</option>`).join('');
+      this.known.map(t => `<option value="${escapeHtml(t)}">#${escapeHtml(t)}</option>`).join('');
     sel.value = current;
   },
 
@@ -59,7 +59,7 @@ export const Tags = {
       .filter(t => !this.pills.includes(t) && (!q || t.includes(q)))
       .slice(0, 8);
     if (!matches.length) { this.hideSuggestions(); return; }
-    box.innerHTML = matches.map(t => `<div class="tag-suggestion-item">${t}</div>`).join('');
+    box.innerHTML = matches.map(t => `<div class="tag-suggestion-item">${escapeHtml(t)}</div>`).join('');
     box.classList.add('show');
     box.querySelectorAll('.tag-suggestion-item').forEach(el =>
       el.addEventListener('mousedown', ev => { ev.preventDefault(); this.addPill(el.textContent); }));
@@ -95,8 +95,8 @@ export const Tags = {
     const el = document.getElementById('tagPills');
     if (!el) return;
     el.innerHTML = this.pills.map((t, idx) => `
-      <span class="tag-pill">#${t}
-        <button type="button" class="tag-pill-remove" data-tag-idx="${idx}" aria-label="Remove tag ${t}">×</button>
+      <span class="tag-pill">#${escapeHtml(t)}
+        <button type="button" class="tag-pill-remove" data-tag-idx="${idx}" aria-label="Remove tag ${escapeHtml(t)}">×</button>
       </span>`).join('');
     el.querySelectorAll('.tag-pill-remove').forEach(btn =>
       btn.addEventListener('click', () => this.removePill(parseInt(btn.dataset.tagIdx))));

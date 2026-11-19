@@ -1,6 +1,6 @@
 const express = require('express');
 const { auth } = require('../middleware/auth');
-const { db } = require('../db');
+const { db, withTransaction } = require('../db');
 const { safeError, sanitizeTags, toDateString, buildTransactionFilters } = require('../utils');
 const { normalizeCurrency, convertCurrency } = require('../services/currency');
 const router = express.Router();
@@ -151,31 +151,34 @@ router.post('/transactions/split', auth, async (req, res) => {
     const splitId = 'split_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
     const baseTags = sanitizeTags(['split', ...(Array.isArray(tags) ? tags : [])]);
 
-    const createdRows = [];
-    for (const s of splits) {
-      const partAmt = parseFloat(s.amount);
-      const partNote = s.note ? s.note.trim() : '';
-      const partDesc = partNote ? `${description} (${partNote})` : `${description} [${s.category.trim()}]`;
-      const partTags = partNote ? sanitizeTags([...baseTags, s.category.toLowerCase().replace(/[^a-z0-9]/g, '')]) : baseTags;
+    const createdRows = await withTransaction(async (client) => {
+      const rows = [];
+      for (const s of splits) {
+        const partAmt = parseFloat(s.amount);
+        const partNote = s.note ? s.note.trim() : '';
+        const partDesc = partNote ? `${description} (${partNote})` : `${description} [${s.category.trim()}]`;
+        const partTags = partNote ? sanitizeTags([...baseTags, s.category.toLowerCase().replace(/[^a-z0-9]/g, '')]) : baseTags;
 
-      const row = await db.get(
-        `INSERT INTO transactions (user_id, description, amount, type, category, date, account_id, tags, notes, split_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
-        [
-          req.user.id,
-          partDesc.slice(0, 500),
-          partAmt,
-          type,
-          s.category.trim(),
-          date,
-          accId,
-          partTags,
-          partNote || `Part of split bill "${description}" (₹${totalAmt})`,
-          splitId
-        ]
-      );
-      createdRows.push(row);
-    }
+        const res = await client.query(
+          `INSERT INTO transactions (user_id, description, amount, type, category, date, account_id, tags, notes, split_id)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+          [
+            req.user.id,
+            partDesc.slice(0, 500),
+            partAmt,
+            type,
+            s.category.trim(),
+            date,
+            accId,
+            partTags,
+            partNote || `Part of split bill "${description}" (₹${totalAmt})`,
+            splitId
+          ]
+        );
+        rows.push(res.rows[0]);
+      }
+      return rows;
+    });
 
     res.status(201).json({
       success: true,
@@ -297,23 +300,26 @@ router.post('/transactions/import', auth, async (req, res) => {
     const dupKey = r => `${r.description}|${Number(r.amount)}|${r.type}|${r.category}|${toDateString(r.date)}`;
     const existingKeys = new Set(existingRows.map(dupKey));
 
-    let imported = 0, skipped = 0;
-    for (const t of transactions) {
-      if (!t.description || !t.amount || !t.type || !t.category || !t.date) continue;
-      if (!['income', 'expense'].includes(t.type)) continue;
-      const amt = parseFloat(t.amount);
-      if (!Number.isFinite(amt) || amt <= 0) continue;
-      const description = String(t.description).slice(0, 500);
-      const key = `${description}|${amt}|${t.type}|${t.category}|${t.date}`;
-      if (existingKeys.has(key)) { skipped++; continue; }
-      await db.run(
-        'INSERT INTO transactions (user_id,description,amount,type,category,date,account_id) VALUES ($1,$2,$3,$4,$5,$6,$7)',
-        [req.user.id, description, amt, t.type, t.category, t.date, accId]
-      );
-      existingKeys.add(key); // guards against duplicates within the same uploaded file too
-      imported++;
-    }
-    res.json({ success: true, imported, skipped });
+    const result = await withTransaction(async (client) => {
+      let imported = 0, skipped = 0;
+      for (const t of transactions) {
+        if (!t.description || !t.amount || !t.type || !t.category || !t.date) continue;
+        if (!['income', 'expense'].includes(t.type)) continue;
+        const amt = parseFloat(t.amount);
+        if (!Number.isFinite(amt) || amt <= 0) continue;
+        const description = String(t.description).slice(0, 500);
+        const key = `${description}|${amt}|${t.type}|${t.category}|${t.date}`;
+        if (existingKeys.has(key)) { skipped++; continue; }
+        await client.query(
+          'INSERT INTO transactions (user_id,description,amount,type,category,date,account_id) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+          [req.user.id, description, amt, t.type, t.category, t.date, accId]
+        );
+        existingKeys.add(key); // guards against duplicates within the same uploaded file too
+        imported++;
+      }
+      return { imported, skipped };
+    });
+    res.json({ success: true, imported: result.imported, skipped: result.skipped });
   } catch (e) {
     if (e?.status) return res.status(e.status).json({ error: e.error });
     safeError(res, e, 'Import transactions');

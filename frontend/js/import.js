@@ -212,8 +212,8 @@ const Importer = {
         ${rows.slice(0, 15).map(r => `
           <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #EFE8D8">
             <div style="flex:1;min-width:0">
-              <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.description}</div>
-              <div style="font-size:11px;color:#A79C8C">${r.category} · ${r.date} · ${r.type}</div>
+              <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(r.description)}</div>
+              <div style="font-size:11px;color:#A79C8C">${escapeHtml(r.category)} · ${escapeHtml(r.date)} · ${escapeHtml(r.type)}</div>
             </div>
             <div style="font-size:13px;font-family:monospace;font-weight:600;color:${r.type==='income'?'#3E6154':'#A6402F'};flex-shrink:0">
               ${r.type==='income'?'+':'-'}${fmt(r.amount)}

@@ -336,7 +336,7 @@ export const DashboardModule = {
         const options = ['<option value="">All Accounts (Net Liquid)</option>'];
         for (const acc of data.accounts) {
           const selected = String(acc.id) === String(accountId) ? 'selected' : '';
-          options.push(`<option value="${acc.id}" ${selected}>${acc.name} (${acc.type})</option>`);
+          options.push(`<option value="${acc.id}" ${selected}>${escapeHtml(acc.name)} (${escapeHtml(acc.type)})</option>`);
         }
         accSelect.innerHTML = options.join('');
       }

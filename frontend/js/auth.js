@@ -2,6 +2,20 @@ const Auth = {
   init() {
     // Older versions kept the JWT in localStorage; remove any leftover copy.
     localStorage.removeItem('fl_token');
+
+    // Check for ?reset=<token> in URL to show reset screen
+    const urlParams = new URLSearchParams(window.location.search);
+    const resetToken = urlParams.get('reset');
+    if (resetToken) {
+      document.getElementById('authOverlay')?.classList.add('show');
+      this.showTab('reset');
+      const tokenInput = document.getElementById('resetToken');
+      if (tokenInput) tokenInput.value = resetToken;
+      this.bindEvents();
+      this.bindConnectivity();
+      return;
+    }
+
     const user = JSON.parse(localStorage.getItem('fl_user') || 'null');
 
     // The real session is an httpOnly cookie. fl_user is only a cached profile
@@ -39,6 +53,10 @@ const Auth = {
     on('loginEmail',    'keydown', e => { if (e.key==='Enter') this.login(); });
     on('loginPassword', 'keydown', e => { if (e.key==='Enter') this.login(); });
     on('regConfirm',    'keydown', e => { if (e.key==='Enter') this.register(); });
+    on('forgotBtn',     'click',   () => this.forgotPassword());
+    on('forgotEmail',   'keydown', e => { if (e.key==='Enter') this.forgotPassword(); });
+    on('resetBtn',      'click',   () => this.resetPasswordSubmit());
+    on('resetConfirmPassword', 'keydown', e => { if (e.key==='Enter') this.resetPasswordSubmit(); });
 
     // Sidebar gear icon → profile, avatar dropdown, auth tabs, password
     // visibility toggles, and the demo-login button all share one
@@ -70,6 +88,7 @@ const Auth = {
       const action = actionEl.dataset.action;
       if (action === 'auth-tab-login')    this.showTab('login');
       else if (action === 'auth-tab-register') this.showTab('register');
+      else if (action === 'auth-tab-forgot') this.showTab('forgot');
       else if (action === 'toggle-pwd')   this.togglePwd(actionEl.dataset.target);
       else if (action === 'try-demo')     this.tryDemo();
     });
@@ -122,14 +141,95 @@ const Auth = {
   },
 
   showTab(tab) {
-    document.getElementById('formLogin').style.display    = tab === 'login'    ? 'block' : 'none';
-    document.getElementById('formRegister').style.display = tab === 'register' ? 'block' : 'none';
-    document.getElementById('tabLogin').classList.toggle('active',    tab === 'login');
-    document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
-    document.getElementById('tabLogin').setAttribute('aria-selected',    tab === 'login'    ? 'true' : 'false');
-    document.getElementById('tabRegister').setAttribute('aria-selected', tab === 'register' ? 'true' : 'false');
-    document.getElementById('loginError').textContent    = '';
-    document.getElementById('registerError').textContent = '';
+    const el = (id) => document.getElementById(id);
+    if (el('formLogin'))    el('formLogin').style.display    = tab === 'login'    ? 'block' : 'none';
+    if (el('formRegister')) el('formRegister').style.display = tab === 'register' ? 'block' : 'none';
+    if (el('formForgot'))   el('formForgot').style.display   = tab === 'forgot'   ? 'block' : 'none';
+    if (el('formReset'))    el('formReset').style.display    = tab === 'reset'    ? 'block' : 'none';
+
+    const tabsRow = document.querySelector('.auth-tabs');
+    if (tabsRow) tabsRow.style.display = (tab === 'forgot' || tab === 'reset') ? 'none' : 'grid';
+
+    if (el('tabLogin')) {
+      el('tabLogin').classList.toggle('active', tab === 'login');
+      el('tabLogin').setAttribute('aria-selected', tab === 'login' ? 'true' : 'false');
+    }
+    if (el('tabRegister')) {
+      el('tabRegister').classList.toggle('active', tab === 'register');
+      el('tabRegister').setAttribute('aria-selected', tab === 'register' ? 'true' : 'false');
+    }
+
+    this.setError('loginError', '');
+    this.setError('registerError', '');
+    this.setError('forgotError', '');
+    this.setError('resetError', '');
+    if (el('forgotSuccess')) el('forgotSuccess').style.display = 'none';
+  },
+
+  async forgotPassword() {
+    const email = document.getElementById('forgotEmail')?.value?.trim();
+    this.setError('forgotError', '');
+    const successEl = document.getElementById('forgotSuccess');
+    if (successEl) successEl.style.display = 'none';
+    if (!email) { this.setError('forgotError', 'Please enter your email'); return; }
+
+    const btn = document.getElementById('forgotBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Sending link...'; }
+
+    try {
+      const data = await API.post('/auth/forgot', { email });
+      if (successEl) {
+        successEl.textContent = data.message || 'If this email is registered, password reset instructions have been sent.';
+        successEl.style.display = 'block';
+      }
+    } catch (e) {
+      this.setError('forgotError', e.message.replace(/^\d+:\s*/, ''));
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Send Reset Link →'; }
+    }
+  },
+
+  async resetPasswordSubmit() {
+    const token = document.getElementById('resetToken')?.value;
+    const newPassword = document.getElementById('resetNewPassword')?.value;
+    const confirmPassword = document.getElementById('resetConfirmPassword')?.value;
+    this.setError('resetError', '');
+
+    if (!newPassword || !confirmPassword) {
+      this.setError('resetError', 'Please fill in all fields');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      this.setError('resetError', 'Passwords do not match');
+      return;
+    }
+    if (newPassword.length < 8) {
+      this.setError('resetError', 'Password must be at least 8 characters');
+      return;
+    }
+    if (!/[a-zA-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      this.setError('resetError', 'Password must include at least one letter and one number');
+      return;
+    }
+
+    const btn = document.getElementById('resetBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Resetting...'; }
+
+    try {
+      const data = await API.post('/auth/reset', { token, newPassword });
+      if (typeof UI !== 'undefined' && UI.toast) {
+        UI.toast('✓ ' + (data.message || 'Password reset successfully! Please login.'), 'success', 4000);
+      }
+      // Remove ?reset query from URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+      this.showTab('login');
+      const loginEmail = document.getElementById('loginEmail');
+      if (loginEmail) loginEmail.focus();
+    } catch (e) {
+      this.setError('resetError', e.message.replace(/^\d+:\s*/, ''));
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Set New Password →'; }
+    }
   },
 
   togglePwd(id) {
@@ -241,6 +341,13 @@ const Auth = {
     await API.clearToken();
     localStorage.removeItem('fl_user');
     localStorage.removeItem('fl_remember');
+    if ('caches' in window) {
+      try {
+        for (const k of await caches.keys()) {
+          await caches.delete(k);
+        }
+      } catch (_) {}
+    }
     window.location.reload();
   },
 

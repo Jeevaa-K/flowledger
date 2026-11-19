@@ -233,4 +233,19 @@ async function migrateDefaultAccounts() {
 }
 
 
-module.exports = { pool, db, initDB };
+async function withTransaction(fn) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await fn(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (e) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
+module.exports = { pool, db, initDB, withTransaction };

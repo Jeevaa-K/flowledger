@@ -1,6 +1,6 @@
 const express = require('express');
 const { auth } = require('../middleware/auth');
-const { db } = require('../db');
+const { db, withTransaction } = require('../db');
 const { safeError, getUserToday } = require('../utils');
 const router = express.Router();
 
@@ -31,27 +31,32 @@ router.post('/groups', auth, async (req, res) => {
   const memberList = Array.isArray(members) ? members.filter(m => typeof m === 'string' && m.trim()) : [];
 
   try {
-    const group = await db.get(
-      `INSERT INTO groups (user_id, name, description) VALUES ($1, $2, $3) RETURNING *`,
-      [req.user.id, name.trim(), (description || '').trim()]
-    );
-
-    // Add creator as first member ("You")
     const creatorUser = await db.get(`SELECT name, email FROM users WHERE id=$1`, [req.user.id]);
-    await db.run(
-      `INSERT INTO group_members (group_id, user_id, name, email) VALUES ($1, $2, $3, $4)`,
-      [group.id, req.user.id, creatorUser.name + ' (You)', creatorUser.email]
-    );
 
-    // Add other members
-    for (const mName of memberList) {
-      if (mName.trim()) {
-        await db.run(
-          `INSERT INTO group_members (group_id, name) VALUES ($1, $2)`,
-          [group.id, mName.trim()]
-        );
+    const group = await withTransaction(async (client) => {
+      const gRes = await client.query(
+        `INSERT INTO groups (user_id, name, description) VALUES ($1, $2, $3) RETURNING *`,
+        [req.user.id, name.trim(), (description || '').trim()]
+      );
+      const g = gRes.rows[0];
+
+      // Add creator as first member ("You")
+      await client.query(
+        `INSERT INTO group_members (group_id, user_id, name, email) VALUES ($1, $2, $3, $4)`,
+        [g.id, req.user.id, creatorUser.name + ' (You)', creatorUser.email]
+      );
+
+      // Add other members
+      for (const mName of memberList) {
+        if (mName.trim()) {
+          await client.query(
+            `INSERT INTO group_members (group_id, name) VALUES ($1, $2)`,
+            [g.id, mName.trim()]
+          );
+        }
       }
-    }
+      return g;
+    });
 
     res.json({ success: true, group });
   } catch (e) {
@@ -222,18 +227,22 @@ router.post('/groups/:id/expenses', auth, async (req, res) => {
 
     const expDate = date || new Date().toISOString().slice(0, 10);
 
-    const expense = await db.get(
-      `INSERT INTO group_expenses (group_id, payer_id, description, amount, category, date) 
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [groupId, parseInt(payer_id), description.trim(), totalAmt, category || 'Other', expDate]
-    );
-
-    for (const s of splitList) {
-      await db.run(
-        `INSERT INTO group_splits (expense_id, member_id, split_amount) VALUES ($1, $2, $3)`,
-        [expense.id, parseInt(s.member_id), parseFloat(s.split_amount)]
+    const expense = await withTransaction(async (client) => {
+      const expRes = await client.query(
+        `INSERT INTO group_expenses (group_id, payer_id, description, amount, category, date) 
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+        [groupId, parseInt(payer_id), description.trim(), totalAmt, category || 'Other', expDate]
       );
-    }
+      const exp = expRes.rows[0];
+
+      for (const s of splitList) {
+        await client.query(
+          `INSERT INTO group_splits (expense_id, member_id, split_amount) VALUES ($1, $2, $3)`,
+          [exp.id, parseInt(s.member_id), parseFloat(s.split_amount)]
+        );
+      }
+      return exp;
+    });
 
     res.json({ success: true, expense });
   } catch (e) {
@@ -269,17 +278,21 @@ router.post('/groups/:id/settle', auth, async (req, res) => {
     const expDate = date || new Date().toISOString().slice(0, 10);
     const desc = `Settlement: ${fromMember.name} paid ${toMember.name}`;
 
-    const expense = await db.get(
-      `INSERT INTO group_expenses (group_id, payer_id, description, amount, category, date, is_settlement) 
-       VALUES ($1, $2, $3, $4, 'Settlement', $5, true) RETURNING *`,
-      [groupId, parseInt(from_id), desc, settleAmt, expDate]
-    );
+    const expense = await withTransaction(async (client) => {
+      const expRes = await client.query(
+        `INSERT INTO group_expenses (group_id, payer_id, description, amount, category, date, is_settlement) 
+         VALUES ($1, $2, $3, $4, 'Settlement', $5, true) RETURNING *`,
+        [groupId, parseInt(from_id), desc, settleAmt, expDate]
+      );
+      const exp = expRes.rows[0];
 
-    // In a settlement: payer paid `amount`, recipient receives `amount` share
-    await db.run(
-      `INSERT INTO group_splits (expense_id, member_id, split_amount) VALUES ($1, $2, $3)`,
-      [expense.id, parseInt(to_id), settleAmt]
-    );
+      // In a settlement: payer paid `amount`, recipient receives `amount` share
+      await client.query(
+        `INSERT INTO group_splits (expense_id, member_id, split_amount) VALUES ($1, $2, $3)`,
+        [exp.id, parseInt(to_id), settleAmt]
+      );
+      return exp;
+    });
 
     res.json({ success: true, expense });
   } catch (e) {

@@ -27,6 +27,10 @@ function createApp() {
     standardJson(req, res, next);
   });
 
+  app.use('/api', (req, res, next) => {
+    res.set('Cache-Control', 'no-store');
+    next();
+  });
   app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
   app.use('/api/', apiLimiter);
   app.use('/api/ai', aiLimiter);

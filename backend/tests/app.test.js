@@ -3,11 +3,23 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
 // No real database is needed: the db module is mocked.
-jest.mock('../src/db', () => ({
-  db: { get: jest.fn(), all: jest.fn(), run: jest.fn(), query: jest.fn() },
-  pool: { query: jest.fn(), end: jest.fn() },
-  initDB: jest.fn()
-}));
+jest.mock('../src/db', () => {
+  const mockDb = { get: jest.fn(), all: jest.fn(), run: jest.fn(), query: jest.fn() };
+  return {
+    db: mockDb,
+    pool: { query: jest.fn(), end: jest.fn() },
+    initDB: jest.fn(),
+    withTransaction: jest.fn(async (fn) => {
+      const mockClient = {
+        query: jest.fn(async (text, params) => {
+          const res = await mockDb.run(text, params);
+          return res || { rows: [] };
+        })
+      };
+      return fn(mockClient);
+    })
+  };
+});
 
 const { db } = require('../src/db');
 const { createApp } = require('../src/app');
@@ -109,7 +121,7 @@ describe('authentication', () => {
     expect(res.status).toBe(200);
   });
 
-  test('login sets an httpOnly cookie and never returns the token in the body', async () => {
+  test('login sets an httpOnly cookie and never returns the token in the body or X-Auth-Token on web', async () => {
     db.get.mockResolvedValue({
       id: 7, name: 'Jeeva', email: 'j@j.io', currency: '₹', theme: 'light',
       password: await bcrypt.hash('secret123', 4)
@@ -121,6 +133,25 @@ describe('authentication', () => {
     const cookie = res.headers['set-cookie'].find((c) => c.startsWith(COOKIE_NAME));
     expect(cookie).toMatch(/HttpOnly/i);
     expect(cookie).toMatch(/SameSite=Lax/i);
+    expect(res.headers['x-auth-token']).toBeUndefined();
+  });
+
+  test('login with X-Client: native provides X-Auth-Token header', async () => {
+    db.get.mockResolvedValue({
+      id: 7, name: 'Jeeva', email: 'j@j.io', currency: '₹', theme: 'light',
+      password: await bcrypt.hash('secret123', 4)
+    });
+    const res = await request(app)
+      .post('/api/auth/login')
+      .set('X-Client', 'native')
+      .send({ email: 'j@j.io', password: 'secret123' });
+    expect(res.status).toBe(200);
+    expect(res.headers['x-auth-token']).toBeDefined();
+  });
+
+  test('API responses include Cache-Control: no-store', async () => {
+    const res = await request(app).get('/api/health');
+    expect(res.headers['cache-control']).toBe('no-store');
   });
 
   test('wrong password → 401 and no cookie', async () => {
@@ -134,6 +165,159 @@ describe('authentication', () => {
     const res = await request(app).post('/api/auth/logout');
     const cookie = res.headers['set-cookie'].find((c) => c.startsWith(COOKIE_NAME));
     expect(cookie).toMatch(/Expires=Thu, 01 Jan 1970/);
+  });
+});
+
+describe('logout – token_version invalidation', () => {
+  test('logout with a valid cookie bumps token_version', async () => {
+    const token = jwt.sign({ id: 42, name: 'U', email: 'u@u.io', token_version: 1 }, JWT_SECRET, { expiresIn: '1h' });
+    db.run.mockResolvedValue({});
+
+    const res = await request(app)
+      .post('/api/auth/logout')
+      .set('Cookie', `${COOKIE_NAME}=${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ success: true });
+    // token_version must have been incremented
+    expect(db.run).toHaveBeenCalledWith(
+      'UPDATE users SET token_version = token_version + 1 WHERE id=$1',
+      [42]
+    );
+    // Session cookie must be cleared
+    const cookie = res.headers['set-cookie'].find((c) => c.startsWith(COOKIE_NAME));
+    expect(cookie).toMatch(/Expires=Thu, 01 Jan 1970/);
+  });
+
+  test('logout with no token still succeeds and clears the cookie', async () => {
+    const res = await request(app).post('/api/auth/logout');
+    expect(res.status).toBe(200);
+    expect(db.run).not.toHaveBeenCalled();
+    const cookie = res.headers['set-cookie'].find((c) => c.startsWith(COOKIE_NAME));
+    expect(cookie).toMatch(/Expires=Thu, 01 Jan 1970/);
+  });
+});
+
+describe('currency change – amount conversion', () => {
+  // Helper: sign an auth cookie for user id=1 with token_version=1
+  const authCookie = () => sessionCookie({ id: 1, name: 'T', email: 't@t.io', token_version: 1 });
+
+  test('PUT /auth/profile converts transaction amounts using conv.converted, not conv.amount', async () => {
+    // db.get: (1) SELECT currency → oldCurr='₹', (2) auth middleware user lookup
+    db.get
+      .mockResolvedValueOnce({ id: 1, name: 'T', email: 't@t.io', currency: '₹', theme: 'light', token_version: 1 }) // auth middleware
+      .mockResolvedValueOnce({ currency: '₹' }); // SELECT currency for profile
+
+    // db.all: transactions then accounts
+    db.all
+      .mockResolvedValueOnce([
+        { id: 10, amount: '8450', original_amount: null, original_currency: null }
+      ])
+      .mockResolvedValueOnce([
+        { id: 20, starting_balance: '10000', currency: '₹' }
+      ]);
+
+    db.run.mockResolvedValue({});
+
+    const res = await request(app)
+      .put('/api/auth/profile')
+      .set('Cookie', authCookie())
+      .send({ currency: '$' });
+
+    expect(res.status).toBe(200);
+
+    // Find the UPDATE transactions call
+    const txnUpdate = db.run.mock.calls.find(
+      (c) => typeof c[0] === 'string' && c[0].includes('UPDATE transactions SET amount')
+    );
+    expect(txnUpdate).toBeDefined();
+
+    // conv.amount = original input (8450); conv.converted = 8450 / 84.5 ≈ 100.00
+    // The saved amount must NOT equal 8450 (the raw input) – it must be the converted value
+    const savedAmount = txnUpdate[1][0];
+    expect(savedAmount).not.toBe(8450);
+    expect(savedAmount).toBeCloseTo(100, 0); // 8450 INR → ~$100 USD at fallback rate
+
+    // Same check for accounts
+    const accUpdate = db.run.mock.calls.find(
+      (c) => typeof c[0] === 'string' && c[0].includes('UPDATE accounts SET starting_balance')
+    );
+    expect(accUpdate).toBeDefined();
+    const savedBalance = accUpdate[1][0];
+    expect(savedBalance).not.toBe(10000);
+    expect(savedBalance).toBeCloseTo(118.34, 0); // 10000 INR → ~$118 USD
+  });
+
+  test('no currency change → no conversion queries run', async () => {
+    db.get
+      .mockResolvedValueOnce({ id: 1, name: 'T', email: 't@t.io', currency: '₹', theme: 'light', token_version: 1 })
+      .mockResolvedValueOnce({ currency: '₹' });
+    db.run.mockResolvedValue({});
+
+    const res = await request(app)
+      .put('/api/auth/profile')
+      .set('Cookie', authCookie())
+      .send({ theme: 'dark' }); // no currency key → no conversion
+
+    expect(res.status).toBe(200);
+    const hasConversionCall = db.all.mock.calls.some(
+      (c) => typeof c[0] === 'string' && c[0].includes('transactions')
+    );
+    expect(hasConversionCall).toBe(false);
+  });
+});
+
+describe('forgot & reset password flow', () => {
+  test('forgot password returns generic message for registered email', async () => {
+    db.get.mockResolvedValueOnce({ id: 1, email: 'user@example.com' });
+    db.run.mockResolvedValueOnce({});
+
+    const res = await request(app)
+      .post('/api/auth/forgot')
+      .send({ email: 'user@example.com' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toMatch(/password reset instructions have been sent/i);
+    expect(db.run).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO password_resets'),
+      expect.any(Array)
+    );
+  });
+
+  test('forgot password returns same message for unregistered email', async () => {
+    db.get.mockResolvedValueOnce(null);
+
+    const res = await request(app)
+      .post('/api/auth/forgot')
+      .send({ email: 'unknown@example.com' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toMatch(/password reset instructions have been sent/i);
+  });
+
+  test('reset password with valid token updates password and invalidates sessions atomically', async () => {
+    db.get.mockResolvedValueOnce({
+      id: 5,
+      user_id: 1,
+      token_hash: 'abc',
+      expires_at: new Date(Date.now() + 60000)
+    });
+    db.run.mockResolvedValue({});
+
+    const res = await request(app)
+      .post('/api/auth/reset')
+      .send({ token: 'abc', newPassword: 'NewPassword123' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(db.run).toHaveBeenCalledWith(
+      expect.stringContaining('UPDATE users SET password=$1, token_version = token_version + 1'),
+      expect.any(Array)
+    );
+    expect(db.run).toHaveBeenCalledWith(
+      expect.stringContaining('UPDATE password_resets SET used=true'),
+      expect.any(Array)
+    );
   });
 });
 
