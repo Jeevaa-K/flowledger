@@ -97,7 +97,7 @@ const UI = {
       this.renderSplitRows();
     } else {
       toggleBtn.style.display = 'inline-flex';
-      toggleBtn.textContent = '✂️ Split into Multiple Categories';
+      toggleBtn.textContent = 'Split into Multiple Categories';
       singleSection.style.display = 'block';
       splitSection.style.display = 'none';
       this.splitRows = [];
@@ -335,7 +335,7 @@ const UI = {
     set('asGoalSaved', fmt(saved));
     set('asGoalTarget', fmt(target));
     set('asGoalPercent', `${pct}% reached`);
-    set('asGoalRemaining', remaining > 0 ? `${fmt(remaining)} to reach goal` : '🎉 Goal already reached!');
+    set('asGoalRemaining', remaining > 0 ? `${fmt(remaining)} to reach goal` : 'Goal already reached!');
     set('asProjectedNewPercent', '');
 
     const bar = document.getElementById('asProgressBar');
@@ -441,7 +441,7 @@ const UI = {
     if (projEl) {
       if (this.savingsMode === 'deposit') {
         if (newSaved >= target) {
-          projEl.innerHTML = `<span style="color:var(--income)">🎉 Will reach 100% (Goal complete!)</span>`;
+          projEl.innerHTML = `<span style="color:var(--income)">Will reach 100% (Goal complete!)</span>`;
         } else {
           projEl.innerHTML = `➔ Will reach <strong>${newPct}%</strong> (${fmt(newRem)} left)`;
         }
@@ -509,7 +509,13 @@ const UI = {
       <div class="bs-card"><div class="bs-label">Accounts</div><div class="bs-val">${accounts.length}</div></div>
       <div class="bs-card"><div class="bs-label">Negative Balance</div><div class="bs-val" style="color:${negativeCount>0?'var(--expense)':'var(--income)'}">${negativeCount} account${negativeCount===1?'':'s'}</div></div>`;
     if (!accounts.length) { grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1">No accounts yet. Add one to start tracking balances!</div>'; return; }
-    const typeEmoji = { cash:'💵', bank:'🏦', credit_card:'💳', wallet:'👛', other:'📦' };
+    const typeIcon = {
+      cash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="vertical-align:middle;margin-right:4px"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>',
+      bank: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="vertical-align:middle;margin-right:4px"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+      credit_card: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="vertical-align:middle;margin-right:4px"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>',
+      wallet: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="vertical-align:middle;margin-right:4px"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 2l-4 5-4-5"/><circle cx="17" cy="13" r="1"/></svg>',
+      other: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="vertical-align:middle;margin-right:4px"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>'
+    };
     const typeLabel = { cash:'Cash', bank:'Bank', credit_card:'Credit Card', wallet:'Wallet', other:'Other' };
     grid.innerHTML = accounts.map(a => {
       const isDiffCurr = a.currency && normalizeCurrCode(a.currency) !== baseCurrCode;
@@ -526,7 +532,7 @@ const UI = {
         <div class="budget-header">
           <div class="budget-cat-wrap">
             <div class="budget-cat-dot" style="background:${a.color||'#6366f1'}"></div>
-            <div class="budget-cat">${typeEmoji[a.type]||'📦'} ${escapeHtml(a.name)} ${currBadge}</div>
+            <div class="budget-cat">${typeIcon[a.type]||typeIcon.other} ${escapeHtml(a.name)} ${currBadge}</div>
           </div>
           <div style="display:flex;gap:4px">
             <button class="txn-btn edit" data-action="edit-account" data-id="${a.id}" title="Edit">✎</button>
@@ -560,12 +566,12 @@ const UI = {
       const isDiff = a.currency && normalizeCurrCode(a.currency) !== baseCurrCode;
       const subVal = isDiff && a.base_balance !== undefined ? `<div class="acc-card-converted acc-card-bal" style="font-size:11px;opacity:0.8">≈ ${fmt(a.base_balance)}</div>` : '';
       return `
-      <div style="flex:1;min-width:140px;padding:12px 14px;border-radius:10px;background:var(--surface-sunken);border-left:3px solid ${a.color||'var(--brand)'}">
-        <div style="font-size:12px;color:var(--text-tertiary);margin-bottom:4px;display:flex;justify-content:space-between">
-          <span>${escapeHtml(a.name)}</span>
-          ${a.currency ? `<span style="font-size:10px;font-weight:700">${a.currency}</span>` : ''}
+      <div style="flex:1;min-width:150px;padding:14px 18px;border-radius:10px;background:var(--surface-sunken);border-left:3px solid ${a.color||'var(--brand)'}">
+        <div style="font-size:12px;color:var(--text-tertiary);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(a.name)}</span>
+          ${a.currency ? `<span style="font-size:10px;font-weight:700;flex-shrink:0">${a.currency}</span>` : ''}
         </div>
-        <div class="acc-card-bal" style="font-size:16px;font-weight:600;color:${a.balance>=0?'var(--income)':'var(--expense)'}">
+        <div class="acc-card-bal" style="font-size:17px;font-weight:600;color:${a.balance>=0?'var(--income)':'var(--expense)'};line-height:1.3">
           ${fmt(a.balance, a.currency)}
           ${subVal}
         </div>
@@ -609,8 +615,8 @@ const UI = {
       const filtersActive = tableMode && ['filterType','filterCategory','filterFrom','filterTo']
         .some(id => document.getElementById(id)?.value);
       el.innerHTML = filtersActive
-        ? `<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">No matches</div><div class="empty-sub">Nothing fits these filters. Try widening the date range or clearing a filter.</div></div>`
-        : `<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">No transactions yet</div><div class="empty-sub">Add your first one to start tracking.</div></div>`;
+        ? `<div class="empty-state"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="32" height="32"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div><div class="empty-title">No matches</div><div class="empty-sub">Nothing fits these filters. Try widening the date range or clearing a filter.</div></div>`
+        : `<div class="empty-state"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="32" height="32"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg></div><div class="empty-title">No transactions yet</div><div class="empty-sub">Add your first one to start tracking.</div></div>`;
       return;
     }
     el.innerHTML = list.map(t => {
@@ -618,7 +624,7 @@ const UI = {
       const isIncome = t.type === 'income';
       const borderColor = isIncome ? 'var(--income)' : 'var(--expense)';
       const splitBadge = t.split_id
-        ? `<span class="txn-split-chip" title="Part of a split transaction">✂️ Split</span>`
+        ? `<span class="txn-split-chip" title="Part of a split transaction">Split</span>`
         : '';
       const tagsHtml = (t.tags && t.tags.length)
         ? `<div class="txn-tags">${t.tags.map(g => `<span class="txn-tag-chip">#${g}</span>`).join('')}</div>`
@@ -744,13 +750,24 @@ const UI = {
     const el = document.getElementById('goalsGrid');
     if (!el) return;
     if (!goals.length) { el.innerHTML = '<div class="empty-state">No goals yet. Add one to start tracking!</div>'; return; }
-    const emojis = ['🏠','✈️','🎓','💻','🚗','💍','🏋️','🌍','🏆','💰'];
+    const goalIcons = [
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="26" height="26"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="26" height="26"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.49 12 19.79 19.79 0 0 1 1.21 3.4a2 2 0 0 1 1.95-2.18H6a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.09 9a16 16 0 0 0 7.59 7.59l.72-.72a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="26" height="26"><path d="M22 10v6M2 10l10-7 10 7-10 7-10-7z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>',
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="26" height="26"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>',
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="26" height="26"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>',
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="26" height="26"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="26" height="26"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>',
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="26" height="26"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="26" height="26"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>',
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="26" height="26"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>'
+    ];
     el.innerHTML = goals.map((g,i) => {
       const pct       = Math.min(Math.round((g.saved / g.target) * 100), 100);
       const remaining = g.target - g.saved;
       const barColor  = pct >= 100 ? 'var(--income)' : pct >= 75 ? 'var(--brand)' : pct >= 40 ? 'var(--warning)' : 'var(--savings)';
       return `<div class="goal-card">
-        <div style="font-size:26px;margin-bottom:10px">${emojis[i % emojis.length]}</div>
+        <div style="margin-bottom:10px">${goalIcons[i % goalIcons.length]}</div>
         <div class="goal-header">
           <div>
             <div class="goal-name">${escapeHtml(g.name)}</div>
@@ -768,7 +785,7 @@ const UI = {
         <div class="goal-bar-bg"><div class="goal-bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
           <div class="goal-percent" style="color:${barColor}">${pct}% complete</div>
-          <div class="goal-remaining" style="font-size:12px;color:var(--text-tertiary)">${remaining > 0 ? fmt(remaining)+' to go' : '🎉 Goal reached!'}</div>
+          <div class="goal-remaining" style="font-size:12px;color:var(--text-tertiary)">${remaining > 0 ? fmt(remaining)+' to go' : 'Goal reached!'}</div>
         </div>
         <button class="tip-btn" style="margin-top:12px" data-action="add-savings" data-id="${g.id}">+ Add Savings</button>
       </div>`;
