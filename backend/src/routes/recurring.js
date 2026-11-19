@@ -1,7 +1,7 @@
 const express = require('express');
 const { auth } = require('../middleware/auth');
 const { db } = require('../db');
-const { safeError, sanitizeTags, getUserToday } = require('../utils');
+const { safeError, sanitizeTags, getUserToday, toDateString } = require('../utils');
 const router = express.Router();
 
 // Allowlist of valid frequency values — rejects typos / unexpected strings
@@ -34,62 +34,104 @@ router.get('/recurring/detect', auth, async (req, res) => {
       'newspaper', 'times prime', 'swiggy one', 'zomato gold', 'uber pass', 'playstation', 'xbox'
     ];
 
-    // Group transactions by normalized description
+    // Group transactions by merchant and amount
     const groups = {};
     for (const t of txns) {
       if (!t.description || !t.amount) continue;
+      const amt = parseFloat(t.amount);
+      if (!Number.isFinite(amt) || amt <= 0) continue;
       const cleanDesc = t.description.trim();
       const norm = cleanDesc.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
-      if (!groups[norm]) {
-        groups[norm] = {
+      if (!norm) continue;
+
+      const groupKey = `${norm}___${amt.toFixed(2)}`;
+      if (!groups[groupKey]) {
+        groups[groupKey] = {
+          norm,
+          amount: amt,
           originalDesc: cleanDesc,
           type: t.type || 'expense',
           category: t.category || 'Other',
           entries: []
         };
       }
-      groups[norm].entries.push(t);
+      groups[groupKey].entries.push(t);
     }
 
     const detected = [];
     const todayStr = new Date().toISOString().slice(0, 10);
 
-    for (const [norm, group] of Object.entries(groups)) {
+    for (const group of Object.values(groups)) {
+      // Must have at least 3 occurrences (filters out occasional repeated expenses like 2 coffees)
+      if (group.entries.length < 3) continue;
+
       // Skip if already in recurring
-      const isAlreadyTracked = [...existingSet].some(ex => norm.includes(ex) || ex.includes(norm));
+      const isAlreadyTracked = [...existingSet].some(ex => group.norm.includes(ex) || ex.includes(group.norm));
       if (isAlreadyTracked) continue;
 
-      const isKnownSub = KNOWN_SUBS.some(sub => norm.includes(sub));
-      const count = group.entries.length;
+      // Sort entries chronologically to inspect date intervals
+      const sorted = [...group.entries].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      const dates = [...new Set(sorted.map(e => toDateString(e.date)))].map(d => new Date(d));
+      if (dates.length < 3) continue;
 
-      // Detect if it's a known subscription keyword or occurs 2+ times with regular amounts
-      if (isKnownSub || count >= 2) {
-        const latestTxn = group.entries[0];
-        const amounts = group.entries.map(e => parseFloat(e.amount));
-        const avgAmt = Math.round(amounts.reduce((a, b) => a + b, 0) / amounts.length);
+      // Calculate gaps in days between consecutive dates
+      const gaps = [];
+      for (let i = 0; i < dates.length - 1; i++) {
+        const diffDays = Math.round((dates[i + 1] - dates[i]) / (1000 * 60 * 60 * 24));
+        gaps.push(diffDays);
+      }
 
-        // Estimate next renewal date (1 month after latest transaction)
-        const lastDate = new Date(latestTxn.date);
-        const nextDate = new Date(lastDate);
+      // Check cadence (weekly ~7 ±3 days, monthly ~30 ±3 days, yearly ~365 ±3 days)
+      const cadences = [
+        { name: 'weekly', target: 7, margin: 3 },
+        { name: 'monthly', target: 30, margin: 3 },
+        { name: 'yearly', target: 365, margin: 3 }
+      ];
+
+      let detectedFrequency = null;
+      for (const c of cadences) {
+        if (gaps.every(gap => Math.abs(gap - c.target) <= c.margin)) {
+          detectedFrequency = c.name;
+          break;
+        }
+      }
+
+      if (!detectedFrequency) continue;
+
+      const isKnownSub = KNOWN_SUBS.some(sub => group.norm.includes(sub));
+      const latestTxn = sorted[sorted.length - 1];
+
+      // Calculate next renewal date
+      const nextDate = new Date(latestTxn.date);
+      if (detectedFrequency === 'weekly') {
+        nextDate.setDate(nextDate.getDate() + 7);
+      } else if (detectedFrequency === 'yearly') {
+        nextDate.setFullYear(nextDate.getFullYear() + 1);
+      } else {
         nextDate.setMonth(nextDate.getMonth() + 1);
+      }
 
-        // If next date falls in the past, roll it forward until it is in the future
-        while (nextDate.toISOString().slice(0, 10) < todayStr) {
+      while (nextDate.toISOString().slice(0, 10) < todayStr) {
+        if (detectedFrequency === 'weekly') {
+          nextDate.setDate(nextDate.getDate() + 7);
+        } else if (detectedFrequency === 'yearly') {
+          nextDate.setFullYear(nextDate.getFullYear() + 1);
+        } else {
           nextDate.setMonth(nextDate.getMonth() + 1);
         }
-
-        detected.push({
-          description: group.originalDesc,
-          amount: avgAmt,
-          type: group.type,
-          category: group.category || (isKnownSub ? 'Entertainment' : 'Bills'),
-          frequency: 'monthly',
-          next_date: nextDate.toISOString().slice(0, 10),
-          last_paid_date: latestTxn.date,
-          occurrences: count,
-          is_known_service: isKnownSub
-        });
       }
+
+      detected.push({
+        description: group.originalDesc,
+        amount: group.amount,
+        type: group.type,
+        category: group.category || (isKnownSub ? 'Entertainment' : 'Bills'),
+        frequency: detectedFrequency,
+        next_date: nextDate.toISOString().slice(0, 10),
+        last_paid_date: toDateString(latestTxn.date),
+        occurrences: sorted.length,
+        is_known_service: isKnownSub
+      });
     }
 
     // Sort: known services first, then by occurrences

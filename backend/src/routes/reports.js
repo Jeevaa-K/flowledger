@@ -572,23 +572,39 @@ router.get('/export/pdf', auth, async (req, res) => {
       });
     }
 
-    const startY = cats.length ? 270 + cats.length * 18 + 30 : 270;
-    doc.moveTo(50, startY).lineTo(545, startY).stroke('#e5e7eb');
-    doc.fontSize(14).font('Helvetica-Bold').fillColor('#111').text('Transactions', 50, startY + 13);
-    let ty = startY + 38;
-    doc.fontSize(9).font('Helvetica-Bold').fillColor('#666');
-    doc.text('Date', 50, ty); doc.text('Description', 110, ty); doc.text('Category', 310, ty); doc.text('Amount', 430, ty, { width: 115, align: 'right' });
-    ty += 16;
-    doc.moveTo(50, ty).lineTo(545, ty).stroke('#e5e7eb');
-    ty += 6;
+    const renderTableHeader = (y) => {
+      doc.fontSize(9).font('Helvetica-Bold').fillColor('#666');
+      doc.text('Date', 50, y);
+      doc.text('Description', 110, y);
+      doc.text('Category', 310, y);
+      doc.text('Amount', 430, y, { width: 115, align: 'right' });
+      doc.moveTo(50, y + 14).lineTo(545, y + 14).stroke('#e5e7eb');
+      return y + 20;
+    };
 
-    txns.slice(0, 40).forEach(t => {
-      if (ty > 750) { doc.addPage(); ty = 50; }
+    let startY = cats.length ? 270 + cats.length * 18 + 30 : 270;
+    let ty;
+    if (startY + 60 > 750) {
+      doc.addPage();
+      doc.fontSize(14).font('Helvetica-Bold').fillColor('#111').text('Transactions', 50, 50);
+      ty = renderTableHeader(75);
+    } else {
+      doc.moveTo(50, startY).lineTo(545, startY).stroke('#e5e7eb');
+      doc.fontSize(14).font('Helvetica-Bold').fillColor('#111').text('Transactions', 50, startY + 13);
+      ty = renderTableHeader(startY + 38);
+    }
+
+    // Paginate through all transactions, adding new pages and repeating header when passing margin
+    txns.forEach(t => {
+      if (ty + 18 > 750) {
+        doc.addPage();
+        ty = renderTableHeader(50);
+      }
       const d = toDateString(t.date);
       doc.fontSize(9).font('Helvetica').fillColor('#374151');
       doc.text(d, 50, ty, { width: 55 });
       doc.text(pdfSafeText(t.description, 'Expense'), 110, ty, { width: 190, ellipsis: true });
-      doc.text(pdfSafeText(t.category, 'Other'), 310, ty, { width: 110 });
+      doc.text(pdfSafeText(t.category, 'Other'), 310, ty, { width: 110, ellipsis: true });
       doc.fillColor(t.type === 'income' ? '#10b981' : '#ef4444')
         .text(`${t.type === 'income' ? '+' : '-'}Rs.${Number(t.amount).toLocaleString('en-IN')}`, 430, ty, { width: 115, align: 'right' });
       ty += 16;
