@@ -4,6 +4,7 @@ const { groq, langfuse, createGroqCompletion, cleanLLMOutput } = require('../ser
 const { db } = require('../db');
 const { safeError, sanitizeTags, getUserToday, getUserYearMonth, getPreviousMonth } = require('../utils');
 const { normalizeCurrency } = require('../services/currency');
+const { DEFAULT_CATEGORIES } = require('../constants/categories');
 const router = express.Router();
 
 // ── Helpers for AI-initiated transaction saves ────────────────────────────────
@@ -40,8 +41,7 @@ router.post('/ai/chat', auth, async (req, res) => {
       [req.user.id]
     );
     const catList = categories.map(c => c.category).filter(Boolean);
-    const defaultCats = ['Food & Dining', 'Groceries', 'Shopping', 'Transportation', 'Bills & Utilities', 'Entertainment', 'Health', 'Housing', 'Salary', 'Investment', 'Other'];
-    const validCats = Array.from(new Set([...catList, ...defaultCats]));
+    const validCats = Array.from(new Set([...catList, ...DEFAULT_CATEGORIES]));
 
     const summary = await db.get(
       `SELECT COALESCE(SUM(CASE WHEN type='income' THEN amount ELSE 0 END),0) as income,

@@ -3,6 +3,7 @@ const { auth } = require('../middleware/auth');
 const { groq, createGroqCompletion, cleanLLMOutput } = require('../services/ai');
 const { db } = require('../db');
 const { getUserToday } = require('../utils');
+const { DEFAULT_CATEGORIES, STANDARD_CATEGORIES } = require('../constants/categories');
 const router = express.Router();
 
 // ── AI Natural Language Quick Add ─────────────────────────────
@@ -18,8 +19,7 @@ router.post('/ai/parse-text', auth, async (req, res) => {
       [req.user.id]
     );
     const catList = categories.map(c => c.category).filter(Boolean);
-    const defaultCats = ['Food & Dining', 'Groceries', 'Shopping', 'Transportation', 'Bills & Utilities', 'Entertainment', 'Health', 'Housing', 'Salary', 'Investment', 'Other'];
-    const validCats = Array.from(new Set([...catList, ...defaultCats]));
+    const validCats = Array.from(new Set([...catList, ...DEFAULT_CATEGORIES]));
 
     const accounts = await db.all(`SELECT id, name, type FROM accounts WHERE user_id=$1 AND archived=false`, [req.user.id]);
     const today = getUserToday(req.user?.timezone);
@@ -111,8 +111,7 @@ router.post('/ai/parse-sms', auth, async (req, res) => {
       [req.user.id]
     );
     const catList = categories.map(c => c.category).filter(Boolean);
-    const defaultCats = ['Food & Dining', 'Groceries', 'Shopping', 'Transportation', 'Bills & Utilities', 'Entertainment', 'Health', 'Housing', 'Salary', 'Investment', 'Other'];
-    const validCats = Array.from(new Set([...catList, ...defaultCats]));
+    const validCats = Array.from(new Set([...catList, ...DEFAULT_CATEGORIES]));
 
     const accounts = await db.all(`SELECT id, name, type FROM accounts WHERE user_id=$1 AND archived=false`, [req.user.id]);
     const today = new Date().toISOString().slice(0, 10);
@@ -309,7 +308,7 @@ router.post('/ai/scan-receipt', auth, async (req, res) => {
 
   try {
     const today = new Date().toISOString().slice(0, 10);
-    const standardCategories = ['Food', 'Transport', 'Shopping', 'Entertainment', 'Health', 'Bills', 'Other'];
+    const standardCategories = STANDARD_CATEGORIES;
 
     const systemPrompt = `You are an expert receipt & invoice OCR parsing engine.
 Examine the receipt image carefully and extract all structural data.

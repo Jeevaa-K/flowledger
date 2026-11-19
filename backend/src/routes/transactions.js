@@ -1,43 +1,15 @@
 const express = require('express');
 const { auth } = require('../middleware/auth');
 const { db } = require('../db');
-const { safeError, sanitizeTags, toDateString } = require('../utils');
+const { safeError, sanitizeTags, toDateString, buildTransactionFilters } = require('../utils');
 const { normalizeCurrency, convertCurrency } = require('../services/currency');
 const router = express.Router();
 
 // ── Transactions ──────────────────────────────────────────────
 router.get('/transactions', auth, async (req, res) => {
   try {
-    const { type, category, from, to, account_id, tag, search, min_amount, max_amount, sort = 'date_desc', limit = 200, page } = req.query;
-    let where = ' WHERE user_id=$1';
-    const p = [req.user.id];
-    let i = 2;
-    if (type) { where += ` AND type=$${i++}`; p.push(type); }
-    if (category) { where += ` AND category=$${i++}`; p.push(category); }
-    if (from) { where += ` AND date>=$${i++}`; p.push(from); }
-    if (to) { where += ` AND date<=$${i++}`; p.push(to); }
-    if (account_id) { where += ` AND account_id=$${i++}`; p.push(account_id); }
-    if (tag) { where += ` AND $${i++} = ANY(tags)`; p.push(tag.trim().toLowerCase()); }
-    if (search && search.trim()) {
-      where += ` AND (description ILIKE $${i} OR notes ILIKE $${i} OR category ILIKE $${i})`;
-      p.push(`%${search.trim()}%`);
-      i++;
-    }
-    if (min_amount && Number.isFinite(parseFloat(min_amount))) {
-      where += ` AND amount >= $${i++}`;
-      p.push(parseFloat(min_amount));
-    }
-    if (max_amount && Number.isFinite(parseFloat(max_amount))) {
-      where += ` AND amount <= $${i++}`;
-      p.push(parseFloat(max_amount));
-    }
-
-    let orderBy = 'ORDER BY date DESC, created_at DESC';
-    if (sort === 'date_asc') orderBy = 'ORDER BY date ASC, created_at ASC';
-    else if (sort === 'amount_desc') orderBy = 'ORDER BY amount DESC, date DESC';
-    else if (sort === 'amount_asc') orderBy = 'ORDER BY amount ASC, date DESC';
-    else if (sort === 'created_desc') orderBy = 'ORDER BY created_at DESC, date DESC';
-
+    const { limit = 200, page } = req.query;
+    const { where, params: p, orderBy, nextIndex: i } = buildTransactionFilters(req.query, req.user.id);
     const pageSize = Math.min(parseInt(limit) || 200, 1000);
 
     if (page) {
@@ -58,35 +30,7 @@ router.get('/transactions', auth, async (req, res) => {
 
 router.get('/transactions/export-csv', auth, async (req, res) => {
   try {
-    const { type, category, from, to, account_id, tag, search, min_amount, max_amount, sort = 'date_desc' } = req.query;
-    let where = ' WHERE user_id=$1';
-    const p = [req.user.id];
-    let i = 2;
-    if (type) { where += ` AND type=$${i++}`; p.push(type); }
-    if (category) { where += ` AND category=$${i++}`; p.push(category); }
-    if (from) { where += ` AND date>=$${i++}`; p.push(from); }
-    if (to) { where += ` AND date<=$${i++}`; p.push(to); }
-    if (account_id) { where += ` AND account_id=$${i++}`; p.push(account_id); }
-    if (tag) { where += ` AND $${i++} = ANY(tags)`; p.push(tag.trim().toLowerCase()); }
-    if (search && search.trim()) {
-      where += ` AND (description ILIKE $${i} OR notes ILIKE $${i} OR category ILIKE $${i})`;
-      p.push(`%${search.trim()}%`);
-      i++;
-    }
-    if (min_amount && Number.isFinite(parseFloat(min_amount))) {
-      where += ` AND amount >= $${i++}`;
-      p.push(parseFloat(min_amount));
-    }
-    if (max_amount && Number.isFinite(parseFloat(max_amount))) {
-      where += ` AND amount <= $${i++}`;
-      p.push(parseFloat(max_amount));
-    }
-
-    let orderBy = 'ORDER BY date DESC, created_at DESC';
-    if (sort === 'date_asc') orderBy = 'ORDER BY date ASC, created_at ASC';
-    else if (sort === 'amount_desc') orderBy = 'ORDER BY amount DESC, date DESC';
-    else if (sort === 'amount_asc') orderBy = 'ORDER BY amount ASC, date DESC';
-    else if (sort === 'created_desc') orderBy = 'ORDER BY created_at DESC, date DESC';
+    const { where, params: p, orderBy } = buildTransactionFilters(req.query, req.user.id);
 
     const rows = await db.all(`SELECT date, type, category, description, amount, notes, tags FROM transactions${where} ${orderBy} LIMIT 2000`, p);
 

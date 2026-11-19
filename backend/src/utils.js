@@ -98,6 +98,41 @@ function csvField(val) {
   return `"${s.replace(/"/g, '""')}"`;
 }
 
+// Builds parameterized WHERE clause and ORDER BY for transactions list and CSV export
+function buildTransactionFilters(query = {}, userId = query.userId || query.user_id) {
+  const { type, category, from, to, account_id, tag, search, min_amount, max_amount, sort = 'date_desc' } = query;
+  let where = ' WHERE user_id=$1';
+  const params = [userId];
+  let i = 2;
+  if (type) { where += ` AND type=$${i++}`; params.push(type); }
+  if (category) { where += ` AND category=$${i++}`; params.push(category); }
+  if (from) { where += ` AND date>=$${i++}`; params.push(from); }
+  if (to) { where += ` AND date<=$${i++}`; params.push(to); }
+  if (account_id) { where += ` AND account_id=$${i++}`; params.push(account_id); }
+  if (tag) { where += ` AND $${i++} = ANY(tags)`; params.push(tag.trim().toLowerCase()); }
+  if (search && search.trim()) {
+    where += ` AND (description ILIKE $${i} OR notes ILIKE $${i} OR category ILIKE $${i})`;
+    params.push(`%${search.trim()}%`);
+    i++;
+  }
+  if (min_amount && Number.isFinite(parseFloat(min_amount))) {
+    where += ` AND amount >= $${i++}`;
+    params.push(parseFloat(min_amount));
+  }
+  if (max_amount && Number.isFinite(parseFloat(max_amount))) {
+    where += ` AND amount <= $${i++}`;
+    params.push(parseFloat(max_amount));
+  }
+
+  let orderBy = 'ORDER BY date DESC, created_at DESC';
+  if (sort === 'date_asc') orderBy = 'ORDER BY date ASC, created_at ASC';
+  else if (sort === 'amount_desc') orderBy = 'ORDER BY amount DESC, date DESC';
+  else if (sort === 'amount_asc') orderBy = 'ORDER BY amount ASC, date DESC';
+  else if (sort === 'created_desc') orderBy = 'ORDER BY created_at DESC, date DESC';
+
+  return { where, params, orderBy, nextIndex: i };
+}
+
 module.exports = {
   safeError,
   sanitizeTags,
@@ -108,5 +143,6 @@ module.exports = {
   getUserToday,
   getUserYearMonth,
   getPreviousMonth,
-  isValidPassword
+  isValidPassword,
+  buildTransactionFilters
 };
