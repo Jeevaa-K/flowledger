@@ -12,7 +12,7 @@ export const ProfileModule = {
       }
     } catch (e) {
       console.error('Load accounts error:', e);
-      if (forceRerender) UI.toast('⚠ Could not load accounts', 'error');
+      if (forceRerender) UI.toast('Could not load accounts', 'error');
     }
   },
 
@@ -22,14 +22,14 @@ export const ProfileModule = {
     const balEl = document.getElementById('accountStartingBalance');
     const currEl = document.getElementById('accountCurrency');
     const editIdEl = document.getElementById('editAccountId');
-    if (!nameEl || !typeEl || !balEl || !editIdEl) { UI.toast('⚠ Something went wrong loading the form', 'error'); return; }
+    if (!nameEl || !typeEl || !balEl || !editIdEl) { UI.toast('Something went wrong loading the form', 'error'); return; }
 
     const name = nameEl.value.trim();
     const type = typeEl.value;
     const starting_balance = parseFloat(balEl.value) || 0;
     const currency = currEl?.value || 'INR';
     const editId = editIdEl.value;
-    if (!name) { UI.toast('⚠ Enter an account name', 'error'); return; }
+    if (!name) { UI.toast('Enter an account name', 'error'); return; }
 
     const btn = document.getElementById('saveAccountBtn');
     if (btn) { btn.disabled = true; btn.dataset.origText = btn.textContent; btn.textContent = 'Saving...'; }
@@ -45,7 +45,7 @@ export const ProfileModule = {
       await this.loadAccounts(State.page === 'accounts');
       if (State.page === 'dashboard' && typeof this.loadDashboard === 'function') await this.loadDashboard();
     } catch (e) {
-      UI.toast('⚠ ' + e.message.replace(/^\d+:\s*/, ''), 'error');
+      UI.toast('' + e.message.replace(/^\d+:\s*/, ''), 'error');
     } finally { if (btn) { btn.disabled = false; btn.textContent = btn.dataset.origText || 'Save Account'; } }
   },
 
@@ -62,7 +62,7 @@ export const ProfileModule = {
       await this.loadAccounts(true);
       if (State.page === 'dashboard' && typeof this.loadDashboard === 'function') await this.loadDashboard();
     } catch (e) {
-      UI.toast('⚠ ' + e.message.replace(/^\d+:\s*/, ''), 'error');
+      UI.toast('' + e.message.replace(/^\d+:\s*/, ''), 'error');
     }
   },
 
@@ -120,7 +120,7 @@ export const ProfileModule = {
   togglePrivacyMode() {
     const isPrivacy = document.body.classList.toggle('privacy-mode');
     localStorage.setItem('fl_privacy_mode', isPrivacy ? 'true' : 'false');
-    UI.toast(isPrivacy ? '👁️ Privacy mode ON — sensitive amounts blurred' : '👁️ Privacy mode OFF — amounts visible', 'info');
+    UI.toast(isPrivacy ? 'Privacy mode ON — sensitive amounts blurred' : 'Privacy mode OFF — amounts visible', 'info');
   },
 
   bindKeyboard() {

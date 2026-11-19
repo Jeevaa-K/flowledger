@@ -93,7 +93,7 @@ const Groups = {
       this.renderGroupsList(groups);
     } catch (e) {
       console.error('Load groups error:', e);
-      UI.toast('⚠ Could not load groups', 'error');
+      UI.toast('Could not load groups', 'error');
     }
   },
 
@@ -104,7 +104,7 @@ const Groups = {
     if (!groups || !groups.length) {
       grid.innerHTML = `
         <div class="card" style="text-align:center;padding:40px 20px;grid-column:1/-1">
-          <div style="font-size:36px;margin-bottom:12px">👥</div>
+          <div style="margin-bottom:12px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="36" height="36"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
           <div style="font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:6px">No Groups Created Yet</div>
           <div style="font-size:13px;color:var(--text-secondary);max-width:340px;margin:0 auto 20px">
             Create a shared group for your trip, house rent, or dinner party to track who paid what and settle up instantly.
@@ -122,7 +122,7 @@ const Groups = {
             <div style="font-size:17px;font-weight:700;color:var(--text-primary)">${escapeHtml(g.name)}</div>
             <div style="font-size:12px;color:var(--text-secondary);margin-top:2px">${g.description || 'Shared Expense Ledger'}</div>
           </div>
-          <span class="res-badge">👥 ${g.member_count} Members</span>
+          <span class="res-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12" style="vertical-align:middle;margin-right:4px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>${g.member_count} Members</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px solid var(--border-soft)">
           <span style="font-size:12px;color:var(--text-secondary)">Total Spent:</span>
@@ -150,7 +150,7 @@ const Groups = {
     const desc = document.getElementById('groupDescInput')?.value?.trim();
     const rawMembers = document.getElementById('groupMembersInput')?.value || '';
 
-    if (!name) { UI.toast('⚠ Enter a group name', 'error'); return; }
+    if (!name) { UI.toast('Enter a group name', 'error'); return; }
     const members = rawMembers.split(',').map(m => m.trim()).filter(Boolean);
 
     const btn = document.getElementById('saveGroupBtn');
@@ -165,7 +165,7 @@ const Groups = {
         this.openGroupDetail(res.group.id);
       }
     } catch (e) {
-      UI.toast('⚠ ' + e.message, 'error');
+      UI.toast('' + e.message, 'error');
     } finally {
       if (btn) { btn.disabled = false; btn.textContent = 'Create Group'; }
     }
@@ -181,7 +181,7 @@ const Groups = {
       this.activeGroupData = data;
       this.renderGroupDetail(data);
     } catch (e) {
-      UI.toast('⚠ Could not load group details', 'error');
+      UI.toast('Could not load group details', 'error');
       this.showListView();
     }
   },
@@ -206,7 +206,7 @@ const Groups = {
       if (!settlements.length && (!expenses.length || balances.every(b => Math.abs(b.net) < 0.01))) {
         setGrid.innerHTML = `
           <div style="font-size:13px;color:var(--income);font-weight:600;padding:12px 0">
-            🎉 Everyone is all settled up! No pending balances.
+            Everyone is all settled up! No pending balances.
           </div>
         `;
       } else {
@@ -216,7 +216,7 @@ const Groups = {
               <div class="settlement-card">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start">
                   <div style="font-size:13px;font-weight:600;color:var(--text-primary)">
-                    🔴 <strong style="color:var(--expense)">${s.from_name}</strong> owes <strong style="color:var(--income)">${s.to_name}</strong>
+                    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--expense);margin-right:6px"></span><strong style="color:var(--expense)">${s.from_name}</strong> owes <strong style="color:var(--income)">${s.to_name}</strong>
                   </div>
                 </div>
                 <div class="settlement-amount" style="font-size:22px;font-weight:800;color:var(--text-primary)">
@@ -230,14 +230,14 @@ const Groups = {
                     data-to-name="${s.to_name}"
                     data-amount="${s.amount}"
                     title="Generate instant UPI payment QR code">
-                    <span>📱</span> Scan to Pay
+                    <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13" style="vertical-align:middle;margin-right:4px"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></span>Scan to Pay
                   </button>
                   <button class="settle-action-btn" data-action="open-settle-form"
                     data-from-id="${s.from_id}"
                     data-to-id="${s.to_id}"
                     data-amount="${s.amount}"
                     title="Record a payment settlement">
-                    <span>🤝</span> Settle Up
+                    <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13" style="vertical-align:middle;margin-right:4px"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span>Settle Up
                   </button>
                 </div>
               </div>
@@ -262,7 +262,7 @@ const Groups = {
         return `
           <div class="txn-item" style="padding:12px 14px">
             <div class="txn-icon" style="background:${isSettle ? 'var(--income-tint)' : 'var(--brand-tint)'};color:${isSettle ? 'var(--income)' : 'var(--brand)'}">
-              ${isSettle ? '🤝' : '💸'}
+              ${isSettle ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>'}
             </div>
             <div class="txn-info" style="flex:1">
               <div class="txn-desc" style="font-weight:600">${escapeHtml(e.description)}</div>
@@ -273,7 +273,7 @@ const Groups = {
             </div>
             <div style="text-align:right">
               <div class="txn-amount ${isSettle ? 'green' : 'red'}" style="font-weight:700">${fmt(e.amount)}</div>
-              <button class="goal-delete" style="margin-top:4px" data-action="delete-group-expense" data-id="${e.id}" title="Delete expense">🗑</button>
+              <button class="goal-delete" style="margin-top:4px" data-action="delete-group-expense" data-id="${e.id}" title="Delete expense">✕</button>
             </div>
           </div>
         `;
@@ -346,7 +346,7 @@ const Groups = {
       this.closeSettleQrModal();
       await this.openGroupDetail(this.activeGroupId);
     } catch (e) {
-      UI.toast('⚠ ' + e.message, 'error');
+      UI.toast('' + e.message, 'error');
     } finally {
       if (btn) { btn.disabled = false; btn.innerHTML = '<span>✓</span> Mark as Settled'; }
     }
@@ -381,9 +381,9 @@ const Groups = {
     const category = document.getElementById('gExpCategory')?.value || 'Other';
     const date = document.getElementById('gExpDate')?.value;
 
-    if (!desc) { UI.toast('⚠ Enter an expense description', 'error'); return; }
-    if (!amount || amount <= 0) { UI.toast('⚠ Enter a valid amount greater than 0', 'error'); return; }
-    if (!payer_id) { UI.toast('⚠ Select who paid for this expense', 'error'); return; }
+    if (!desc) { UI.toast('Enter an expense description', 'error'); return; }
+    if (!amount || amount <= 0) { UI.toast('Enter a valid amount greater than 0', 'error'); return; }
+    if (!payer_id) { UI.toast('Select who paid for this expense', 'error'); return; }
 
     const btn = document.getElementById('saveGroupExpenseBtn');
     if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
@@ -394,7 +394,7 @@ const Groups = {
       this.closeExpenseModal();
       await this.openGroupDetail(this.activeGroupId);
     } catch (e) {
-      UI.toast('⚠ ' + e.message, 'error');
+      UI.toast('' + e.message, 'error');
     } finally {
       if (btn) { btn.disabled = false; btn.textContent = 'Save Shared Expense'; }
     }
@@ -437,11 +437,11 @@ const Groups = {
     const amount  = parseFloat(document.getElementById('settleAmount')?.value) || 0;
 
     if (!from_id || !to_id || amount <= 0) {
-      UI.toast('⚠ Enter valid payer, recipient, and positive amount', 'error');
+      UI.toast('Enter valid payer, recipient, and positive amount', 'error');
       return;
     }
     if (from_id === to_id) {
-      UI.toast('⚠ Payer and recipient must be different members', 'error');
+      UI.toast('Payer and recipient must be different members', 'error');
       return;
     }
 
@@ -454,7 +454,7 @@ const Groups = {
       this.closeSettleModal();
       await this.openGroupDetail(this.activeGroupId);
     } catch (e) {
-      UI.toast('⚠ ' + e.message, 'error');
+      UI.toast('' + e.message, 'error');
     } finally {
       if (btn) { btn.disabled = false; btn.textContent = 'Record Settlement'; }
     }
@@ -467,7 +467,7 @@ const Groups = {
       UI.toast('✓ Expense deleted', 'success');
       await this.openGroupDetail(this.activeGroupId);
     } catch (e) {
-      UI.toast('⚠ ' + e.message, 'error');
+      UI.toast('' + e.message, 'error');
     }
   },
 
@@ -480,7 +480,7 @@ const Groups = {
       UI.toast('✓ Group deleted', 'success');
       this.showListView();
     } catch (e) {
-      UI.toast('⚠ ' + e.message, 'error');
+      UI.toast('' + e.message, 'error');
     }
   }
 };

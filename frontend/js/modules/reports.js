@@ -57,8 +57,8 @@ export const ReportsModule = {
       const btn2 = document.getElementById('auditEmptyGenBtn');
       const origText = btn ? btn.textContent : '';
       const origText2 = btn2 ? btn2.textContent : '';
-      if (btn) { btn.disabled = true; btn.textContent = '⏳ Analyzing...'; }
-      if (btn2) { btn2.disabled = true; btn2.textContent = '⏳ Analyzing...'; }
+      if (btn) { btn.disabled = true; btn.textContent = 'Analyzing...'; }
+      if (btn2) { btn2.disabled = true; btn2.textContent = 'Analyzing...'; }
       try {
         const data = await API.get(`/reports/audit?month=${this._auditMonth}&year=${this._auditYear}`);
         this.renderAudit(data);
@@ -96,7 +96,7 @@ export const ReportsModule = {
       const btn   = document.getElementById('downloadPdfBtn');
       const m     = this._auditMonth;
       const y     = this._auditYear;
-      if (btn) { btn.textContent = '⏳ Generating...'; btn.disabled = true; }
+      if (btn) { btn.textContent = 'Generating...'; btn.disabled = true; }
       try {
         const res = await fetch(`/api/export/pdf?month=${m}&year=${y}`, { credentials: 'same-origin' });
         if (!res.ok) {
@@ -118,7 +118,7 @@ export const ReportsModule = {
         console.error('PDF error:', e);
         UI.toast('PDF error: ' + e.message, 'error');
       } finally {
-        if (btn) { btn.textContent = '📄 Download PDF'; btn.disabled = false; }
+        if (btn) { btn.textContent = 'Download PDF'; btn.disabled = false; }
       }
     });
   },

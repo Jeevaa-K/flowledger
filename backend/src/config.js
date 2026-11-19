@@ -10,7 +10,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 // A missing or weak secret would let anyone forge login tokens,
 // so refuse to start instead of running insecurely.
 if (!JWT_SECRET) {
-  console.error('❌ FATAL: JWT_SECRET environment variable is not set. Refusing to start.');
+  console.error('FATAL: JWT_SECRET environment variable is not set. Refusing to start.');
   process.exit(1);
 }
 const INSECURE_JWT_DEFAULTS = new Set([
@@ -22,7 +22,7 @@ const INSECURE_JWT_DEFAULTS = new Set([
 ]);
 
 if (isProd && (INSECURE_JWT_DEFAULTS.has(JWT_SECRET) || /change_me/i.test(JWT_SECRET))) {
-  console.error('❌ FATAL: Default or placeholder JWT_SECRET detected in production. Generate a secure secret using: openssl rand -hex 64');
+  console.error('FATAL: Default or placeholder JWT_SECRET detected in production. Generate a secure secret using: openssl rand -hex 64');
   process.exit(1);
 }
 

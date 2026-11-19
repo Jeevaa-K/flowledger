@@ -9,7 +9,7 @@ initDB()
   .then(() => {
     startRecurringJob();
     const server = app.listen(PORT, () => {
-      console.log(`\n🚀 FlowLedger running at http://localhost:${PORT}\n`);
+      console.log(`\nFlowLedger running at http://localhost:${PORT}\n`);
     });
 
     const shutdown = (signal) => {

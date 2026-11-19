@@ -111,11 +111,11 @@ async function refreshFxRates() {
            ON CONFLICT (base) DO UPDATE SET rates = EXCLUDED.rates, fetched_at = EXCLUDED.fetched_at`,
           [JSON.stringify(cachedRatesUsd), fetchedTime]
         );
-        console.log(`✅ FX rates updated from live API (fetched_at: ${fetchedTime})`);
+        console.log(`FX rates updated from live API (fetched_at: ${fetchedTime})`);
       } catch (_) {}
     }
   } catch (err) {
-    console.warn('⚠️ Unable to refresh FX rates from API, using fallback rates:', err.message);
+    console.warn('Unable to refresh FX rates from API, using fallback rates:', err.message);
   }
 }
 

@@ -7,7 +7,7 @@ export const GoalsModule = {
       UI.renderGoals(State.goals);
     } catch (e) {
       console.error('Load goals error:', e);
-      UI.toast('⚠ Could not load goals', 'error');
+      UI.toast('Could not load goals', 'error');
     }
   },
 
@@ -17,14 +17,14 @@ export const GoalsModule = {
     const savedEl = document.getElementById('goalSaved');
     const dateEl = document.getElementById('goalDate');
     const editIdEl = document.getElementById('goalEditId');
-    if (!nameEl || !targetEl || !savedEl || !dateEl || !editIdEl) { UI.toast('⚠ Something went wrong loading the form', 'error'); return; }
+    if (!nameEl || !targetEl || !savedEl || !dateEl || !editIdEl) { UI.toast('Something went wrong loading the form', 'error'); return; }
 
     const name = nameEl.value.trim();
     const target = parseFloat(targetEl.value);
     const saved = parseFloat(savedEl.value) || 0;
     const date = dateEl.value;
     const editId = editIdEl.value;
-    if (!name || !target) { UI.toast('⚠ Fill in goal name and target', 'error'); return; }
+    if (!name || !target) { UI.toast('Fill in goal name and target', 'error'); return; }
 
     const btn = document.getElementById('saveGoalBtn');
     if (btn) btn.disabled = true;
@@ -39,7 +39,7 @@ export const GoalsModule = {
       UI.closeGoalModal();
       await this.loadGoals();
     } catch (e) {
-      UI.toast('⚠ ' + e.message.replace(/^\d+:\s*/, ''), 'error');
+      UI.toast('' + e.message.replace(/^\d+:\s*/, ''), 'error');
     } finally { if (btn) btn.disabled = false; }
   },
 
@@ -119,7 +119,7 @@ export const GoalsModule = {
 
       const newPct = target > 0 ? Math.min(Math.round((newSaved / target) * 100), 100) : 0;
       if (isDeposit && newSaved >= target) {
-        UI.toast(`🎉 Congratulations! You reached your goal for "${goal.name}"!`, 'success');
+        UI.toast(`Congratulations! You reached your goal for "${goal.name}"!`, 'success');
       } else if (isDeposit) {
         UI.toast(`✓ Added ${fmt(amount)} to "${goal.name}" (${newPct}% reached)`, 'success');
       } else {
@@ -135,7 +135,7 @@ export const GoalsModule = {
         if (State.page === 'transactions' && typeof this.loadTransactions === 'function') await this.loadTransactions();
       }
     } catch (e) {
-      UI.toast('⚠ ' + e.message.replace(/^\d+:\s*/, ''), 'error');
+      UI.toast('' + e.message.replace(/^\d+:\s*/, ''), 'error');
     } finally {
       if (btn) {
         btn.disabled = false;
@@ -151,7 +151,7 @@ export const GoalsModule = {
       UI.toast('✓ Goal removed', 'success');
       await this.loadGoals();
     } catch (e) {
-      UI.toast('⚠ ' + e.message.replace(/^\d+:\s*/, ''), 'error');
+      UI.toast('' + e.message.replace(/^\d+:\s*/, ''), 'error');
     }
   }
 };

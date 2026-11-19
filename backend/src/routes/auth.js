@@ -190,7 +190,7 @@ router.post('/auth/forgot', authLimiter, async (req, res) => {
       // In production with email provider (e.g. Resend/Nodemailer), email is sent.
       // In development or when email service is unconfigured, log the link safely.
       if (process.env.NODE_ENV !== 'production') {
-        console.log(`🔑 [DEV ONLY] Password reset token for ${email}: ${rawToken}`);
+        console.log(`[DEV ONLY] Password reset token for ${email}: ${rawToken}`);
       }
     }
 

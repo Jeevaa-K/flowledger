@@ -17,8 +17,8 @@ function cleanLLMOutput(text) {
 // ── Groq ──────────────────────────────────────────────────────
 let groq = null;
 const apiKey = process.env.GROQ_API_KEY;
-console.log(apiKey ? '🔑 GROQ_API_KEY configured' : '⚠️  GROQ_API_KEY not set — AI features disabled');
-if (apiKey) { groq = new Groq({ apiKey }); console.log('✅ Groq AI enabled'); }
+console.log(apiKey ? 'GROQ_API_KEY configured' : 'GROQ_API_KEY not set — AI features disabled');
+if (apiKey) { groq = new Groq({ apiKey }); console.log('Groq AI enabled'); }
 
 // Verified active chat models from GET https://api.groq.com/openai/v1/models:
 // 1. qwen/qwen3.8-27b
@@ -44,14 +44,14 @@ if (groq && process.env.NODE_ENV !== 'test') {
       const list = await groq.models.list();
       const activeIds = (list.data || []).filter(m => m.active !== false).map(m => m.id);
       if (!activeIds.includes(PRIMARY_MODEL)) {
-        console.warn(`⚠️ Warning: Configured GROQ_MODEL '${PRIMARY_MODEL}' is not in Groq's active models list (${activeIds.filter(id => !id.includes('whisper') && !id.includes('guard')).join(', ')}). Fallback models will be attempted.`);
+        console.warn(`Warning: Configured GROQ_MODEL '${PRIMARY_MODEL}' is not in Groq's active models list (${activeIds.filter(id => !id.includes('whisper') && !id.includes('guard')).join(', ')}). Fallback models will be attempted.`);
       } else {
-        console.log(`✅ Groq model '${PRIMARY_MODEL}' validated and active`);
+        console.log(`Groq model '${PRIMARY_MODEL}' validated and active`);
       }
     } catch (err) {
       // In offline/sandboxed environments, fallback to static check
       if (!KNOWN_ACTIVE_MODELS.includes(PRIMARY_MODEL)) {
-        console.warn(`⚠️ Warning: Configured GROQ_MODEL '${PRIMARY_MODEL}' is not in verified active models (${KNOWN_ACTIVE_MODELS.join(', ')}).`);
+        console.warn(`Warning: Configured GROQ_MODEL '${PRIMARY_MODEL}' is not in verified active models (${KNOWN_ACTIVE_MODELS.join(', ')}).`);
       }
     }
   })();
@@ -69,14 +69,14 @@ async function createGroqCompletion(params) {
     const model = modelsToTry[i];
     try {
       if (i > 0) {
-        console.warn(`⚠️ Attempting fallback Groq model '${model}' (primary '${preferredModel}' failed: ${lastErr?.message || 'unavailable'})...`);
+        console.warn(`Attempting fallback Groq model '${model}' (primary '${preferredModel}' failed: ${lastErr?.message || 'unavailable'})...`);
       }
       const completion = await groq.chat.completions.create({
         ...params,
         model
       });
       if (i > 0) {
-        console.warn(`⚠️ Warning: AI request completed using fallback model '${model}' instead of preferred model '${preferredModel}'`);
+        console.warn(`Warning: AI request completed using fallback model '${model}' instead of preferred model '${preferredModel}'`);
       }
       return completion;
     } catch (err) {
@@ -94,7 +94,7 @@ async function createGroqCompletion(params) {
           err.message.includes('model_not_found')
         ));
       if (isNotFound) {
-        console.warn(`⚠️ Groq model '${model}' not available (${err.code || err.status}: ${err.message || ''}), attempting next fallback model...`);
+        console.warn(`Groq model '${model}' not available (${err.code || err.status}: ${err.message || ''}), attempting next fallback model...`);
         continue;
       }
       throw err;
@@ -120,7 +120,7 @@ if (
     secretKey: process.env.LANGFUSE_SECRET_KEY,
     baseUrl: process.env.LANGFUSE_HOST || 'https://cloud.langfuse.com'
   });
-  console.log('✅ Langfuse tracing enabled');
+  console.log('Langfuse tracing enabled');
 }
 
 module.exports = { groq, langfuse, GROQ_MODELS, createGroqCompletion, cleanLLMOutput };

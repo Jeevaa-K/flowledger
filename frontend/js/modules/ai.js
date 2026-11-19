@@ -69,7 +69,7 @@ export const AIModule = {
 
       listEl.innerHTML = State.aiSessions.map(s => {
         const isActive = State.aiSessionId === s.id;
-        const icon = (s.model === 'deepseek' || s.model === 'claude') ? '🔬' : s.model === 'fast' ? '⚡' : '🧠';
+        const icon = (s.model === 'deepseek' || s.model === 'claude') ? 'AI' : s.model === 'fast' ? 'AI' : 'AI';
         const d = s.updated_at ? new Date(s.updated_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }) : '';
         return `
           <div class="ai-session-item ${isActive ? 'active' : ''}" data-session-id="${s.id}">
@@ -178,7 +178,7 @@ export const AIModule = {
     if (!c) return;
     const isAssistant = role === 'assistant';
     const activeModel = model || State.aiModel;
-    const avatarText = isAssistant ? ((activeModel === 'deepseek' || activeModel === 'claude') ? '🔬' : activeModel === 'fast' ? '⚡' : '🧠') : 'You';
+    const avatarText = isAssistant ? ((activeModel === 'deepseek' || activeModel === 'claude') ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v11m0 0h10m-10 0a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2m-10 0V9m10 5V9m0 0H9"/></svg>' : activeModel === 'fast' ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="15" x2="8.01" y2="15"/><line x1="16" y1="15" x2="16.01" y2="15"/></svg>') : 'You';
     const formattedHtml = isAssistant ? this.formatMarkdown(content) : content.replace(/\n/g, '<br>');
 
     const d = document.createElement('div');
@@ -189,7 +189,7 @@ export const AIModule = {
         <div class="msg-bubble">${formattedHtml}</div>
         <div class="msg-meta-row">
           <div class="msg-time">${new Date().toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' })}</div>
-          ${isAssistant ? `<button type="button" class="msg-copy-btn" title="Copy response">📋 Copy</button>` : ''}
+          ${isAssistant ? `<button type="button" class="msg-copy-btn" title="Copy response">Copy</button>` : ''}
         </div>
       </div>`;
 
@@ -198,7 +198,7 @@ export const AIModule = {
       copyBtn?.addEventListener('click', () => {
         navigator.clipboard.writeText(content).then(() => {
           copyBtn.textContent = '✓ Copied!';
-          setTimeout(() => { copyBtn.textContent = '📋 Copy'; }, 2000);
+          setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
         }).catch(() => UI.toast('Copy failed', 'error'));
       });
     }
@@ -211,7 +211,7 @@ export const AIModule = {
     const c = document.getElementById('chatMessages');
     if (!c) return;
     const activeModel = State.aiModel;
-    const avatarText = (activeModel === 'deepseek' || activeModel === 'claude') ? '🔬' : activeModel === 'fast' ? '⚡' : '🧠';
+    const avatarText = (activeModel === 'deepseek' || activeModel === 'claude') ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v11m0 0h10m-10 0a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2m-10 0V9m10 5V9m0 0H9"/></svg>' : activeModel === 'fast' ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="15" x2="8.01" y2="15"/><line x1="16" y1="15" x2="16.01" y2="15"/></svg>';
     const d = document.createElement('div');
     d.className = 'chat-msg assistant'; d.id = 'typingIndicator';
     d.innerHTML = `
@@ -258,11 +258,11 @@ export const AIModule = {
           if (typeof this.updateNavCount === 'function') this.updateNavCount();
           if (typeof Tags !== 'undefined' && typeof Tags.populateFilterSelect === 'function') Tags.populateFilterSelect();
         } catch (_) { }
-        UI.toast('✅ Transaction saved by NOVA!', 'success');
+        UI.toast('Transaction saved by NOVA!', 'success');
       }
     } catch(e) {
       document.getElementById('typingIndicator')?.remove();
-      this.appendMsg('assistant', '⚠ Error: ' + e.message);
+      this.appendMsg('assistant', 'Error: ' + e.message);
     } finally {
       if (btn) btn.disabled = false;
       input?.focus();
@@ -305,7 +305,7 @@ export const AIModule = {
           this.startNewAiChat();
           UI.toast('✓ Chat cleared', 'success');
         } catch (e) {
-          UI.toast('⚠ Could not clear chat: ' + e.message.replace(/^\d+:\s*/, ''), 'error');
+          UI.toast('Could not clear chat: ' + e.message.replace(/^\d+:\s*/, ''), 'error');
         } finally {
           clearBtn.disabled = false;
         }
@@ -322,7 +322,7 @@ export const AIModule = {
     if (!SpeechRec) {
       micBtn.title = 'Voice input requires Chrome, Edge, or Safari';
       micBtn.addEventListener('click', () => {
-        UI.toast('🎙️ Voice input is supported in Chrome, Edge, and Safari.', 'error');
+        UI.toast('Voice input is supported in Chrome, Edge, and Safari.', 'error');
       });
       return;
     }
@@ -339,8 +339,8 @@ export const AIModule = {
         isListening = true;
         micBtn.classList.add('listening');
         micBtn.title = 'Click to stop listening';
-        input.placeholder = '🎙️ Listening… say your transaction (e.g. "Spent ₹450 on lunch today")';
-        UI.toast('🎙️ Listening — speak your transaction now', 'info');
+        input.placeholder = 'Listening… say your transaction (e.g. "Spent ₹450 on lunch today")';
+        UI.toast('Listening — speak your transaction now', 'info');
       };
 
       rec.onresult = (event) => {
@@ -360,9 +360,9 @@ export const AIModule = {
         micBtn.title = 'Click to speak';
         input.placeholder = 'Enter transaction details...';
         if (event.error === 'not-allowed' || event.error === 'permission-denied') {
-          UI.toast('⚠️ Microphone access denied — please allow it in your browser settings.', 'error');
+          UI.toast('Microphone access denied — please allow it in your browser settings.', 'error');
         } else if (event.error === 'network') {
-          UI.toast('⚠️ Network error during voice recognition. Check your connection.', 'error');
+          UI.toast('Network error during voice recognition. Check your connection.', 'error');
         } else if (event.error !== 'no-speech' && event.error !== 'aborted') {
           UI.toast(`Voice error: ${event.error}`, 'error');
         }
@@ -375,7 +375,7 @@ export const AIModule = {
         input.placeholder = 'Enter transaction details...';
         const transcript = input.value.trim();
         if (transcript) {
-          UI.toast(`✅ Heard: "${transcript}"`, 'success');
+          UI.toast(`Heard: "${transcript}"`, 'success');
           const quickBtn = document.getElementById('aiQuickSubmitBtn');
           setTimeout(() => quickBtn?.click(), 300);
         }
@@ -414,13 +414,13 @@ export const AIModule = {
         return;
       }
 
-      if (quickBtn) { quickBtn.disabled = true; quickBtn.textContent = '✨ Extracting...'; }
+      if (quickBtn) { quickBtn.disabled = true; quickBtn.textContent = 'Extracting...'; }
       try {
         const isSmsLike = /(?:debited|credited|a\/c|acct|ending in|upi|vpa|avl\s+bal|txn\s+id|ref\s+no)/i.test(text);
         const res = isSmsLike ? await API.parseBankSms(text) : await API.parseNaturalLanguage(text);
         if (res && res.result) {
           const r = res.result;
-          UI.toast(isSmsLike ? '📱 AI parsed bank SMS details!' : '✨ AI extracted transaction details!', 'success');
+          UI.toast(isSmsLike ? 'AI parsed bank SMS details!' : 'AI extracted transaction details!', 'success');
           UI.openAddModal({
             description: r.description || r.merchant || text,
             amount: r.amount || '',
@@ -435,7 +435,7 @@ export const AIModule = {
       } catch (err) {
         UI.toast(err.message || 'Failed to parse input', 'error');
       } finally {
-        if (quickBtn) { quickBtn.disabled = false; quickBtn.textContent = '✨ Extract'; }
+        if (quickBtn) { quickBtn.disabled = false; quickBtn.textContent = 'Extract'; }
       }
     };
 
@@ -571,7 +571,7 @@ export const AIModule = {
 
             if (useBtn) useBtn.style.display = 'inline-block';
             if (rescanBtn) rescanBtn.style.display = 'inline-block';
-            UI.toast('✨ Receipt scanned successfully!', 'success');
+            UI.toast('Receipt scanned successfully!', 'success');
           }
         } catch (err) {
           if (laserLine) laserLine.style.display = 'none';
@@ -650,7 +650,7 @@ export const AIModule = {
       if (btnExtractSms) {
         btnExtractSms.style.display = 'inline-block';
         btnExtractSms.disabled = false;
-        btnExtractSms.textContent = '✨ Extract Data';
+        btnExtractSms.textContent = 'Extract Data';
       }
       currentSmsParsedData = null;
     };
@@ -687,7 +687,7 @@ export const AIModule = {
             const clipText = await navigator.clipboard.readText();
             if (clipText && clipText.trim()) {
               smsInput.value = clipText.trim();
-              UI.toast('📋 Pasted from clipboard!', 'info');
+              UI.toast('Pasted from clipboard!', 'info');
               executeSmsParse();
               return;
             }
@@ -779,7 +779,7 @@ export const AIModule = {
 
           if (btnOpenInForm) btnOpenInForm.style.display = 'inline-block';
           if (btnSaveDirect) btnSaveDirect.style.display = 'inline-block';
-          UI.toast('✨ Bank SMS parsed successfully!', 'success');
+          UI.toast('Bank SMS parsed successfully!', 'success');
         }
       } catch (err) {
         if (smsLoader) smsLoader.style.display = 'none';
@@ -787,7 +787,7 @@ export const AIModule = {
       } finally {
         if (btnExtractSms) {
           btnExtractSms.disabled = false;
-          btnExtractSms.textContent = '✨ Re-parse';
+          btnExtractSms.textContent = 'Re-parse';
         }
       }
     };
@@ -808,7 +808,7 @@ export const AIModule = {
           account_id: data.account_id || '',
           tags: Array.isArray(data.tags) ? data.tags : ['bank-sms']
         });
-        UI.toast('📝 Form pre-filled from bank alert!', 'info');
+        UI.toast('Form pre-filled from bank alert!', 'info');
       });
     }
 
@@ -821,7 +821,7 @@ export const AIModule = {
           const text = smsInput?.value?.trim() || '';
           const res = await API.parseBankSms(text, true);
           if (res && res.saved) {
-            UI.toast(`⚡ Saved ${typeof fmt === 'function' ? fmt(currentSmsParsedData.amount) : '₹' + currentSmsParsedData.amount} (${currentSmsParsedData.merchant || currentSmsParsedData.category})!`, 'success');
+            UI.toast(`Saved ${typeof fmt === 'function' ? fmt(currentSmsParsedData.amount) : '₹' + currentSmsParsedData.amount} (${currentSmsParsedData.merchant || currentSmsParsedData.category})!`, 'success');
             closeSms();
             if (typeof this.loadDashboard === 'function') await this.loadDashboard();
             if (typeof this.loadTransactions === 'function') await this.loadTransactions({});
@@ -833,7 +833,7 @@ export const AIModule = {
           UI.toast(err.message || 'Failed to direct-save transaction', 'error');
         } finally {
           btnSaveDirect.disabled = false;
-          btnSaveDirect.textContent = '⚡ Save Directly';
+          btnSaveDirect.textContent = 'Save Directly';
         }
       });
     }

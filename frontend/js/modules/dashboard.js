@@ -32,7 +32,7 @@ export const DashboardModule = {
       kpiIds.forEach(id => document.getElementById(id)?.classList.remove('is-loading'));
 
       const sr = parseFloat(summary.savingsRate);
-      setText('savingsStatus', sr >= 30 ? 'Excellent! 🎉' : sr >= 15 ? 'Good job! 👍' : sr > 0 ? 'Keep improving' : 'No savings yet');
+      setText('savingsStatus', sr >= 30 ? 'Excellent!' : sr >= 15 ? 'Good job!' : sr > 0 ? 'Keep improving' : 'No savings yet');
 
       const badge = document.getElementById('balanceBadge');
       if (badge) { badge.textContent = summary.savingsRate + '% saved'; badge.className = sr >= 0 ? 'kpi-badge' : 'kpi-badge neg'; }
@@ -69,7 +69,7 @@ export const DashboardModule = {
     } catch (e) {
       console.error('Dashboard error:', e);
       kpiIds.forEach(id => document.getElementById(id)?.classList.remove('is-loading'));
-      UI.toast('⚠ Could not load data. Is the server running?', 'error');
+      UI.toast('Could not load data. Is the server running?', 'error');
     }
   },
 
@@ -85,12 +85,12 @@ export const DashboardModule = {
     const nearing = (budgets || []).filter(b => b.percent >= 80 && b.percent < 100);
     const items = [
       ...over.map(b => ({
-        icon: '🚨', level: '',
+        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>', level: '',
         title: `Over budget: ${b.category}`,
         sub: `Spent ${fmt(b.spent)} of ${fmt(b.monthly_limit)} limit (${b.percent}%)`
       })),
       ...nearing.map(b => ({
-        icon: '⚠️', level: 'warn',
+        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>', level: 'warn',
         title: `Approaching limit: ${b.category}`,
         sub: `Spent ${fmt(b.spent)} of ${fmt(b.monthly_limit)} limit (${b.percent}%)`
       }))
@@ -280,7 +280,7 @@ export const DashboardModule = {
         if (existing !== msg) {
           if (typeof Notifications !== 'undefined' && Notifications.setBurnRateAlert) {
             Notifications.setBurnRateAlert([{
-              icon: '🔥',
+              icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>',
               level: 'danger',
               title: 'High Burn Rate',
               sub: msg
@@ -333,7 +333,6 @@ export const DashboardModule = {
 
       const accSelect = document.getElementById('cashflowAccountSelect');
       if (accSelect && data.accounts) {
-        const currentVal = accSelect.value;
         const options = ['<option value="">All Accounts (Net Liquid)</option>'];
         for (const acc of data.accounts) {
           const selected = String(acc.id) === String(accountId) ? 'selected' : '';
@@ -342,51 +341,107 @@ export const DashboardModule = {
         accSelect.innerHTML = options.join('');
       }
 
-      const balEl = document.getElementById('cfCurrentBalance');
-      const inEl = document.getElementById('cfProjectedIn');
-      const outEl = document.getElementById('cfProjectedOut');
-      const lowEl = document.getElementById('cfLowestProjected');
+      const curBal = data.current_balance !== undefined ? data.current_balance : (data.currentBalance || 0);
+      const projBal = data.projected_balance !== undefined ? data.projected_balance : (data.timeline && data.timeline.length ? data.timeline[data.timeline.length - 1].balance : 0);
+      const netVal = data.net_change !== undefined ? data.net_change : (projBal - curBal);
+      const lowestBal = data.lowest_point ? (typeof data.lowest_point === 'object' ? data.lowest_point.balance : data.lowest_point) : curBal;
 
-      if (balEl) balEl.textContent = fmt(data.currentBalance);
-      if (inEl) inEl.textContent = `+${fmt(data.projectedInflow)}`;
-      if (outEl) outEl.textContent = `-${fmt(data.projectedOutflow)}`;
-      if (lowEl) {
-        lowEl.textContent = fmt(data.lowestProjectedBalance);
-        lowEl.classList.toggle('negative', data.lowestProjectedBalance < 0);
+      const balEl = document.getElementById('cfCurrentBalance');
+      const projEl = document.getElementById('cfProjectedBalance');
+      const netSub = document.getElementById('cfNetChangeSub');
+      const lowValEl = document.getElementById('cfLowestVal');
+      const lowDateEl = document.getElementById('cfLowestDate');
+      const schedEl = document.getElementById('cfScheduledFlow');
+      const burnEl = document.getElementById('cfBurnEstimate');
+      const statusBadge = document.getElementById('cashflowStatusBadge');
+      const insightBanner = document.getElementById('cashflowInsightBanner');
+      const insightText = document.getElementById('cfInsightText');
+
+      if (balEl) balEl.textContent = fmt(curBal);
+      if (projEl) {
+        projEl.textContent = fmt(projBal);
+        projEl.classList.toggle('negative', projBal < 0);
+      }
+      if (netSub) {
+        const sign = netVal >= 0 ? '+' : '';
+        netSub.textContent = `${sign}${fmt(netVal)} net change`;
+        netSub.style.color = netVal >= 0 ? 'var(--income)' : 'var(--expense)';
+      }
+      if (lowValEl) {
+        lowValEl.textContent = fmt(lowestBal);
+        lowValEl.classList.toggle('negative', lowestBal < 0);
+      }
+      if (lowDateEl) {
+        if (data.lowest_point && data.lowest_point.date) {
+          lowDateEl.textContent = lowestBal < 0 ? `Overdraft on ${data.lowest_point.date}` : `Lowest on ${data.lowest_point.date}`;
+        } else {
+          lowDateEl.textContent = 'Safe margin';
+        }
+      }
+      if (schedEl) {
+        const inc = data.total_scheduled_income || 0;
+        const exp = data.total_scheduled_expense || 0;
+        schedEl.textContent = `↑ ${fmt(inc)} / ↓ ${fmt(exp)}`;
+      }
+      if (burnEl) {
+        const burn = data.daily_discretionary_burn || 0;
+        burnEl.textContent = `Est. burn ${fmt(burn)}/day`;
+      }
+      if (statusBadge) {
+        const st = data.status || 'safe';
+        statusBadge.className = `cashflow-status-badge ${st}`;
+        statusBadge.textContent = data.status_title || (st === 'danger' ? 'Overdraft Warning' : st === 'warning' ? 'Tight Margin' : 'Healthy Runway');
+      }
+      if (insightBanner) {
+        insightBanner.className = `cashflow-insight-banner ${data.status === 'danger' ? 'danger' : data.status === 'warning' ? 'warning' : ''}`;
+      }
+      if (insightText && data.insight) {
+        insightText.textContent = data.insight;
       }
 
-      const banner = document.getElementById('cfOverdraftBanner');
-      const sub = document.getElementById('cfOverdraftSub');
-      const alertBadge = document.getElementById('cfAlertBadge');
+      // Scheduled Events Strip
+      const eventsContainer = document.getElementById('cashflowEventsContainer');
+      const eventsStrip = document.getElementById('cfEventsStrip');
+      if (eventsContainer && eventsStrip) {
+        if (data.upcoming_events && data.upcoming_events.length > 0) {
+          eventsContainer.style.display = 'block';
+          eventsStrip.innerHTML = data.upcoming_events.map(ev => {
+            const isInc = ev.type === 'income';
+            return `<div class="cf-event-chip ${isInc ? 'income' : 'expense'}">` +
+              `<span class="chip-dot"></span>` +
+              `<span class="chip-name">${escapeHtml(ev.description || ev.category)}</span>` +
+              `<span class="chip-amt">${isInc ? '+' : '-'}${fmt(ev.amount)}</span>` +
+              `<span class="chip-date">${ev.date}</span>` +
+            `</div>`;
+          }).join('');
+        } else {
+          eventsContainer.style.display = 'none';
+        }
+      }
 
-      if (data.overdraftRisk) {
-        if (banner) banner.style.display = 'flex';
-        if (alertBadge) alertBadge.style.display = 'inline-flex';
-        const msg = `Projected deficit of ${fmt(Math.abs(data.lowestProjectedBalance))} on ${data.overdraftDate} (${data.daysUntilOverdraft} days away). Adjust discretionary spending or transfer funds.`;
-        if (sub) sub.textContent = msg;
-
-        const notifId = `overdraft-${data.overdraftDate}-${Math.round(data.lowestProjectedBalance)}`;
+      // Overdraft Notification Alert
+      const isOverdraft = data.status === 'danger' || Boolean(data.first_overdraft_date);
+      if (isOverdraft) {
+        const notifId = `overdraft-${data.first_overdraft_date || 'risk'}-${Math.round(lowestBal)}`;
         if (State.lastOverdraftAlert !== notifId) {
           if (typeof Notifications !== 'undefined' && Notifications.setCashflowAlert) {
             Notifications.setCashflowAlert([{
-              icon: '⚡',
+              icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
               level: 'danger',
-              title: `Overdraft Risk in ${data.daysUntilOverdraft} Days`,
-              sub: msg
+              title: `Overdraft Warning`,
+              sub: data.insight || 'Projected cash flow dips into negative balance.'
             }]);
           }
           State.lastOverdraftAlert = notifId;
         }
       } else {
-        if (banner) banner.style.display = 'none';
-        if (alertBadge) alertBadge.style.display = 'none';
         if (typeof Notifications !== 'undefined' && Notifications.setCashflowAlert) {
           Notifications.setCashflowAlert([]);
         }
       }
 
       if (typeof Charts !== 'undefined' && Charts.renderCashflowForecast) {
-        Charts.renderCashflowForecast(data.forecast, data.overdraftRisk);
+        Charts.renderCashflowForecast(data);
       }
     } catch (e) {
       console.warn('Could not load cashflow forecast:', e);

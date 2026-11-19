@@ -61,26 +61,26 @@ const Importer = {
       fileInput.click();
     });
 
-    console.log('✅ Importer initialized');
+    console.log('Importer initialized');
   },
 
   handleFile(file) {
-    console.log('📂 File received:', file.name, file.size);
+    console.log('File received:', file.name, file.size);
     if (!file.name.toLowerCase().endsWith('.csv')) {
-      UI.toast('⚠ Please upload a .csv file', 'error');
+      UI.toast('Please upload a .csv file', 'error');
       return;
     }
     const reader = new FileReader();
     reader.onload = (e) => this.parseCSV(e.target.result);
-    reader.onerror = () => UI.toast('⚠ Could not read file', 'error');
+    reader.onerror = () => UI.toast('Could not read file', 'error');
     reader.readAsText(file);
   },
 
   parseCSV(text) {
-    console.log('📊 Parsing CSV, length:', text.length);
+    console.log('Parsing CSV, length:', text.length);
     const lines = text.trim().split('\n').filter(l => l.trim());
     if (lines.length < 2) {
-      UI.toast('⚠ CSV has no data rows', 'error');
+      UI.toast('CSV has no data rows', 'error');
       return;
     }
 
@@ -107,8 +107,8 @@ const Importer = {
       });
     }
 
-    console.log('✅ Parsed rows:', rows.length);
-    if (!rows.length) { UI.toast('⚠ No valid rows found. Check your CSV format.', 'error'); return; }
+    console.log('Parsed rows:', rows.length);
+    if (!rows.length) { UI.toast('No valid rows found. Check your CSV format.', 'error'); return; }
 
     this.rawRows = rows;
     this.dateFormat = 'auto';
@@ -207,7 +207,7 @@ const Importer = {
     if (!preview) return;
 
     preview.innerHTML = `
-      <div class="import-summary">✅ Found <strong>${rows.length}</strong> transactions ready to import</div>
+      <div class="import-summary">Found <strong>${rows.length}</strong> transactions ready to import</div>
       <div style="max-height:280px;overflow-y:auto;margin-top:10px">
         ${rows.slice(0, 15).map(r => `
           <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #EFE8D8">
@@ -226,7 +226,7 @@ const Importer = {
   },
 
   async importAll() {
-    if (!this.parsed.length) { UI.toast('⚠ No transactions to import', 'error'); return; }
+    if (!this.parsed.length) { UI.toast('No transactions to import', 'error'); return; }
     const btn = document.getElementById('importBtn');
     if (btn) { btn.textContent = 'Importing...'; btn.disabled = true; }
     try {

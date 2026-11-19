@@ -9,10 +9,10 @@ export const BudgetsModule = {
   async saveBudget() {
     const catEl = document.getElementById('budgetCategory');
     const limEl = document.getElementById('budgetLimit');
-    if (!catEl || !limEl) { UI.toast('⚠ Something went wrong loading the form', 'error'); return; }
+    if (!catEl || !limEl) { UI.toast('Something went wrong loading the form', 'error'); return; }
     const category = catEl.value;
     const monthly_limit = parseFloat(limEl.value);
-    if (!monthly_limit || monthly_limit <= 0) { UI.toast('⚠ Enter a valid limit', 'error'); return; }
+    if (!monthly_limit || monthly_limit <= 0) { UI.toast('Enter a valid limit', 'error'); return; }
     const btn = document.getElementById('saveBudgetBtn');
     if (btn) { btn.disabled = true; btn.dataset.origText = btn.textContent; btn.textContent = 'Saving...'; }
     try {
@@ -46,9 +46,9 @@ export const BudgetsModule = {
     const refreshBtn = document.getElementById('refreshAutoBudgetBtn');
     const bannerText = document.getElementById('autoBudgetAiText');
     const list = document.getElementById('autoBudgetList');
-    if (refreshBtn) { refreshBtn.disabled = true; refreshBtn.textContent = '⏳ Analyzing...'; }
+    if (refreshBtn) { refreshBtn.disabled = true; refreshBtn.textContent = 'Analyzing...'; }
     if (bannerText) bannerText.textContent = 'Analyzing your 90-day spending velocity across categories...';
-    if (list) list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-tertiary)">⏳ Running AI spending diagnosis and computing realistic caps...</div>';
+    if (list) list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-tertiary)">Running AI spending diagnosis and computing realistic caps...</div>';
 
     try {
       const data = await API.get('/budgets/suggest');
@@ -57,9 +57,9 @@ export const BudgetsModule = {
     } catch (e) {
       console.error('Auto budget error:', e);
       UI.toast('Could not generate budget suggestions: ' + (e.message || 'Error'), 'error');
-      if (list) list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--expense)">⚠ Failed to load suggestions. Please try again.</div>';
+      if (list) list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--expense)">Failed to load suggestions. Please try again.</div>';
     } finally {
-      if (refreshBtn) { refreshBtn.disabled = false; refreshBtn.textContent = '🔄 Re-analyze'; }
+      if (refreshBtn) { refreshBtn.disabled = false; refreshBtn.textContent = 'Re-analyze'; }
     }
   },
 
@@ -83,8 +83,8 @@ export const BudgetsModule = {
 
     list.innerHTML = suggestions.map((s, idx) => {
       const color = (typeof CAT_COLORS !== 'undefined' && CAT_COLORS[s.category]) || '#6366F1';
-      const emoji = (typeof CAT_EMOJIS !== 'undefined' && CAT_EMOJIS[s.category]) || '🏷️';
-      const trendLabel = s.trend === 'increasing' ? '↗ Trending +15%' : s.trend === 'decreasing' ? '↘ Downward' : s.trend === 'starter' ? '⭐ Starter' : '➡ Stable';
+      const emoji = (typeof CAT_EMOJIS !== 'undefined' && CAT_EMOJIS[s.category]) || '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="vertical-align:middle;margin-right:4px"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>';
+      const trendLabel = s.trend === 'increasing' ? '↗ Trending +15%' : s.trend === 'decreasing' ? '↘ Downward' : s.trend === 'starter' ? 'Recommended Starter' : '➡ Stable';
 
       return `
         <div class="ab-item-row" id="abRow_${idx}" data-idx="${idx}">
@@ -147,7 +147,7 @@ export const BudgetsModule = {
     if (totalEl) totalEl.textContent = fmt(total);
     if (applyBtn) {
       applyBtn.disabled = (count === 0);
-      applyBtn.textContent = `⚡ Apply Selected Budgets (${count})`;
+      applyBtn.textContent = `Apply Selected Budgets (${count})`;
     }
   },
 
@@ -208,7 +208,7 @@ export const BudgetsModule = {
       console.error('Apply budgets error:', e);
       UI.toast('Failed to apply budgets: ' + (e.message || 'Error'), 'error');
     } finally {
-      if (btn) { btn.disabled = false; btn.textContent = '⚡ Apply Selected Budgets'; }
+      if (btn) { btn.disabled = false; btn.textContent = 'Apply Selected Budgets'; }
     }
   },
 

@@ -10,10 +10,10 @@
       navigator.serviceWorker
         .register('/sw.js')
         .then(reg => {
-          console.log('✅ FlowLedger ServiceWorker active with scope:', reg.scope);
+          console.log('FlowLedger ServiceWorker active with scope:', reg.scope);
         })
         .catch(err => {
-          console.warn('⚠️ FlowLedger ServiceWorker registration failed:', err);
+          console.warn('FlowLedger ServiceWorker registration failed:', err);
         });
     });
   }
@@ -43,7 +43,7 @@
 
   // 3. Track successful installation
   window.addEventListener('appinstalled', () => {
-    console.log('🎉 FlowLedger successfully installed as app');
+    console.log('FlowLedger successfully installed as app');
     deferredInstallPrompt = null;
     document.querySelectorAll('.pwa-install-action').forEach(b => (b.style.display = 'none'));
     if (window.UI && typeof window.UI.toast === 'function') {
@@ -70,9 +70,9 @@
       } catch (_) {}
 
       if (hasCachedData) {
-        window.UI.toast('⚡ You are offline. Cached data is available.', 'warning');
+        window.UI.toast('You are offline. Cached data is available.', 'warning');
       } else {
-        window.UI.toast('⚡ You are offline. Check your internet connection.', 'warning');
+        window.UI.toast('You are offline. Check your internet connection.', 'warning');
       }
     }
   });

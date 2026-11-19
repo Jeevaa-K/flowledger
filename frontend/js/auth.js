@@ -21,7 +21,7 @@ const Auth = {
 
   bindConnectivity() {
     window.addEventListener('offline', () => {
-      if (typeof UI !== 'undefined') UI.toast("⚠ You're offline — changes won't save until you're back online", 'error', 5000);
+      if (typeof UI !== 'undefined') UI.toast("You're offline — changes won't save until you're back online", 'error', 5000);
     });
     window.addEventListener('online', () => {
       if (typeof UI !== 'undefined') UI.toast('✓ Back online', 'success');
@@ -391,7 +391,7 @@ const Auth = {
     }
 
     if (btn) btn.disabled = true;
-    if (btnText) btnText.textContent = '⏳ Wiping account & data...';
+    if (btnText) btnText.textContent = 'Wiping account & data...';
 
     try {
       await API.del('/auth/account', { password });

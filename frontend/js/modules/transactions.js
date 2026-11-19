@@ -46,7 +46,7 @@ export const TransactionsModule = {
     const dateEl = document.getElementById('txnDate');
     const catEl  = document.getElementById('txnCategory');
     const accEl  = document.getElementById('txnAccount');
-    if (!descEl || !amtEl || !dateEl) { UI.toast('⚠ Something went wrong loading the form', 'error'); return; }
+    if (!descEl || !amtEl || !dateEl) { UI.toast('Something went wrong loading the form', 'error'); return; }
 
     const desc       = descEl.value.trim();
     const amount     = parseFloat(amtEl.value);
@@ -54,30 +54,30 @@ export const TransactionsModule = {
     const type       = UI.currentType;
     const account_id = accEl?.value || null;
     const tags       = typeof Tags !== 'undefined' && Tags.getPills ? Tags.getPills() : [];
-    if (!desc || !amount || !date) { UI.toast('⚠ Fill in description, amount, and date', 'error'); return; }
-    if (amount <= 0) { UI.toast('⚠ Amount must be greater than 0', 'error'); return; }
+    if (!desc || !amount || !date) { UI.toast('Fill in description, amount, and date', 'error'); return; }
+    if (amount <= 0) { UI.toast('Amount must be greater than 0', 'error'); return; }
 
     // Handle Split Transaction Mode
     if (UI.isSplitMode) {
       if (!Array.isArray(UI.splitRows) || UI.splitRows.length < 2) {
-        UI.toast('⚠ Split requires at least 2 category parts', 'error');
+        UI.toast('Split requires at least 2 category parts', 'error');
         return;
       }
       let allocatedSum = 0;
       for (const s of UI.splitRows) {
         const pAmt = parseFloat(s.amount);
         if (!pAmt || isNaN(pAmt) || pAmt <= 0) {
-          UI.toast(`⚠ Enter a valid amount for category "${s.category || 'Split'}"`, 'error');
+          UI.toast(`Enter a valid amount for category "${s.category || 'Split'}"`, 'error');
           return;
         }
         if (!s.category) {
-          UI.toast('⚠ Select a category for every split item', 'error');
+          UI.toast('Select a category for every split item', 'error');
           return;
         }
         allocatedSum += pAmt;
       }
       if (Math.abs(allocatedSum - amount) > 0.05) {
-        UI.toast(`⚠ Split total (${typeof fmt === 'function' ? fmt(allocatedSum) : '₹' + allocatedSum.toFixed(2)}) must equal bill amount (${typeof fmt === 'function' ? fmt(amount) : '₹' + amount.toFixed(2)})`, 'error');
+        UI.toast(`Split total (${typeof fmt === 'function' ? fmt(allocatedSum) : '₹' + allocatedSum.toFixed(2)}) must equal bill amount (${typeof fmt === 'function' ? fmt(amount) : '₹' + amount.toFixed(2)})`, 'error');
         return;
       }
 
@@ -93,7 +93,7 @@ export const TransactionsModule = {
           tags,
           splits: UI.splitRows
         });
-        UI.toast(`✂️ Split transaction saved across ${UI.splitRows.length} categories!`, 'success');
+        UI.toast(`Split transaction saved across ${UI.splitRows.length} categories!`, 'success');
         UI.closeAddModal();
         if (typeof this.updateNavCount === 'function') this.updateNavCount();
         if (typeof Tags !== 'undefined' && Tags.populateFilterSelect) Tags.populateFilterSelect();
@@ -114,7 +114,7 @@ export const TransactionsModule = {
 
     // Standard Single Category Transaction
     const category = catEl?.value;
-    if (!category) { UI.toast('⚠ Please select a category', 'error'); return; }
+    if (!category) { UI.toast('Please select a category', 'error'); return; }
 
     const btn = document.getElementById('saveTxnBtn');
     if (btn) { btn.disabled = true; btn.dataset.origText = btn.textContent; btn.textContent = 'Saving...'; }
@@ -178,11 +178,11 @@ export const TransactionsModule = {
       const match = budgets.find(b => b.category === category);
       if (!match) return false;
       if (match.percent >= 100) {
-        UI.toast(`⚠ Over budget for ${category} (${match.percent}%)`, 'error', 4000);
+        UI.toast(`Over budget for ${category} (${match.percent}%)`, 'error', 4000);
         return true;
       }
       if (match.percent >= 80) {
-        UI.toast(`⚠ ${category} budget at ${match.percent}%`, 'error', 3500);
+        UI.toast(`${category} budget at ${match.percent}%`, 'error', 3500);
         return true;
       }
       return false;
@@ -478,7 +478,7 @@ export const TransactionsModule = {
       if (filters.sort) qs.set('sort', filters.sort);
 
       exportBtn.disabled = true;
-      exportBtn.textContent = '⏳ Exporting...';
+      exportBtn.textContent = 'Exporting...';
       try {
         const res = await fetch(`/api/transactions/export-csv?${qs}`, { credentials: 'same-origin' });
         if (!res.ok) throw new Error('Export failed');
@@ -496,7 +496,7 @@ export const TransactionsModule = {
         UI.toast('Export error: ' + (err.message || 'Failed'), 'error');
       } finally {
         exportBtn.disabled = false;
-        exportBtn.textContent = '⬇ Export CSV';
+        exportBtn.textContent = 'Export CSV';
       }
     });
 

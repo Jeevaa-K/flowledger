@@ -185,7 +185,7 @@ async function initDB() {
   )`);
   await migrateDefaultAccounts();
   await migrateDefaultRecurringAccounts();
-  console.log('✅ Database tables ready');
+  console.log('Database tables ready');
 }
 
 // Backfill existing recurring rules with user's default account if unassigned
@@ -228,7 +228,7 @@ async function migrateDefaultAccounts() {
     );
   }
   if (usersNeedingMigration.length) {
-    console.log(`✅ Created default accounts for ${usersNeedingMigration.length} user(s)`);
+    console.log(`Created default accounts for ${usersNeedingMigration.length} user(s)`);
   }
 }
 

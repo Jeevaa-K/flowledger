@@ -413,13 +413,13 @@ router.get('/reports/audit', auth, async (req, res) => {
 - Top 5 Outflow Transactions: ${merchantSummary}
 
 Format your response in three crisp sections:
-### 📊 Financial Health & Verdict
+### Financial Health & Verdict
 2-3 concise sentences evaluating cash flow surplus/deficit, savings rate health, and month-over-month trajectory.
 
-### 🔍 Spending Leakages & Patterns
+### Spending Leakages & Patterns
 2-3 bullet points identifying significant category concentrations or anomalies.
 
-### 💡 CFO Strategic Action Plan
+### CFO Strategic Action Plan
 2 actionable, high-ROI recommendations for the upcoming month.`
             }
           ],
@@ -436,14 +436,14 @@ Format your response in three crisp sections:
     if (!aiAnalysis) {
       const topCat = cats[0]?.category || 'General';
       const topPct = expense > 0 && cats[0] ? Math.round((cats[0].total / expense) * 100) : 0;
-      aiAnalysis = `### 📊 Financial Health & Verdict
+      aiAnalysis = `### Financial Health & Verdict
 For ${mName}, your cash flow yielded a net savings of Rs.${netSavings.toLocaleString('en-IN')} with a savings rate of ${savingsRate}%. ${savingsRate >= 20 ? 'Your savings rate exceeds the benchmark 20% target, demonstrating strong financial discipline.' : 'Your savings rate is below the recommended 20% target; focus on widening the gap between income and expenses.'}
 
-### 🔍 Spending Leakages & Patterns
+### Spending Leakages & Patterns
 • **Category Concentration**: ${topCat} was your largest cost center, consuming ${topPct}% of your total expenditure.
 • **Month-over-Month Shift**: Your spending ${momChange > 0 ? 'increased by ' + momChange + '%' : momChange < 0 ? 'decreased by ' + Math.abs(momChange) + '%' : 'remained steady'} compared to the prior month.
 
-### 💡 CFO Strategic Action Plan
+### CFO Strategic Action Plan
 • **Trim ${topCat}**: Target a 10-15% reduction in ${topCat} discretionary expenses next month.
 • **Automate Goal Reserves**: Transfer at least 15% of total income into liquid emergency savings immediately on payday.`;
     }

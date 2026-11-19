@@ -16,32 +16,32 @@ const Recurring = {
   ],
 
   SERVICE_ICONS: {
-    'netflix':     { icon: '🎬', color: '#E50914' },
-    'spotify':     { icon: '🎵', color: '#1DB954' },
-    'prime':       { icon: '📦', color: '#00A8E1' },
-    'amazon':      { icon: '📦', color: '#FF9900' },
-    'youtube':     { icon: '▶️', color: '#FF0000' },
-    'hotstar':     { icon: '⭐', color: '#0C111B' },
-    'disney':      { icon: '🏰', color: '#113CCF' },
-    'apple':       { icon: '🍏', color: '#A2AAAD' },
-    'icloud':      { icon: '☁️', color: '#3B82F6' },
-    'google':      { icon: '🔍', color: '#4285F4' },
-    'gym':         { icon: '💪', color: '#EC4899' },
-    'fitness':     { icon: '🏋️', color: '#F97316' },
-    'rent':        { icon: '🏠', color: '#6366F1' },
-    'wifi':        { icon: '📡', color: '#06B6D4' },
-    'broadband':   { icon: '🌐', color: '#0EA5E9' },
-    'airtel':      { icon: '📱', color: '#EF4444' },
-    'jio':         { icon: '📶', color: '#2563EB' },
-    'adobe':       { icon: '🎨', color: '#FF0000' },
-    'chatgpt':     { icon: '🤖', color: '#10A37F' },
-    'openai':      { icon: '🧠', color: '#10A37F' },
-    'github':      { icon: '🐙', color: '#24292F' },
-    'swiggy':      { icon: '🍔', color: '#FC8019' },
-    'zomato':      { icon: '🍕', color: '#E23744' },
-    'electricity': { icon: '⚡', color: '#F59E0B' },
-    'water':       { icon: '💧', color: '#3B82F6' },
-    'salary':      { icon: '💼', color: '#10B981' }
+    'netflix':     { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>', color: '#E50914' },
+    'spotify':     { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>', color: '#1DB954' },
+    'prime':       { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>', color: '#00A8E1' },
+    'amazon':      { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>', color: '#FF9900' },
+    'youtube':     { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polygon points="5 3 19 12 5 21 5 3"/></svg>', color: '#FF0000' },
+    'hotstar':     { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>', color: '#0C111B' },
+    'disney':      { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>', color: '#113CCF' },
+    'apple':       { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>', color: '#A2AAAD' },
+    'icloud':      { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>', color: '#3B82F6' },
+    'google':      { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>', color: '#4285F4' },
+    'gym':         { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M6 4v16M18 4v16M2 8h4M18 8h4M2 16h4M18 16h4M6 12h12"/></svg>', color: '#EC4899' },
+    'fitness':     { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M6 4v16M18 4v16M2 8h4M18 8h4M2 16h4M18 16h4M6 12h12"/></svg>', color: '#F97316' },
+    'rent':        { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>', color: '#6366F1' },
+    'wifi':        { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></svg>', color: '#06B6D4' },
+    'broadband':   { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>', color: '#0EA5E9' },
+    'airtel':      { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>', color: '#EF4444' },
+    'jio':         { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>', color: '#2563EB' },
+    'adobe':       { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polygon points="12 2 2 22 22 22 12 2"/></svg>', color: '#FF0000' },
+    'chatgpt':     { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>', color: '#10A37F' },
+    'openai':      { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>', color: '#10A37F' },
+    'github':      { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>', color: '#24292F' },
+    'swiggy':      { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8zM6 1v3M10 1v3M14 1v3"/></svg>', color: '#FC8019' },
+    'zomato':      { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8zM6 1v3M10 1v3M14 1v3"/></svg>', color: '#E23744' },
+    'electricity': { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>', color: '#F59E0B' },
+    'water':       { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>', color: '#3B82F6' },
+    'salary':      { icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>', color: '#10B981' }
   },
 
   getServiceMeta(desc, cat) {
@@ -49,7 +49,7 @@ const Recurring = {
     for (const [key, val] of Object.entries(this.SERVICE_ICONS)) {
       if (text.includes(key)) return val;
     }
-    return { icon: (typeof CAT_EMOJIS !== 'undefined' && CAT_EMOJIS[cat]) || '💳', color: 'var(--brand)' };
+    return { icon: (typeof CAT_EMOJIS !== 'undefined' && CAT_EMOJIS[cat]) || '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>', color: 'var(--brand)' };
   },
 
   init() {
@@ -248,9 +248,9 @@ const Recurring = {
     if (nextDueItem) {
       set('subNextService', nextDueItem.description);
       const countdownTag = nextDueItem.diffDays === 0
-        ? '🚨 Due Today'
+        ? 'Due Today'
         : nextDueItem.diffDays === 1
-        ? '⚠️ Tomorrow'
+        ? 'Tomorrow'
         : `In ${nextDueItem.diffDays} days`;
       set('subNextCountdown', countdownTag);
       set('subNextDetail', `${fmt(nextDueItem.amount)} · ${nextDueItem.next_date}`);
@@ -394,10 +394,10 @@ const Recurring = {
     if (textEl) {
       if (stats.totalIncome > 0) {
         const badge = stats.commitmentRatio <= 30
-          ? '🟢 Healthy (<30%)'
+          ? 'Healthy (<30%)'
           : stats.commitmentRatio <= 50
-          ? '🟡 Moderate'
-          : '⚠️ High ratio (>50%)';
+          ? 'Moderate'
+          : 'High ratio (>50%)';
         textEl.textContent = `${stats.commitmentRatio}% of income committed · ${badge}`;
       } else {
         textEl.innerHTML = stats.totalBills > 0 ? `<span class="hub-kpi-val expense">${fmt(stats.totalBills)}</span> monthly commitments` : 'No commitments scheduled';
@@ -494,7 +494,7 @@ const Recurring = {
       const dateObj = new Date(this.calYear, this.calMonth, this.selectedDay);
       const weekdayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
 
-      if (titleEl) titleEl.innerHTML = `📍 <span>${weekdayName}, ${this.selectedDay} ${monthName}</span>`;
+      if (titleEl) titleEl.innerHTML = `<span>${weekdayName}, ${this.selectedDay} ${monthName}</span>`;
       if (subEl) subEl.textContent = `${itemsToDisplay.length} commitment${itemsToDisplay.length !== 1 ? 's' : ''} on this date`;
       if (countEl) countEl.textContent = `${itemsToDisplay.length} on ${this.selectedDay}th`;
     } else {
@@ -504,7 +504,7 @@ const Recurring = {
           itemsToDisplay.push(...occurrencesByDay[d]);
         }
       }
-      if (titleEl) titleEl.innerHTML = `📅 <span>${monthName} ${this.calYear} Commitments</span>`;
+      if (titleEl) titleEl.innerHTML = `<span>${monthName} ${this.calYear} Commitments</span>`;
       if (subEl) subEl.textContent = `Showing all scheduled renewals sorted chronologically`;
       if (countEl) countEl.textContent = `${itemsToDisplay.length} items`;
     }
@@ -520,7 +520,7 @@ const Recurring = {
 
       listEl.innerHTML = `
         <div class="sub-feed-empty">
-          <div class="sub-feed-empty-icon">📅</div>
+          <div class="sub-feed-empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
           <div>${emptyMsg}</div>
           <button class="sub-feed-btn primary" style="margin-top:6px" data-action="rec-open-add" data-date="${targetDateStr}">
             + Add Subscription
@@ -538,9 +538,9 @@ const Recurring = {
       const dateStr = o.dateStr;
 
       const statusBadge = o.isToday
-        ? '<span style="font-size:10.5px;font-weight:700;color:var(--expense);background:rgba(239,68,68,0.12);padding:1px 6px;border-radius:8px">🚨 Today</span>'
+        ? '<span style="font-size:10.5px;font-weight:700;color:var(--expense);background:rgba(239,68,68,0.12);padding:1px 6px;border-radius:8px">Today</span>'
         : o.isDueSoon
-        ? `<span style="font-size:10.5px;font-weight:700;color:#f59e0b;background:rgba(245,158,11,0.12);padding:1px 6px;border-radius:8px">⚠️ In ${o.diffDays}d</span>`
+        ? `<span style="font-size:10.5px;font-weight:700;color:#f59e0b;background:rgba(245,158,11,0.12);padding:1px 6px;border-radius:8px">In ${o.diffDays}d</span>`
         : o.isPast
         ? '<span style="font-size:10.5px;font-weight:500;color:var(--text-tertiary)">✓ Past</span>'
         : `<span style="font-size:10.5px;font-weight:500;color:var(--text-secondary)">In ${o.diffDays}d</span>`;
@@ -569,10 +569,10 @@ const Recurring = {
             </div>
             <div class="sub-feed-actions">
               <button class="sub-feed-btn primary" title="Instant Log to Transactions" data-action="rec-quick-log" data-id="${item.id}" data-date="${dateStr}">
-                ⚡ Log
+                Log
               </button>
               <button class="sub-feed-btn" title="Review in Form" data-action="rec-edit-txn" data-id="${item.id}" data-date="${dateStr}">
-                ✏️ Edit
+                Edit
               </button>
             </div>
           </div>
@@ -656,7 +656,7 @@ const Recurring = {
       .slice(0, 8);
 
     if (!upcoming.length) {
-      strip.innerHTML = '<div class="sub-empty-hint">No active subscriptions due in upcoming weeks 🎉</div>';
+      strip.innerHTML = '<div class="sub-empty-hint">No active subscriptions due in upcoming weeks</div>';
       return;
     }
 
@@ -724,7 +724,7 @@ const Recurring = {
           </div>
           <div class="rec-amount ${r.type === 'income' ? 'inc' : 'exp'}">${r.type === 'income' ? '+' : '-'}${fmt(r.amount)}</div>
           <div class="rec-actions">
-            <button class="txn-btn" data-action="toggle-recurring" data-id="${r.id}" data-active="${r.active}" title="${r.active ? 'Pause auto-tracking' : 'Resume auto-tracking'}">${r.active ? '⏸' : '▶'}</button>
+            <button class="txn-btn" data-action="toggle-recurring" data-id="${r.id}" data-active="${r.active}" title="${r.active ? 'Pause auto-tracking' : 'Resume auto-tracking'}">${r.active ? '<svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>' : '<svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><polygon points="5 3 19 12 5 21 5 3"/></svg>'}</button>
             <button class="txn-btn del" data-action="del-recurring" data-id="${r.id}" title="Remove subscription">✕</button>
           </div>
         </div>
@@ -755,7 +755,7 @@ const Recurring = {
 
   async detectSubscriptions(manualTrigger = false) {
     const btn = document.getElementById('detectSubsBtn');
-    if (btn) { btn.disabled = true; btn.textContent = '✨ Scanning...'; }
+    if (btn) { btn.disabled = true; btn.textContent = 'Scanning...'; }
     try {
       const candidates = await API.get('/recurring/detect');
       this.detected = candidates || [];
@@ -775,11 +775,11 @@ const Recurring = {
         card.style.display = 'block';
         card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
-      if (manualTrigger) UI.toast(`✨ Found ${this.detected.length} potential subscriptions!`, 'success');
+      if (manualTrigger) UI.toast(`Found ${this.detected.length} potential subscriptions!`, 'success');
     } catch (e) {
       UI.toast('Could not scan subscriptions: ' + e.message, 'error');
     } finally {
-      if (btn) { btn.disabled = false; btn.textContent = '✨ Auto-Detect'; }
+      if (btn) { btn.disabled = false; btn.textContent = 'Auto-Detect'; }
     }
   },
 
@@ -854,7 +854,7 @@ const Recurring = {
     const freqEl = document.getElementById('recFrequency');
     const dateEl = document.getElementById('recNextDate');
     if (!descEl || !amtEl || !typeEl || !catEl || !freqEl || !dateEl) {
-      UI.toast('⚠️ Something went wrong loading the form', 'error'); return;
+      UI.toast('Something went wrong loading the form', 'error'); return;
     }
 
     const description = descEl.value.trim();
@@ -864,8 +864,8 @@ const Recurring = {
     const frequency   = freqEl.value;
     const next_date   = dateEl.value;
 
-    if (!description || !amount || !next_date) { UI.toast('⚠️ Fill in all fields', 'error'); return; }
-    if (amount <= 0) { UI.toast('⚠️ Amount must be greater than 0', 'error'); return; }
+    if (!description || !amount || !next_date) { UI.toast('Fill in all fields', 'error'); return; }
+    if (amount <= 0) { UI.toast('Amount must be greater than 0', 'error'); return; }
 
     const btn = document.getElementById('saveRecurringBtn');
     if (btn) { btn.disabled = true; btn.dataset.origText = btn.textContent; btn.textContent = 'Saving...'; }
@@ -886,7 +886,7 @@ const Recurring = {
       const item = (await API.get('/recurring')).find(r => r.id === id);
       if (!item) return;
       await API.put(`/recurring/${id}`, { ...item, active: currentActive ? 0 : 1 });
-      UI.toast(currentActive ? '⏸ Subscription paused' : '▶ Subscription resumed', 'success');
+      UI.toast(currentActive ? 'Subscription paused' : 'Subscription resumed', 'success');
       this.load();
     } catch(e) { UI.toast('Error toggling subscription', 'error'); }
   },
