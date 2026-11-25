@@ -1194,7 +1194,7 @@
           </div>
           <div class="sub-detect-actions">
             <button class="pill-btn active" id="viewDetectedSubsBtn" type="button">Review (0)</button>
-            <button class="pill-btn" id="dismissDetectedSubsBtn" type="button">✕</button>
+            <button class="pill-btn" id="dismissDetectedSubsBtn" type="button" aria-label="Dismiss"><svg class="fl-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
           </div>
         </div>
 
@@ -1519,7 +1519,7 @@
       <div class="form-group span2" id="splitCategorySection" style="display:none">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
           <label style="margin-bottom:0">Category Splits</label>
-          <button type="button" class="btn-link" id="btnCancelSplit" style="font-size:12px;color:var(--expense)">✕ Cancel Split</button>
+          <button type="button" class="btn-link" id="btnCancelSplit" style="font-size:12px;color:var(--expense)"><svg class="fl-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Cancel Split</button>
         </div>
         <div id="splitRowsContainer" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
           <!-- Dynamic split rows inserted here -->
@@ -2283,13 +2283,13 @@
     <div class="modal-header">
       <div class="modal-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></div>
       <h2 class="modal-title" id="settleQrModalTitle">Scan & Pay to Settle</h2>
-      <button class="modal-close" id="closeSettleQrModal" type="button">✕</button>
+      <button class="modal-close" id="closeSettleQrModal" type="button" aria-label="Close"><svg class="fl-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
 
     <div class="qr-pay-recipient-card">
       <div class="qr-pay-from-to">
         <span class="qr-member-pill" id="qrFromMember">Payer</span>
-        <span class="qr-arrow">➔ pays ➔</span>
+        <span class="qr-arrow">pays</span>
         <span class="qr-member-pill qr-to" id="qrToMember">Recipient</span>
       </div>
       <div class="qr-pay-amount" id="qrAmountDisplay">₹0</div>
@@ -2323,7 +2323,7 @@
           <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="vertical-align:middle;margin-right:4px"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></span>Open in UPI App
         </a>
         <button class="btn-primary full" id="qrMarkSettledBtn" type="button" style="display:flex;align-items:center;justify-content:center;gap:6px">
-          <span>✓</span> Mark as Settled
+          <svg class="fl-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg> Mark as Settled
         </button>
       </div>
     </div>

@@ -138,7 +138,7 @@ export const TransactionsModule = {
           original_amount: amount,
           exchange_rate: customRate
         });
-        UI.toast('✓ Transaction updated', 'success');
+        UI.toast('Transaction updated', 'success');
       } else {
         await API.post('/transactions', {
           description: desc,
@@ -156,7 +156,7 @@ export const TransactionsModule = {
         if (type === 'expense' && isCurrentMonth) {
           budgetToastShown = await this.checkBudgetAfterSave(category);
         }
-        if (!budgetToastShown) UI.toast('✓ Transaction added', 'success');
+        if (!budgetToastShown) UI.toast('Transaction added', 'success');
       }
       UI.closeAddModal();
       if (typeof this.updateNavCount === 'function') this.updateNavCount();
@@ -202,7 +202,7 @@ export const TransactionsModule = {
       if (txn && txn.split_id) {
         if (confirm('This transaction is part of a split bill.\nClick OK to delete ALL parts of this split bill.')) {
           await API.deleteSplitGroup(txn.split_id);
-          UI.toast('✓ Deleted entire split group', 'success');
+          UI.toast('Deleted entire split group', 'success');
           if (typeof this.updateNavCount === 'function') this.updateNavCount();
           if (typeof this.loadAccounts === 'function') this.loadAccounts(State.page === 'accounts');
           if (State.page === 'transactions') await this.loadTransactions();
@@ -213,7 +213,7 @@ export const TransactionsModule = {
 
       if (!confirm('Delete this transaction?')) return;
       await API.del(`/transactions/${id}`);
-      UI.toast('✓ Deleted', 'success');
+      UI.toast('Deleted', 'success');
       if (typeof this.updateNavCount === 'function') this.updateNavCount();
       if (typeof this.loadAccounts === 'function') this.loadAccounts(State.page === 'accounts');
       if (State.page === 'transactions') await this.loadTransactions();
@@ -491,7 +491,7 @@ export const TransactionsModule = {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        UI.toast('✓ Filtered transactions exported to CSV!', 'success');
+        UI.toast('Filtered transactions exported to CSV!', 'success');
       } catch (err) {
         UI.toast('Export error: ' + (err.message || 'Failed'), 'error');
       } finally {

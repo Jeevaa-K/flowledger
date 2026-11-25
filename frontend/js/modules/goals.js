@@ -31,10 +31,10 @@ export const GoalsModule = {
     try {
       if (editId) {
         await API.put(`/goals/${editId}`, { name, target, saved, date });
-        UI.toast('✓ Goal updated', 'success');
+        UI.toast('Goal updated', 'success');
       } else {
         await API.post('/goals', { name, target, saved, date });
-        UI.toast('✓ Goal added', 'success');
+        UI.toast('Goal added', 'success');
       }
       UI.closeGoalModal();
       await this.loadGoals();
@@ -121,9 +121,9 @@ export const GoalsModule = {
       if (isDeposit && newSaved >= target) {
         UI.toast(`Congratulations! You reached your goal for "${goal.name}"!`, 'success');
       } else if (isDeposit) {
-        UI.toast(`✓ Added ${fmt(amount)} to "${goal.name}" (${newPct}% reached)`, 'success');
+        UI.toast(`Added ${fmt(amount)} to "${goal.name}" (${newPct}% reached)`, 'success');
       } else {
-        UI.toast(`✓ Withdrew ${fmt(amount)} from "${goal.name}" (${newPct}% remaining)`, 'success');
+        UI.toast(`Withdrew ${fmt(amount)} from "${goal.name}" (${newPct}% remaining)`, 'success');
       }
 
       UI.closeAddSavingsModal();
@@ -148,7 +148,7 @@ export const GoalsModule = {
     if (!confirm('Delete this goal?')) return;
     try {
       await API.del(`/goals/${id}`);
-      UI.toast('✓ Goal removed', 'success');
+      UI.toast('Goal removed', 'success');
       await this.loadGoals();
     } catch (e) {
       UI.toast('' + e.message.replace(/^\d+:\s*/, ''), 'error');

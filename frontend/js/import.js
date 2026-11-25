@@ -235,8 +235,8 @@ const Importer = {
       const skipped = result.skipped || 0;
       UI.toast(
         skipped > 0
-          ? `✓ Imported ${result.imported}, skipped ${skipped} duplicate${skipped === 1 ? '' : 's'}`
-          : `✓ Imported ${result.imported} transactions!`,
+          ? ` Imported ${result.imported}, skipped ${skipped} duplicate${skipped === 1 ? '' : 's'}`
+          : ` Imported ${result.imported} transactions!`,
         'success', skipped > 0 ? 4000 : 2800
       );
       App.loadAccounts(State.page === 'accounts');

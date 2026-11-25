@@ -48,7 +48,7 @@ const Groups = {
           localStorage.setItem('fl_upi_' + this.activeQrSettlement.toId, newUpi);
           const status = document.getElementById('upiSaveStatus');
           if (status) {
-            status.textContent = 'Saved ✓';
+            status.textContent = 'Saved';
             setTimeout(() => { if (status) status.textContent = 'Auto-saved'; }, 2000);
           }
           this.generateQr(newUpi, this.activeQrSettlement.toName, this.activeQrSettlement.amount);
@@ -159,7 +159,7 @@ const Groups = {
     try {
       const res = await API.createGroup({ name, description: desc, members });
       if (res && res.group) {
-        UI.toast('✓ Group created!', 'success');
+        UI.toast('Group created!', 'success');
         this.closeGroupModal();
         await this.loadGroups();
         this.openGroupDetail(res.group.id);
@@ -273,7 +273,7 @@ const Groups = {
             </div>
             <div style="text-align:right">
               <div class="txn-amount ${isSettle ? 'green' : 'red'}" style="font-weight:700">${fmt(e.amount)}</div>
-              <button class="goal-delete" style="margin-top:4px" data-action="delete-group-expense" data-id="${e.id}" title="Delete expense">✕</button>
+              <button class="goal-delete" style="margin-top:4px" data-action="delete-group-expense" data-id="${e.id}" title="Delete expense">${Icons.x(13)}</button>
             </div>
           </div>
         `;
@@ -342,13 +342,13 @@ const Groups = {
 
     try {
       await API.settleGroup(this.activeGroupId, { from_id: fromId, to_id: toId, amount });
-      UI.toast(`✓ Settlement of ${fmt(amount)} recorded!`, 'success');
+      UI.toast(`Settlement of ${fmt(amount)} recorded!`, 'success');
       this.closeSettleQrModal();
       await this.openGroupDetail(this.activeGroupId);
     } catch (e) {
       UI.toast('' + e.message, 'error');
     } finally {
-      if (btn) { btn.disabled = false; btn.innerHTML = '<span>✓</span> Mark as Settled'; }
+      if (btn) { btn.disabled = false; btn.innerHTML = '${Icons.check(14)} Mark as Settled'; }
     }
   },
 
@@ -390,7 +390,7 @@ const Groups = {
 
     try {
       await API.addGroupExpense(this.activeGroupId, { description: desc, amount, payer_id, category, date });
-      UI.toast('✓ Shared expense added!', 'success');
+      UI.toast('Shared expense added!', 'success');
       this.closeExpenseModal();
       await this.openGroupDetail(this.activeGroupId);
     } catch (e) {
@@ -450,7 +450,7 @@ const Groups = {
 
     try {
       await API.settleGroup(this.activeGroupId, { from_id, to_id, amount });
-      UI.toast('✓ Settlement recorded!', 'success');
+      UI.toast('Settlement recorded!', 'success');
       this.closeSettleModal();
       await this.openGroupDetail(this.activeGroupId);
     } catch (e) {
@@ -464,7 +464,7 @@ const Groups = {
     if (!confirm('Are you sure you want to delete this group expense?')) return;
     try {
       await API.deleteGroupExpense(this.activeGroupId, expenseId);
-      UI.toast('✓ Expense deleted', 'success');
+      UI.toast('Expense deleted', 'success');
       await this.openGroupDetail(this.activeGroupId);
     } catch (e) {
       UI.toast('' + e.message, 'error');
@@ -477,7 +477,7 @@ const Groups = {
 
     try {
       await API.deleteGroup(this.activeGroupId);
-      UI.toast('✓ Group deleted', 'success');
+      UI.toast('Group deleted', 'success');
       this.showListView();
     } catch (e) {
       UI.toast('' + e.message, 'error');

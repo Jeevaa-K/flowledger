@@ -38,7 +38,7 @@ const Auth = {
       if (typeof UI !== 'undefined') UI.toast("You're offline — changes won't save until you're back online", 'error', 5000);
     });
     window.addEventListener('online', () => {
-      if (typeof UI !== 'undefined') UI.toast('✓ Back online', 'success');
+      if (typeof UI !== 'undefined') UI.toast('Back online', 'success');
     });
   },
 
@@ -218,7 +218,7 @@ const Auth = {
     try {
       const data = await API.post('/auth/reset', { token, newPassword });
       if (typeof UI !== 'undefined' && UI.toast) {
-        UI.toast('✓ ' + (data.message || 'Password reset successfully! Please login.'), 'success', 4000);
+        UI.toast('' + (data.message || 'Password reset successfully! Please login.'), 'success', 4000);
       }
       // Remove ?reset query from URL
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -387,7 +387,7 @@ const Auth = {
       localStorage.setItem('fl_user', JSON.stringify(user));
       this.onLoggedIn(user);
       document.getElementById('profileModal')?.classList.remove('open');
-      UI.toast('✓ Profile updated', 'success');
+      UI.toast('Profile updated', 'success');
     } catch(e) { alert(e.message.replace(/^\d+:\s*/,'')); }
   },
 
@@ -406,7 +406,7 @@ const Auth = {
       await API.put('/auth/password', { currentPassword:current, newPassword:newPwd });
       ['currentPwd','newPwd','confirmPwd'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
       document.getElementById('profileModal')?.classList.remove('open');
-      UI.toast('✓ Password changed', 'success');
+      UI.toast('Password changed', 'success');
     } catch(e) { alert(e.message.replace(/^\d+:\s*/,'')); }
   },
 
@@ -459,7 +459,7 @@ const Auth = {
 
     if (badge) {
       if (isMatch) {
-        badge.textContent = '✓ VERIFIED';
+        badge.textContent = 'VERIFIED';
         badge.style.color = 'var(--income)';
       } else {
         badge.textContent = 'REQUIRED';

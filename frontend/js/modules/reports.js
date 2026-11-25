@@ -86,7 +86,7 @@ export const ReportsModule = {
         document.body.appendChild(a); a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        UI.toast('✓ CSV downloaded!', 'success');
+        UI.toast('CSV downloaded!', 'success');
       } catch (e) { UI.toast('CSV error: ' + e.message, 'error'); }
     };
     document.getElementById('downloadAuditCsvBtn')?.addEventListener('click', downloadCsv);
@@ -113,7 +113,7 @@ export const ReportsModule = {
         document.body.appendChild(a); a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        UI.toast('✓ PDF downloaded!', 'success');
+        UI.toast('PDF downloaded!', 'success');
       } catch (e) {
         console.error('PDF error:', e);
         UI.toast('PDF error: ' + e.message, 'error');
@@ -190,7 +190,7 @@ export const ReportsModule = {
       ];
       breakdownEl.innerHTML = rows.map(r =>
         `<div class="audit-score-row-item">
-          <span class="audit-score-pill ${r.ok ? 'ok' : 'bad'}">${r.ok ? '✓' : '!'}</span>
+          <span class="audit-score-pill ${r.ok ? 'ok' : 'bad'}">${r.ok ? Icons.check(12) : '!'}</span>
           <span class="audit-score-key">${r.k}</span>
           <span class="audit-score-val">${r.v}</span>
         </div>`

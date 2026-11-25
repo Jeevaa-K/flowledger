@@ -77,7 +77,7 @@ export const AIModule = {
               <div class="ai-session-title">${icon} ${escapeHtml(s.title || 'Conversation')}</div>
               <div class="ai-session-date">${d} · ${s.message_count || 0} msgs</div>
             </div>
-            <button class="ai-session-del" data-action="del-session" data-session-id="${s.id}" title="Delete conversation">✕</button>
+            <button class="ai-session-del" data-action="del-session" data-session-id="${s.id}" title="Delete conversation">${Icons.x(13)}</button>
           </div>`;
       }).join('');
 
@@ -197,7 +197,7 @@ export const AIModule = {
       const copyBtn = d.querySelector('.msg-copy-btn');
       copyBtn?.addEventListener('click', () => {
         navigator.clipboard.writeText(content).then(() => {
-          copyBtn.textContent = '✓ Copied!';
+          copyBtn.textContent = 'Copied';
           setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
         }).catch(() => UI.toast('Copy failed', 'error'));
       });
@@ -298,7 +298,7 @@ export const AIModule = {
             await API.del('/ai/history');
           }
           this.startNewAiChat();
-          UI.toast('✓ Chat cleared', 'success');
+          UI.toast('Chat cleared', 'success');
         } catch (e) {
           UI.toast('Could not clear chat: ' + e.message.replace(/^\d+:\s*/, ''), 'error');
         } finally {
@@ -613,9 +613,9 @@ export const AIModule = {
         const currentYear = new Date().getFullYear();
         const receiptYear = parseInt(dateStr.slice(0, 4), 10);
         if (hasCustomDate && receiptYear < currentYear) {
-          UI.toast(`✓ Form pre-filled from receipt! Note: Date is ${dateStr} (past year). Change to Today if you want it in this month's stats.`, 'info', 5000);
+          UI.toast(`Form pre-filled from receipt! Note: Date is ${dateStr} (past year). Change to Today if you want it in this month's stats.`, 'info', 5000);
         } else {
-          UI.toast('✓ Form pre-filled from receipt!', 'success');
+          UI.toast('Form pre-filled from receipt!', 'success');
         }
       });
     }
@@ -744,7 +744,7 @@ export const AIModule = {
           if (accSpan) {
             if (currentSmsParsedData.account_id && Array.isArray(State.accounts)) {
               const matchedAcc = State.accounts.find(acc => acc.id === currentSmsParsedData.account_id);
-              accSpan.innerHTML = matchedAcc ? `<strong style="color:var(--brand)">✓ ${escapeHtml(matchedAcc.name)}</strong>` : 'Detected';
+              accSpan.innerHTML = matchedAcc ? `<strong style="color:var(--brand)">${escapeHtml(matchedAcc.name)}</strong>` : 'Detected';
             } else {
               accSpan.textContent = 'None matched (will use default)';
             }

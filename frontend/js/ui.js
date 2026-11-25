@@ -124,7 +124,7 @@ const UI = {
           <input type="number" class="split-amt-input" data-index="${i}" placeholder="0.00" min="0" step="0.01" value="${r.amount !== '' && r.amount !== undefined ? r.amount : ''}" />
         </div>
         <input type="text" class="split-note-input" data-index="${i}" placeholder="Detail/Note (optional)" value="${escapeHtml(r.note || '')}" style="flex:1" />
-        <button type="button" class="btn-ghost split-del-btn" data-index="${i}" title="Remove part" ${this.splitRows.length <= 2 ? 'disabled style="opacity:0.35;cursor:not-allowed"' : ''}>✕</button>
+        <button type="button" class="btn-ghost split-del-btn" data-index="${i}" title="Remove part" ${this.splitRows.length <= 2 ? 'disabled style="opacity:0.35;cursor:not-allowed"' : ''}>${Icons.x(13)}</button>
       </div>
     `).join('');
 
@@ -187,7 +187,7 @@ const UI = {
 
     if (remSpan && pill) {
       if (Math.abs(remaining) < 0.01 && total > 0) {
-        remSpan.textContent = '✓ Balanced (₹0.00 left)';
+        remSpan.textContent = 'Balanced (₹0.00 left)';
         pill.style.background = 'var(--income-tint)';
         pill.style.borderColor = 'var(--income-border)';
         pill.style.color = 'var(--income)';
@@ -447,10 +447,10 @@ const UI = {
         if (newSaved >= target) {
           projEl.innerHTML = `<span style="color:var(--income)">Will reach 100% (Goal complete!)</span>`;
         } else {
-          projEl.innerHTML = `➔ Will reach <strong>${newPct}%</strong> (${fmt(newRem)} left)`;
+          projEl.innerHTML = `Will reach <strong>${newPct}%</strong> (${fmt(newRem)} left)`;
         }
       } else {
-        projEl.innerHTML = `➔ Will become <strong>${newPct}%</strong> (${fmt(newSaved)} saved)`;
+        projEl.innerHTML = `Will become <strong>${newPct}%</strong> (${fmt(newSaved)} saved)`;
       }
     }
   },
@@ -539,8 +539,8 @@ const UI = {
             <div class="budget-cat">${typeIcon[a.type]||typeIcon.other} ${escapeHtml(a.name)} ${currBadge}</div>
           </div>
           <div style="display:flex;gap:4px">
-            <button class="txn-btn edit" data-action="edit-account" data-id="${a.id}" title="Edit">✎</button>
-            <button class="budget-delete" data-action="del-account" data-id="${a.id}">✕</button>
+            <button class="txn-btn edit" data-action="edit-account" data-id="${a.id}" title="Edit">${Icons.edit(13)}</button>
+            <button class="budget-delete" data-action="del-account" data-id="${a.id}"></button>
           </div>
         </div>
         <div class="budget-amounts">
@@ -659,8 +659,8 @@ const UI = {
         <div class="txn-date-col">${t.date}</div>
         <div class="txn-amount ${isIncome?'inc':'exp'}">${amountHtml}</div>
         <div class="txn-actions">
-          <button class="txn-btn edit" data-action="edit-txn" data-id="${t.id}" aria-label="Edit ${escapeHtml(t.description)}">✎</button>
-          <button class="txn-btn del"  data-action="del-txn"  data-id="${t.id}" aria-label="Delete ${escapeHtml(t.description)}">✕</button>
+          <button class="txn-btn edit" data-action="edit-txn" data-id="${t.id}" aria-label="Edit ${escapeHtml(t.description)}"></button>
+          <button class="txn-btn del"  data-action="del-txn"  data-id="${t.id}" aria-label="Delete ${escapeHtml(t.description)}"></button>
         </div>
       </div>`;
     }).join('');
@@ -691,7 +691,7 @@ const UI = {
             <div class="budget-cat-dot" style="background:${CAT_COLORS[b.category]||'#94A3B8'}"></div>
             <div class="budget-cat">${CAT_EMOJIS[b.category]||''} ${escapeHtml(b.category)}</div>
           </div>
-          <button class="budget-delete" data-action="del-budget" data-id="${b.id}">✕</button>
+          <button class="budget-delete" data-action="del-budget" data-id="${b.id}"></button>
         </div>
         <div class="budget-amounts">
           <span>Spent: <span>${fmt(spent)}</span></span>
@@ -778,8 +778,8 @@ const UI = {
             <div class="goal-date">${g.date ? 'Target: ' + getLocalDateString(g.date) : 'No deadline'}</div>
           </div>
           <div style="display:flex;gap:4px">
-            <button class="txn-btn edit" data-action="edit-goal" data-id="${g.id}" title="Edit">✎</button>
-            <button class="goal-delete"  data-action="del-goal"  data-id="${g.id}">✕</button>
+            <button class="txn-btn edit" data-action="edit-goal" data-id="${g.id}" title="Edit"></button>
+            <button class="goal-delete"  data-action="del-goal"  data-id="${g.id}"></button>
           </div>
         </div>
         <div class="goal-amounts">

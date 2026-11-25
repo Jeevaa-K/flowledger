@@ -4595,3 +4595,5 @@ body.dark .sort-dropdown-menu {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.fl-icon { display: inline-block; width: 1em; height: 1em; vertical-align: -0.15em; flex-shrink: 0; }

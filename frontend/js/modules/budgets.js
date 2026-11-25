@@ -17,7 +17,7 @@ export const BudgetsModule = {
     if (btn) { btn.disabled = true; btn.dataset.origText = btn.textContent; btn.textContent = 'Saving...'; }
     try {
       await API.post('/budgets', { category, monthly_limit });
-      UI.toast('✓ Budget saved', 'success');
+      UI.toast('Budget saved', 'success');
       UI.closeBudgetModal();
       await this.loadBudgets();
     } catch { UI.toast('Error saving budget', 'error'); }
@@ -26,7 +26,7 @@ export const BudgetsModule = {
 
   async deleteBudget(id) {
     if (!confirm('Remove this budget?')) return;
-    try { await API.del(`/budgets/${id}`); UI.toast('✓ Removed', 'success'); await this.loadBudgets(); }
+    try { await API.del(`/budgets/${id}`); UI.toast('Removed', 'success'); await this.loadBudgets(); }
     catch { UI.toast('Error removing budget', 'error'); }
   },
 
@@ -84,7 +84,7 @@ export const BudgetsModule = {
     list.innerHTML = suggestions.map((s, idx) => {
       const color = (typeof CAT_COLORS !== 'undefined' && CAT_COLORS[s.category]) || '#6366F1';
       const emoji = (typeof CAT_EMOJIS !== 'undefined' && CAT_EMOJIS[s.category]) || '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="vertical-align:middle;margin-right:4px"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>';
-      const trendLabel = s.trend === 'increasing' ? '↗ Trending +15%' : s.trend === 'decreasing' ? '↘ Downward' : s.trend === 'starter' ? 'Recommended Starter' : '➡ Stable';
+      const trendLabel = s.trend === 'increasing' ? 'Trending +15%' : s.trend === 'decreasing' ? 'Downward' : s.trend === 'starter' ? 'Recommended Starter' : ' Stable';
 
       return `
         <div class="ab-item-row" id="abRow_${idx}" data-idx="${idx}">
@@ -201,7 +201,7 @@ export const BudgetsModule = {
 
     try {
       const res = await API.post('/budgets/apply-suggestions', { budgets: budgetsToApply });
-      UI.toast(`✓ Successfully set ${res.count || budgetsToApply.length} category budgets!`, 'success');
+      UI.toast(`Successfully set ${res.count || budgetsToApply.length} category budgets!`, 'success');
       this.closeAutoBudgetPlanner();
       await this.loadBudgets();
     } catch (e) {
@@ -224,7 +224,7 @@ export const BudgetsModule = {
 
     try {
       await API.post('/budgets', { category: s.category, monthly_limit: limit });
-      UI.toast(`✓ Saved budget for ${s.category}: ${fmt(limit)}`, 'success');
+      UI.toast(`Saved budget for ${s.category}: ${fmt(limit)}`, 'success');
       const prevEl = inp.parentElement?.parentElement?.querySelector('.ab-prev-limit');
       if (prevEl) prevEl.textContent = `Current: ${fmt(limit)}`;
       await this.loadBudgets();

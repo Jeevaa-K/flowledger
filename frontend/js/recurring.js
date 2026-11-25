@@ -542,7 +542,7 @@ const Recurring = {
         : o.isDueSoon
         ? `<span style="font-size:10.5px;font-weight:700;color:#f59e0b;background:rgba(245,158,11,0.12);padding:1px 6px;border-radius:8px">In ${o.diffDays}d</span>`
         : o.isPast
-        ? '<span style="font-size:10.5px;font-weight:500;color:var(--text-tertiary)">✓ Past</span>'
+        ? '<span style="font-size:10.5px;font-weight:500;color:var(--text-tertiary)">Past</span>'
         : `<span style="font-size:10.5px;font-weight:500;color:var(--text-secondary)">In ${o.diffDays}d</span>`;
 
       return `
@@ -607,7 +607,7 @@ const Recurring = {
         account_id: defaultAcc
       });
 
-      UI.toast(`✓ Logged ${item.description} (${fmt(item.amount)}) to Transactions!`, 'success');
+      UI.toast(`Logged ${item.description} (${fmt(item.amount)}) to Transactions!`, 'success');
       this.closeDayModal();
 
       // Refresh app data in background
@@ -725,7 +725,7 @@ const Recurring = {
           <div class="rec-amount ${r.type === 'income' ? 'inc' : 'exp'}">${r.type === 'income' ? '+' : '-'}${fmt(r.amount)}</div>
           <div class="rec-actions">
             <button class="txn-btn" data-action="toggle-recurring" data-id="${r.id}" data-active="${r.active}" title="${r.active ? 'Pause auto-tracking' : 'Resume auto-tracking'}">${r.active ? '<svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>' : '<svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><polygon points="5 3 19 12 5 21 5 3"/></svg>'}</button>
-            <button class="txn-btn del" data-action="del-recurring" data-id="${r.id}" title="Remove subscription">✕</button>
+            <button class="txn-btn del" data-action="del-recurring" data-id="${r.id}" title="Remove subscription">${Icons.x(13)}</button>
           </div>
         </div>
       `;
@@ -764,7 +764,7 @@ const Recurring = {
       const banner = document.getElementById('subDetectBanner');
 
       if (!this.detected.length) {
-        if (manualTrigger) UI.toast('✓ All subscriptions in your transaction history are already tracked!', 'success');
+        if (manualTrigger) UI.toast('All subscriptions in your transaction history are already tracked!', 'success');
         if (card) card.style.display = 'none';
         if (banner) banner.style.display = 'none';
         return;
@@ -826,7 +826,7 @@ const Recurring = {
         next_date: item.next_date
       });
 
-      UI.toast(`✓ Added ${item.description} to tracked subscriptions`, 'success');
+      UI.toast(`Added ${item.description} to tracked subscriptions`, 'success');
       this.detected.splice(idx, 1);
       this.renderDetectedGrid();
 
@@ -871,7 +871,7 @@ const Recurring = {
     if (btn) { btn.disabled = true; btn.dataset.origText = btn.textContent; btn.textContent = 'Saving...'; }
     try {
       await API.post('/recurring', { description, amount, type, category, frequency, next_date });
-      UI.toast('✓ Subscription added to tracking', 'success');
+      UI.toast('Subscription added to tracking', 'success');
       document.getElementById('recurringModal')?.classList.remove('open');
       this.load();
     } catch(e) {
@@ -895,7 +895,7 @@ const Recurring = {
     if (!confirm('Remove this subscription from tracking?')) return;
     try {
       await API.del(`/recurring/${id}`);
-      UI.toast('✓ Removed from subscriptions', 'success');
+      UI.toast('Removed from subscriptions', 'success');
       this.load();
     } catch(e) { UI.toast('Error removing subscription', 'error'); }
   }

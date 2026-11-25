@@ -47,7 +47,7 @@
     deferredInstallPrompt = null;
     document.querySelectorAll('.pwa-install-action').forEach(b => (b.style.display = 'none'));
     if (window.UI && typeof window.UI.toast === 'function') {
-      window.UI.toast('✓ FlowLedger installed on your device!', 'success');
+      window.UI.toast('FlowLedger installed on your device!', 'success');
     }
   });
 
@@ -79,7 +79,7 @@
 
   window.addEventListener('online', () => {
     if (window.UI && typeof window.UI.toast === 'function') {
-      window.UI.toast('✓ Back online! Syncing...', 'success');
+      window.UI.toast('Back online! Syncing...', 'success');
     }
   });
 

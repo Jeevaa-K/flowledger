@@ -36,10 +36,10 @@ export const ProfileModule = {
     try {
       if (editId) {
         await API.put(`/accounts/${editId}`, { name, type, starting_balance, currency });
-        UI.toast('✓ Account updated', 'success');
+        UI.toast('Account updated', 'success');
       } else {
         await API.post('/accounts', { name, type, starting_balance, currency });
-        UI.toast('✓ Account added', 'success');
+        UI.toast('Account added', 'success');
       }
       UI.closeAccountModal();
       await this.loadAccounts(State.page === 'accounts');
@@ -58,7 +58,7 @@ export const ProfileModule = {
     if (!confirm('Delete this account? Transactions on it will stay in your history but become unassigned.')) return;
     try {
       await API.del(`/accounts/${id}`);
-      UI.toast('✓ Account removed', 'success');
+      UI.toast('Account removed', 'success');
       await this.loadAccounts(true);
       if (State.page === 'dashboard' && typeof this.loadDashboard === 'function') await this.loadDashboard();
     } catch (e) {
