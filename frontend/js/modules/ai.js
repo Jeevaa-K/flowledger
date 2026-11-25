@@ -251,14 +251,9 @@ export const AIModule = {
       }
       this.appendMsg('assistant', res.reply, res.model || State.aiModel);
 
-      if (res.action?.type === 'transaction_added') {
-        try {
-          if (typeof this.loadDashboard === 'function') await this.loadDashboard();
-          if (typeof this.loadTransactions === 'function') await this.loadTransactions({});
-          if (typeof this.updateNavCount === 'function') this.updateNavCount();
-          if (typeof Tags !== 'undefined' && typeof Tags.populateFilterSelect === 'function') Tags.populateFilterSelect();
-        } catch (_) { }
-        UI.toast('Transaction saved by NOVA!', 'success');
+      if (res.action?.type === 'transaction_proposed' && res.action.transaction) {
+        UI.openAddModal(res.action.transaction);
+        UI.toast('Review and confirm the proposed transaction', 'info');
       }
     } catch(e) {
       document.getElementById('typingIndicator')?.remove();
@@ -818,16 +813,23 @@ export const AIModule = {
         btnSaveDirect.disabled = true;
         btnSaveDirect.textContent = 'Saving...';
         try {
-          const text = smsInput?.value?.trim() || '';
-          const res = await API.parseBankSms(text, true);
-          if (res && res.saved) {
-            UI.toast(`Saved ${typeof fmt === 'function' ? fmt(currentSmsParsedData.amount) : '₹' + currentSmsParsedData.amount} (${currentSmsParsedData.merchant || currentSmsParsedData.category})!`, 'success');
+          const saved = await API.post('/transactions', {
+            description: currentSmsParsedData.description || currentSmsParsedData.merchant || 'Bank Transaction',
+            amount: currentSmsParsedData.amount,
+            type: currentSmsParsedData.type || 'expense',
+            category: currentSmsParsedData.category || 'Other',
+            date: currentSmsParsedData.date || new Date().toISOString().slice(0, 10),
+            account_id: currentSmsParsedData.account_id || null,
+            tags: Array.isArray(currentSmsParsedData.tags) ? currentSmsParsedData.tags : ['bank-sms']
+          });
+          if (saved && saved.id) {
+            UI.toast(`Saved ${typeof fmt === 'function' ? fmt(currentSmsParsedData.amount) : '₹' + currentSmsParsedData.amount} (${currentSmsParsedData.merchant || currentSmsParsedData.category})`, 'success');
             closeSms();
             if (typeof this.loadDashboard === 'function') await this.loadDashboard();
             if (typeof this.loadTransactions === 'function') await this.loadTransactions({});
             if (typeof this.loadAccounts === 'function') await this.loadAccounts(false);
           } else {
-            throw new Error('Could not auto-save transaction');
+            throw new Error('Could not save transaction');
           }
         } catch (err) {
           UI.toast(err.message || 'Failed to direct-save transaction', 'error');
