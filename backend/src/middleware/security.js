@@ -80,10 +80,12 @@ const apiLimiter = rateLimit({
   message: { error: 'Too many requests. Please slow down.' }
 });
 
+// Must be mounted AFTER `auth` so req.user.id is populated and users behind
+// a shared NAT/proxy each get their own AI quota bucket.
 const aiLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 20, // 20 requests per minute
-  keyGenerator: (req) => req.user?.id ? String(req.user.id) : (req.ip || 'anonymous'),
+  max: 20, // 20 requests per minute per user
+  keyGenerator: (req) => (req.user && req.user.id ? `user:${req.user.id}` : 'anon'),
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many AI requests. Please wait a minute and try again.' }

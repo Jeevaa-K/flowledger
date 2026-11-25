@@ -3,7 +3,7 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 const { isProd } = require('./config');
 const {
-  securityHeaders, corsMiddleware, originGuard, apiLimiter, aiLimiter
+  securityHeaders, corsMiddleware, originGuard, apiLimiter
 } = require('./middleware/security');
 
 function createApp() {
@@ -17,13 +17,11 @@ function createApp() {
   app.use(originGuard);
   app.use(cookieParser());
 
-  // 100kb global json limit; 10MB only on receipt scan route for image uploads
-  const standardJson = express.json({ limit: '100kb' });
-  const receiptJson = express.json({ limit: '10mb' });
+  // Keep global JSON parser modest (2MB); /api/ai/scan-receipt parses its own
+  // 6MB payload *after* apiLimiter, auth, and aiLimiter in aiTools.js.
+  const standardJson = express.json({ limit: '2mb' });
   app.use((req, res, next) => {
-    if (req.path === '/api/ai/scan-receipt') {
-      return receiptJson(req, res, next);
-    }
+    if (req.path === '/api/ai/scan-receipt') return next();
     standardJson(req, res, next);
   });
 
@@ -33,7 +31,6 @@ function createApp() {
   });
   app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
   app.use('/api/', apiLimiter);
-  app.use('/api/ai', aiLimiter);
 
   app.use('/api', require('./routes/auth'));
   app.use('/api', require('./routes/transactions'));

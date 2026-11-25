@@ -133,6 +133,42 @@ function buildTransactionFilters(query = {}, userId = query.userId || query.user
   return { where, params, orderBy, nextIndex: i };
 }
 
+function createMonthlyCache(maxEntries = 500) {
+  const store = new Map();
+  return {
+    get(key, month) {
+      const entry = store.get(key);
+      if (!entry) return undefined;
+      if (entry.month !== month) {
+        store.delete(key);
+        return undefined;
+      }
+      return entry.value;
+    },
+    set(key, month, value) {
+      if (store.size >= maxEntries) {
+        const oldestKey = store.keys().next().value;
+        store.delete(oldestKey);
+      }
+      store.set(key, { month, value });
+    }
+  };
+}
+
+function isValidIsoDate(str) {
+  if (typeof str !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(str)) return false;
+  const d = new Date(`${str}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === str;
+}
+
+function normalizeCategory(cat, validCats, fallback = 'Other') {
+  if (typeof cat !== 'string') return fallback;
+  const trimmed = cat.trim().toLowerCase();
+  if (!trimmed) return fallback;
+  const match = validCats.find(c => String(c).toLowerCase() === trimmed);
+  return match || fallback;
+}
+
 module.exports = {
   safeError,
   sanitizeTags,
@@ -144,5 +180,8 @@ module.exports = {
   getUserYearMonth,
   getPreviousMonth,
   isValidPassword,
-  buildTransactionFilters
+  buildTransactionFilters,
+  createMonthlyCache,
+  isValidIsoDate,
+  normalizeCategory
 };
