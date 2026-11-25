@@ -8,11 +8,11 @@ const JWT_SECRET = process.env.JWT_SECRET;
 // A missing or weak secret would let anyone forge login tokens,
 // so refuse to start instead of running insecurely.
 if (!JWT_SECRET) {
-  console.error('❌ FATAL: JWT_SECRET environment variable is not set. Refusing to start.');
+  console.error('FATAL: JWT_SECRET environment variable is not set. Refusing to start.');
   process.exit(1);
 }
 if (JWT_SECRET.length < 32) {
-  console.error('❌ FATAL: JWT_SECRET is too short (min 32 characters). Refusing to start.');
+  console.error('FATAL: JWT_SECRET is too short (min 32 characters). Refusing to start.');
   process.exit(1);
 }
 

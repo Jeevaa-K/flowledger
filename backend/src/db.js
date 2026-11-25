@@ -157,7 +157,7 @@ async function initDB() {
     split_amount NUMERIC NOT NULL
   )`);
   await migrateDefaultAccounts();
-  console.log('✅ Database tables ready');
+  console.log('Database tables ready');
 }
 
 // One-time backfill: any user who has transactions but no accounts yet
@@ -182,7 +182,7 @@ async function migrateDefaultAccounts() {
     );
   }
   if (usersNeedingMigration.length) {
-    console.log(`✅ Created default accounts for ${usersNeedingMigration.length} user(s)`);
+    console.log(`Created default accounts for ${usersNeedingMigration.length} user(s)`);
   }
 }
 

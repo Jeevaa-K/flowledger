@@ -3,8 +3,8 @@ const Groq = require('groq-sdk');
 // ── Groq ──────────────────────────────────────────────────────
 let groq = null;
 const apiKey = process.env.GROQ_API_KEY;
-console.log(apiKey ? '🔑 GROQ_API_KEY configured' : '⚠️  GROQ_API_KEY not set — AI features disabled');
-if (apiKey) { groq = new Groq({ apiKey }); console.log('✅ Groq AI enabled'); }
+console.log(apiKey ? 'GROQ_API_KEY configured' : 'GROQ_API_KEY not set — AI features disabled');
+if (apiKey) { groq = new Groq({ apiKey }); console.log('Groq AI enabled'); }
 
 // Candidate Groq models to try in fallback sequence if a specific model returns 404
 const GROQ_MODELS = [
@@ -40,7 +40,7 @@ async function createGroqCompletion(params) {
         err.code === 'model_not_found' ||
         (err.message && (err.message.includes('does not exist') || err.message.includes('not have access')));
       if (isNotFound) {
-        console.warn(`⚠️ Groq model '${model}' not available (404), attempting next fallback model...`);
+        console.warn(`Groq model '${model}' not available (404), attempting next fallback model...`);
         continue;
       }
       throw err;
@@ -58,7 +58,7 @@ if (process.env.LANGFUSE_PUBLIC_KEY && process.env.LANGFUSE_SECRET_KEY && proces
     secretKey: process.env.LANGFUSE_SECRET_KEY,
     baseUrl: process.env.LANGFUSE_HOST || 'https://cloud.langfuse.com'
   });
-  console.log('✅ Langfuse tracing enabled');
+  console.log('Langfuse tracing enabled');
 }
 
 module.exports = { groq, langfuse, GROQ_MODELS, createGroqCompletion };

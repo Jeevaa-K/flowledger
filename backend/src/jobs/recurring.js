@@ -46,7 +46,7 @@ async function processDueRecurring() {
       while (next.toISOString().slice(0, 10) <= today);
       await db.run('UPDATE recurring SET next_date=$1 WHERE id=$2', [next.toISOString().slice(0, 10), r.id]);
     }
-    if (due.length) console.log(`✅ Processed ${due.length} recurring transactions`);
+    if (due.length) console.log(`Processed ${due.length} recurring transactions`);
   } catch (e) { console.error('Cron error:', e.message); }
 }
 
