@@ -66,6 +66,12 @@ const API = {
     window.location.reload();
   },
 
+  // Credential-verification endpoints may legitimately reject wrong passwords
+  // without meaning the user's session cookie has expired.
+  isCredentialRoute(path) {
+    return /^\/auth\/(login|register|password|account|forgot|reset)(\?|$)/.test(path);
+  },
+
   async request(method, path, body) {
     const headers = await this.headers();
     const opts = { method, headers, credentials: 'include' };
@@ -82,7 +88,7 @@ const API = {
     if (tokenHeader) {
       await this.setToken(tokenHeader);
     }
-    if (r.status === 401) {
+    if (r.status === 401 && !this.isCredentialRoute(path)) {
       this.handleUnauthorized();
       return;
     }

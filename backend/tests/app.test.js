@@ -168,10 +168,9 @@ describe('authentication', () => {
   });
 });
 
-describe('logout – token_version invalidation', () => {
-  test('logout with a valid cookie bumps token_version', async () => {
+describe('logout – per-device cookie clearing', () => {
+  test('logout with a valid cookie clears the cookie without bumping token_version', async () => {
     const token = jwt.sign({ id: 42, name: 'U', email: 'u@u.io', token_version: 1 }, JWT_SECRET, { expiresIn: '1h' });
-    db.run.mockResolvedValue({});
 
     const res = await request(app)
       .post('/api/auth/logout')
@@ -179,11 +178,8 @@ describe('logout – token_version invalidation', () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ success: true });
-    // token_version must have been incremented
-    expect(db.run).toHaveBeenCalledWith(
-      'UPDATE users SET token_version = token_version + 1 WHERE id=$1',
-      [42]
-    );
+    // Logout must not invalidate other devices' sessions (token_version is for password change/reset)
+    expect(db.run).not.toHaveBeenCalled();
     // Session cookie must be cleared
     const cookie = res.headers['set-cookie'].find((c) => c.startsWith(COOKIE_NAME));
     expect(cookie).toMatch(/Expires=Thu, 01 Jan 1970/);
@@ -195,6 +191,16 @@ describe('logout – token_version invalidation', () => {
     expect(db.run).not.toHaveBeenCalled();
     const cookie = res.headers['set-cookie'].find((c) => c.startsWith(COOKIE_NAME));
     expect(cookie).toMatch(/Expires=Thu, 01 Jan 1970/);
+  });
+
+  test('wrong current password on PUT /api/auth/password → 403', async () => {
+    db.get.mockResolvedValueOnce({ id: 7, name: 'J', email: 'j@j.io', token_version: 1 }); // auth middleware
+    db.get.mockResolvedValueOnce({ id: 7, password: await bcrypt.hash('right-pass', 4) }); // password lookup
+    const res = await request(app)
+      .put('/api/auth/password')
+      .set('Cookie', sessionCookie({ id: 7, name: 'J', email: 'j@j.io', token_version: 1 }))
+      .send({ currentPassword: 'wrong', newPassword: 'NewPassword123' });
+    expect(res.status).toBe(403);
   });
 });
 

@@ -26,12 +26,25 @@ if (isProd && (INSECURE_JWT_DEFAULTS.has(JWT_SECRET) || /change_me/i.test(JWT_SE
   process.exit(1);
 }
 
+if (isProd && !process.env.RESEND_API_KEY && !process.env.SMTP_HOST) {
+  console.error('FATAL: Production requires an email provider (RESEND_API_KEY or SMTP_HOST). Refusing to start.');
+  process.exit(1);
+}
+
+if (isProd && !process.env.APP_URL) {
+  console.error('FATAL: APP_URL environment variable is required in production. Refusing to start.');
+  process.exit(1);
+}
+
 const csv = (v) => (v || '').split(',').map((s) => s.trim()).filter(Boolean);
+const PORT = process.env.PORT || 3001;
+const APP_URL = (process.env.APP_URL || `http://localhost:${PORT}`).replace(/\/+$/, '');
 
 module.exports = {
   isProd,
   isTest,
-  PORT: process.env.PORT || 3001,
+  PORT,
+  APP_URL,
   JWT_SECRET,
   SESSION_DAYS: 7,
   COOKIE_NAME: 'fl_session',

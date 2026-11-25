@@ -1,12 +1,22 @@
 const nodemailer = require('nodemailer');
 
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 /**
  * Sends a password reset email using Resend API or Nodemailer SMTP,
- * with console logging for development / unconfigured environments.
+ * with console logging ONLY in non-production environments.
  */
 async function sendPasswordResetEmail({ to, resetUrl }) {
   const from = process.env.EMAIL_FROM || 'FlowLedger <noreply@flowledger.app>';
   const subject = 'Reset your FlowLedger password';
+  const safeResetUrl = escapeHtml(resetUrl);
   const html = `
     <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#1c1917;">
       <h2 style="color:#6366f1;margin-bottom:16px;">FlowLedger Password Reset</h2>
@@ -14,7 +24,7 @@ async function sendPasswordResetEmail({ to, resetUrl }) {
         You requested a password reset for your FlowLedger account. Click the button below to set a new password:
       </p>
       <div style="text-align:center;margin:28px 0;">
-        <a href="${resetUrl}" style="background-color:#6366f1;color:#ffffff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;">
+        <a href="${safeResetUrl}" style="background-color:#6366f1;color:#ffffff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;">
           Reset Password
         </a>
       </div>
@@ -22,7 +32,7 @@ async function sendPasswordResetEmail({ to, resetUrl }) {
         This link is single-use and will expire in 30 minutes. If you did not request this reset, you can safely ignore this email.
       </p>
       <p style="font-size:12px;color:#a8a29e;word-break:break-all;margin-top:16px;">
-        Direct link: <a href="${resetUrl}" style="color:#6366f1;">${resetUrl}</a>
+        Direct link: <a href="${safeResetUrl}" style="color:#6366f1;">${safeResetUrl}</a>
       </p>
     </div>
   `;
@@ -68,8 +78,8 @@ async function sendPasswordResetEmail({ to, resetUrl }) {
     }
   }
 
-  // 3. Fallback / Dev / Test logging
-  if (process.env.NODE_ENV !== 'production' || (!process.env.RESEND_API_KEY && !process.env.SMTP_HOST)) {
+  // 3. Fallback logging ONLY in non-production environments (never log reset tokens in production)
+  if (process.env.NODE_ENV !== 'production') {
     console.log(`[PASSWORD RESET EMAIL] To: ${to} | Reset Link: ${resetUrl}`);
   }
   return false;

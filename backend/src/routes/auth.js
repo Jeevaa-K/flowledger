@@ -1,8 +1,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const { JWT_SECRET, COOKIE_NAME } = require('../config');
+const { APP_URL } = require('../config');
 const { authLimiter } = require('../middleware/security');
 const { EMAIL_RE, safeError, isValidPassword } = require('../utils');
 const { pool, db, withTransaction } = require('../db');
@@ -80,16 +79,9 @@ router.post('/auth/demo', authLimiter, async (req, res) => {
   } catch (e) { safeError(res, e, 'Demo login'); }
 });
 
-router.post('/auth/logout', async (req, res) => {
-  try {
-    const token = req.cookies?.[COOKIE_NAME] || req.headers.authorization?.replace(/^Bearer\s+/i, '');
-    if (token) {
-      const decoded = jwt.verify(token, JWT_SECRET);
-      if (decoded?.id) {
-        await db.run('UPDATE users SET token_version = token_version + 1 WHERE id=$1', [decoded.id]);
-      }
-    }
-  } catch (e) { console.warn('Logout token check failed:', e.message); }
+// Logout clears only the current device's session cookie; token_version is
+// reserved for password change/reset so logging out one device doesn't boot all others.
+router.post('/auth/logout', (req, res) => {
   clearSession(res);
   res.json({ success: true });
 });
@@ -160,7 +152,7 @@ router.put('/auth/password', auth, async (req, res) => {
   try {
     const user = await db.get('SELECT * FROM users WHERE id=$1', [req.user.id]);
     const match = await bcrypt.compare(currentPassword, user.password);
-    if (!match) return res.status(401).json({ error: 'Current password incorrect' });
+    if (!match) return res.status(403).json({ error: 'Current password incorrect' });
 
     const newHash = await bcrypt.hash(newPassword, 10);
     // Incrementing token_version invalidates all other active sessions across devices
@@ -193,8 +185,8 @@ router.post('/auth/forgot', authLimiter, async (req, res) => {
         [user.id, tokenHash, expiresAt]
       );
 
-      const origin = req.get('origin') || process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
-      const resetUrl = `${origin.replace(/\/+$/, '')}/?reset=${rawToken}`;
+      // Always build reset URL from configured APP_URL (never trust Origin/Host headers)
+      const resetUrl = `${APP_URL}/?reset=${rawToken}`;
       await sendPasswordResetEmail({ to: email.toLowerCase().trim(), resetUrl });
     }
 
