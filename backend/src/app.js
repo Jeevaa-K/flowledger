@@ -16,7 +16,14 @@ function createApp() {
   app.use(corsMiddleware);
   app.use(originGuard);
   app.use(cookieParser());
-  app.use(express.json({ limit: '10mb' })); // receipt images arrive as base64
+  // Keep the global JSON limit modest (2 MB); /api/ai/scan-receipt uses its
+  // own 6 MB parser *after* rate-limiting and auth so unauthenticated clients
+  // cannot force the server to buffer/parse large base64 payloads.
+  const defaultJsonParser = express.json({ limit: '2mb' });
+  app.use((req, res, next) => {
+    if (req.path === '/api/ai/scan-receipt') return next();
+    return defaultJsonParser(req, res, next);
+  });
 
   app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
   app.use('/api/', apiLimiter);

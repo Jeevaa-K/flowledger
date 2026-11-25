@@ -70,7 +70,7 @@ router.put('/auth/password', auth, async (req, res) => {
   try {
     const user = await db.get('SELECT * FROM users WHERE id=$1', [req.user.id]);
     const match = await bcrypt.compare(currentPassword, user.password);
-    if (!match) return res.status(401).json({ error: 'Current password incorrect' });
+    if (!match) return res.status(403).json({ error: 'Current password incorrect' });
     await db.run('UPDATE users SET password=$1 WHERE id=$2', [await bcrypt.hash(newPassword, 10), req.user.id]);
     res.json({ success: true });
   } catch (e) { safeError(res, e, 'Change password'); }

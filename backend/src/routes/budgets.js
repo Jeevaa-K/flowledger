@@ -1,9 +1,11 @@
 const express = require('express');
 const { auth } = require('../middleware/auth');
+const { aiLimiter } = require('../middleware/security');
 const { db } = require('../db');
-const { safeError } = require('../utils');
+const { safeError, createMonthlyCache } = require('../utils');
 const { groq, createGroqCompletion } = require('../services/ai');
 const router = express.Router();
+const budgetSummaryCache = createMonthlyCache();
 
 // ── Budgets ───────────────────────────────────────────────────
 router.get('/budgets', auth, async (req, res) => {
@@ -45,7 +47,7 @@ router.delete('/budgets/:id', auth, async (req, res) => {
 });
 
 // ── AI Budget Auto-Suggestions & Bulk Apply ─────────────────────
-router.get('/budgets/suggest', auth, async (req, res) => {
+router.get('/budgets/suggest', auth, aiLimiter, async (req, res) => {
   try {
     const userId = req.user.id;
 
@@ -164,8 +166,13 @@ router.get('/budgets/suggest', auth, async (req, res) => {
       }
     }
 
-    let aiSummary = '';
-    if (groq && suggestions.length > 0 && catRows.length > 0) {
+    const totalSuggested = suggestions.reduce((s, c) => s + c.suggestedLimit, 0);
+    const totalCurrent = suggestions.reduce((s, c) => s + (c.currentLimit || 0), 0);
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    const cacheKey = `${userId}:${latestMonth}:${totalSuggested}:${totalCurrent}:${suggestions.length}`;
+
+    let aiSummary = budgetSummaryCache.get(cacheKey, currentMonth) || '';
+    if (!aiSummary && groq && suggestions.length > 0 && catRows.length > 0) {
       try {
         const prompt = `You are an expert personal finance coach on FlowLedger.
 Here are category budget suggestions based on actual user expense velocity:
@@ -186,18 +193,15 @@ Do not use markdown headers (#). Keep it encouraging, numbers-focused, and under
           temperature: 0.6
         });
         aiSummary = completion.choices[0]?.message?.content?.trim() || '';
+        if (aiSummary) budgetSummaryCache.set(cacheKey, currentMonth, aiSummary);
       } catch (err) {
         aiSummary = '';
       }
     }
 
     if (!aiSummary) {
-      const totalSuggested = suggestions.reduce((s, c) => s + c.suggestedLimit, 0);
       aiSummary = `Analyzed ${suggestions.length} spending categories over ${effectiveMonths} active month${effectiveMonths > 1 ? 's' : ''}. Applying these recommended caps will establish a balanced total monthly budget of ₹${totalSuggested.toLocaleString('en-IN')}.`;
     }
-
-    const totalSuggested = suggestions.reduce((s, c) => s + c.suggestedLimit, 0);
-    const totalCurrent = suggestions.reduce((s, c) => s + (c.currentLimit || 0), 0);
 
     res.json({
       suggestions,

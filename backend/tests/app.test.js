@@ -130,6 +130,16 @@ describe('authentication', () => {
     expect(res.headers['set-cookie']).toBeUndefined();
   });
 
+  test('wrong current password on PUT /api/auth/password → 403 (not 401)', async () => {
+    db.get.mockResolvedValue({ id: 7, password: await bcrypt.hash('right-pass', 4) });
+    const res = await request(app)
+      .put('/api/auth/password')
+      .set('Cookie', sessionCookie({ id: 7, name: 'J', email: 'j@j.io' }))
+      .send({ currentPassword: 'wrong', newPassword: 'new-password-123' });
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/incorrect/i);
+  });
+
   test('logout clears the session cookie', async () => {
     const res = await request(app).post('/api/auth/logout');
     const cookie = res.headers['set-cookie'].find((c) => c.startsWith(COOKIE_NAME));
@@ -155,5 +165,60 @@ describe('registration validation', () => {
     db.get.mockResolvedValueOnce({ id: 1 });
     const res = await post({ name: 'A', email: 'a@b.io', password: '123456' });
     expect(res.status).toBe(409);
+  });
+});
+
+describe('ai chat session ownership', () => {
+  test('POST /api/ai/chat with unowned session_id → 404 without loading context or history', async () => {
+    db.get.mockResolvedValueOnce(undefined);
+    const res = await request(app)
+      .post('/api/ai/chat')
+      .set('Cookie', sessionCookie({ id: 1, name: 'T', email: 't@t.io' }))
+      .send({ message: 'hello', session_id: 999 });
+    expect(res.status).toBe(404);
+    expect(db.all).not.toHaveBeenCalled();
+    expect(db.run).not.toHaveBeenCalled();
+  });
+
+  test('POST /api/ai/chat with invalid session_id → 400', async () => {
+    const res = await request(app)
+      .post('/api/ai/chat')
+      .set('Cookie', sessionCookie({ id: 1, name: 'T', email: 't@t.io' }))
+      .send({ message: 'hello', session_id: 'abc' });
+    expect(res.status).toBe(400);
+    expect(db.get).not.toHaveBeenCalled();
+  });
+});
+
+describe('receipt scanner security', () => {
+  test('unauthenticated POST /api/ai/scan-receipt → 401 before body parsing', async () => {
+    const res = await request(app)
+      .post('/api/ai/scan-receipt')
+      .send({ image: 'https://evil.example/receipt.png' });
+    expect(res.status).toBe(401);
+  });
+
+  test('rejects plain URLs and non-raster image types with 400', async () => {
+    const cookie = sessionCookie({ id: 1, name: 'T', email: 't@t.io' });
+    const urlRes = await request(app)
+      .post('/api/ai/scan-receipt')
+      .set('Cookie', cookie)
+      .send({ image: 'https://evil.example/receipt.png' });
+    expect(urlRes.status).toBe(400);
+
+    const svgRes = await request(app)
+      .post('/api/ai/scan-receipt')
+      .set('Cookie', cookie)
+      .send({ image: 'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=' });
+    expect(svgRes.status).toBe(400);
+  });
+
+  test('rejects base64 images exceeding 4 MB with 413', async () => {
+    const oversizedB64 = 'A'.repeat(5_600_000); // > 4 MB decoded
+    const res = await request(app)
+      .post('/api/ai/scan-receipt')
+      .set('Cookie', sessionCookie({ id: 1, name: 'T', email: 't@t.io' }))
+      .send({ image: `data:image/png;base64,${oversizedB64}` });
+    expect(res.status).toBe(413);
   });
 });

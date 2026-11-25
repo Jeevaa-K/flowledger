@@ -63,4 +63,15 @@ const apiLimiter = rateLimit({
   message: { error: 'Too many requests. Please slow down.' }
 });
 
-module.exports = { securityHeaders, corsMiddleware, originGuard, authLimiter, apiLimiter };
+// Must be mounted AFTER `auth` so req.user.id is populated and users behind
+// a shared NAT/proxy each get their own AI quota bucket.
+const aiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => (req.user && req.user.id ? `user:${req.user.id}` : 'anon'),
+  message: { error: 'AI rate limit reached. Please wait a few minutes before trying again.' }
+});
+
+module.exports = { securityHeaders, corsMiddleware, originGuard, authLimiter, apiLimiter, aiLimiter };
