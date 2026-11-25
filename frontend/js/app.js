@@ -167,7 +167,7 @@ const App = {
       kpiIds.forEach(id => document.getElementById(id)?.classList.remove('is-loading'));
 
       const sr = parseFloat(summary.savingsRate);
-      setText('savingsStatus', sr >= 30 ? 'Excellent! 🎉' : sr >= 15 ? 'Good job! 👍' : sr > 0 ? 'Keep improving' : 'No savings yet');
+      setText('savingsStatus', sr >= 30 ? 'Excellent' : sr >= 15 ? 'Good' : sr > 0 ? 'Keep improving' : 'No savings yet');
 
       const badge = document.getElementById('balanceBadge');
       if (badge) { badge.textContent = summary.savingsRate + '% saved'; badge.className = sr >= 0 ? 'kpi-badge' : 'kpi-badge neg'; }
@@ -203,7 +203,7 @@ const App = {
     } catch(e) {
       console.error('Dashboard error:', e);
       kpiIds.forEach(id => document.getElementById(id)?.classList.remove('is-loading'));
-      UI.toast('⚠ Could not load data. Is the server running?', 'error');
+      UI.toast('Could not load data. Is the server running?', 'error');
     }
   },
 
@@ -224,12 +224,12 @@ const App = {
     const nearing = (budgets || []).filter(b => b.percent >= 80 && b.percent < 100);
     const items = [
       ...over.map(b => ({
-        icon: '🚨', level: '',
+        icon: Icons.alert(15), level: '',
         title: `Over budget: ${b.category}`,
         sub: `Spent ${fmt(b.spent)} of ${fmt(b.monthly_limit)} limit (${b.percent}%)`
       })),
       ...nearing.map(b => ({
-        icon: '⚠️', level: 'warn',
+        icon: Icons.alert(15), level: 'warn',
         title: `Approaching limit: ${b.category}`,
         sub: `Spent ${fmt(b.spent)} of ${fmt(b.monthly_limit)} limit (${b.percent}%)`
       }))
@@ -304,7 +304,7 @@ const App = {
     const dateEl = document.getElementById('txnDate');
     const catEl  = document.getElementById('txnCategory');
     const accEl  = document.getElementById('txnAccount');
-    if (!descEl || !amtEl || !dateEl) { UI.toast('⚠ Something went wrong loading the form', 'error'); return; }
+    if (!descEl || !amtEl || !dateEl) { UI.toast('Something went wrong loading the form', 'error'); return; }
 
     const desc       = descEl.value.trim();
     const amount     = parseFloat(amtEl.value);
@@ -312,30 +312,30 @@ const App = {
     const type       = UI.currentType;
     const account_id = accEl?.value || null;
     const tags       = Tags.getPills();
-    if (!desc || !amount || !date) { UI.toast('⚠ Fill in description, amount, and date', 'error'); return; }
-    if (amount <= 0) { UI.toast('⚠ Amount must be greater than 0', 'error'); return; }
+    if (!desc || !amount || !date) { UI.toast('Fill in description, amount, and date', 'error'); return; }
+    if (amount <= 0) { UI.toast('Amount must be greater than 0', 'error'); return; }
 
     // ── Handle Split Transaction Mode ────────────────────────────
     if (UI.isSplitMode) {
       if (!Array.isArray(UI.splitRows) || UI.splitRows.length < 2) {
-        UI.toast('⚠ Split requires at least 2 category parts', 'error');
+        UI.toast('Split requires at least 2 category parts', 'error');
         return;
       }
       let allocatedSum = 0;
       for (const s of UI.splitRows) {
         const pAmt = parseFloat(s.amount);
         if (!pAmt || isNaN(pAmt) || pAmt <= 0) {
-          UI.toast(`⚠ Enter a valid amount for category "${s.category || 'Split'}"`, 'error');
+          UI.toast(`Enter a valid amount for category "${s.category || 'Split'}"`, 'error');
           return;
         }
         if (!s.category) {
-          UI.toast('⚠ Select a category for every split item', 'error');
+          UI.toast('Select a category for every split item', 'error');
           return;
         }
         allocatedSum += pAmt;
       }
       if (Math.abs(allocatedSum - amount) > 0.05) {
-        UI.toast(`⚠ Split total (${typeof fmt === 'function' ? fmt(allocatedSum) : '₹' + allocatedSum.toFixed(2)}) must equal bill amount (${typeof fmt === 'function' ? fmt(amount) : '₹' + amount.toFixed(2)})`, 'error');
+        UI.toast(`Split total (${typeof fmt === 'function' ? fmt(allocatedSum) : '₹' + allocatedSum.toFixed(2)}) must equal bill amount (${typeof fmt === 'function' ? fmt(amount) : '₹' + amount.toFixed(2)})`, 'error');
         return;
       }
 
@@ -351,7 +351,7 @@ const App = {
           tags,
           splits: UI.splitRows
         });
-        UI.toast(`✂️ Split transaction saved across ${UI.splitRows.length} categories!`, 'success');
+        UI.toast(`Split transaction saved across ${UI.splitRows.length} categories!`, 'success');
         UI.closeAddModal();
         this.updateNavCount();
         Tags.populateFilterSelect();
@@ -372,7 +372,7 @@ const App = {
 
     // ── Standard Single Category Transaction ─────────────────────
     const category = catEl?.value;
-    if (!category) { UI.toast('⚠ Please select a category', 'error'); return; }
+    if (!category) { UI.toast('Please select a category', 'error'); return; }
 
     const btn = document.getElementById('saveTxnBtn');
     if (btn) { btn.disabled = true; btn.dataset.origText = btn.textContent; btn.textContent = 'Saving...'; }
@@ -380,14 +380,14 @@ const App = {
       let budgetToastShown = false;
       if (UI.editId) {
         await API.put(`/transactions/${UI.editId}`, { description:desc, amount, type, category, date, account_id, tags });
-        UI.toast('✓ Transaction updated', 'success');
+        UI.toast('Transaction updated', 'success');
       } else {
         await API.post('/transactions', { description:desc, amount, type, category, date, account_id, tags });
         const isCurrentMonth = new Date(date).toISOString().slice(0,7) === new Date().toISOString().slice(0,7);
         if (type === 'expense' && isCurrentMonth) {
           budgetToastShown = await this.checkBudgetAfterSave(category);
         }
-        if (!budgetToastShown) UI.toast('✓ Transaction added', 'success');
+        if (!budgetToastShown) UI.toast('Transaction added', 'success');
       }
       UI.closeAddModal();
       this.updateNavCount();
@@ -413,11 +413,11 @@ const App = {
       const match = budgets.find(b => b.category === category);
       if (!match) return false;
       if (match.percent >= 100) {
-        UI.toast(`⚠ Over budget for ${category} (${match.percent}%)`, 'error', 4000);
+        UI.toast(`Over budget for ${category} (${match.percent}%)`, 'error', 4000);
         return true;
       }
       if (match.percent >= 80) {
-        UI.toast(`⚠ ${category} budget at ${match.percent}%`, 'error', 3500);
+        UI.toast(`${category} budget at ${match.percent}%`, 'error', 3500);
         return true;
       }
       return false;
@@ -440,7 +440,7 @@ const App = {
       if (txn && txn.split_id) {
         if (confirm('This transaction is part of a split bill.\nClick OK to delete ALL parts of this split bill.')) {
           await API.deleteSplitGroup(txn.split_id);
-          UI.toast('✓ Deleted entire split group', 'success');
+          UI.toast('Deleted entire split group', 'success');
           this.updateNavCount();
           this.loadAccounts(State.page === 'accounts');
           if (State.page === 'transactions') await this.loadTransactions();
@@ -451,7 +451,7 @@ const App = {
 
       if (!confirm('Delete this transaction?')) return;
       await API.del(`/transactions/${id}`);
-      UI.toast('✓ Deleted', 'success');
+      UI.toast('Deleted', 'success');
       this.updateNavCount();
       this.loadAccounts(State.page === 'accounts');
       if (State.page === 'transactions') await this.loadTransactions();
@@ -471,7 +471,7 @@ const App = {
       if (forceRerender) UI.renderAccounts(State.accounts);
     } catch(e) {
       console.error('Load accounts error:', e);
-      if (forceRerender) UI.toast('⚠ Could not load accounts', 'error');
+      if (forceRerender) UI.toast('Could not load accounts', 'error');
     }
   },
 
@@ -480,29 +480,29 @@ const App = {
     const typeEl  = document.getElementById('accountType');
     const balEl   = document.getElementById('accountStartingBalance');
     const editIdEl = document.getElementById('editAccountId');
-    if (!nameEl || !typeEl || !balEl || !editIdEl) { UI.toast('⚠ Something went wrong loading the form', 'error'); return; }
+    if (!nameEl || !typeEl || !balEl || !editIdEl) { UI.toast('Something went wrong loading the form', 'error'); return; }
 
     const name             = nameEl.value.trim();
     const type              = typeEl.value;
     const starting_balance = parseFloat(balEl.value) || 0;
     const editId            = editIdEl.value;
-    if (!name) { UI.toast('⚠ Enter an account name', 'error'); return; }
+    if (!name) { UI.toast('Enter an account name', 'error'); return; }
 
     const btn = document.getElementById('saveAccountBtn');
     if (btn) { btn.disabled = true; btn.dataset.origText = btn.textContent; btn.textContent = 'Saving...'; }
     try {
       if (editId) {
         await API.put(`/accounts/${editId}`, { name, type, starting_balance });
-        UI.toast('✓ Account updated', 'success');
+        UI.toast('Account updated', 'success');
       } else {
         await API.post('/accounts', { name, type, starting_balance });
-        UI.toast('✓ Account added', 'success');
+        UI.toast('Account added', 'success');
       }
       UI.closeAccountModal();
       await this.loadAccounts(State.page === 'accounts');
       if (State.page === 'dashboard') await this.loadDashboard();
     } catch(e) {
-      UI.toast('⚠ ' + e.message.replace(/^\d+:\s*/,''), 'error');
+      UI.toast('' + e.message.replace(/^\d+:\s*/,''), 'error');
     } finally { if (btn) { btn.disabled = false; btn.textContent = btn.dataset.origText || 'Save Account'; } }
   },
 
@@ -519,11 +519,11 @@ const App = {
     if (!confirm('Delete this account? Transactions on it will stay in your history but become unassigned.')) return;
     try {
       await API.del(`/accounts/${id}`);
-      UI.toast('✓ Account removed', 'success');
+      UI.toast('Account removed', 'success');
       await this.loadAccounts(true);
       if (State.page === 'dashboard') await this.loadDashboard();
     } catch(e) {
-      UI.toast('⚠ ' + e.message.replace(/^\d+:\s*/,''), 'error');
+      UI.toast('' + e.message.replace(/^\d+:\s*/,''), 'error');
     }
   },
 
@@ -536,15 +536,15 @@ const App = {
   async saveBudget() {
     const catEl = document.getElementById('budgetCategory');
     const limEl = document.getElementById('budgetLimit');
-    if (!catEl || !limEl) { UI.toast('⚠ Something went wrong loading the form', 'error'); return; }
+    if (!catEl || !limEl) { UI.toast('Something went wrong loading the form', 'error'); return; }
     const category      = catEl.value;
     const monthly_limit = parseFloat(limEl.value);
-    if (!monthly_limit || monthly_limit <= 0) { UI.toast('⚠ Enter a valid limit', 'error'); return; }
+    if (!monthly_limit || monthly_limit <= 0) { UI.toast('Enter a valid limit', 'error'); return; }
     const btn = document.getElementById('saveBudgetBtn');
     if (btn) { btn.disabled = true; btn.dataset.origText = btn.textContent; btn.textContent = 'Saving...'; }
     try {
       await API.post('/budgets', { category, monthly_limit });
-      UI.toast('✓ Budget saved', 'success');
+      UI.toast('Budget saved', 'success');
       UI.closeBudgetModal();
       await this.loadBudgets();
     } catch { UI.toast('Error saving budget', 'error'); }
@@ -553,7 +553,7 @@ const App = {
 
   async deleteBudget(id) {
     if (!confirm('Remove this budget?')) return;
-    try { await API.del(`/budgets/${id}`); UI.toast('✓ Removed', 'success'); await this.loadBudgets(); }
+    try { await API.del(`/budgets/${id}`); UI.toast('Removed', 'success'); await this.loadBudgets(); }
     catch { UI.toast('Error removing budget', 'error'); }
   },
 
@@ -574,9 +574,9 @@ const App = {
     const refreshBtn = document.getElementById('refreshAutoBudgetBtn');
     const bannerText = document.getElementById('autoBudgetAiText');
     const list = document.getElementById('autoBudgetList');
-    if (refreshBtn) { refreshBtn.disabled = true; refreshBtn.textContent = '⏳ Analyzing...'; }
+    if (refreshBtn) { refreshBtn.disabled = true; refreshBtn.textContent = 'Analyzing...'; }
     if (bannerText) bannerText.textContent = 'Analyzing your 90-day spending velocity across categories...';
-    if (list) list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-tertiary)">⏳ Running AI spending diagnosis and computing realistic caps...</div>';
+    if (list) list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-tertiary)">Running AI spending diagnosis and computing realistic caps...</div>';
 
     try {
       const data = await API.get('/budgets/suggest');
@@ -585,9 +585,9 @@ const App = {
     } catch (e) {
       console.error('Auto budget error:', e);
       UI.toast('Could not generate budget suggestions: ' + (e.message || 'Error'), 'error');
-      if (list) list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--expense)">⚠ Failed to load suggestions. Please try again.</div>';
+      if (list) list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--expense)">Failed to load suggestions. Please try again.</div>';
     } finally {
-      if (refreshBtn) { refreshBtn.disabled = false; refreshBtn.textContent = '🔄 Re-analyze'; }
+      if (refreshBtn) { refreshBtn.disabled = false; refreshBtn.innerHTML = Icons.refresh(14) + ' Re-analyze'; }
     }
   },
 
@@ -611,8 +611,8 @@ const App = {
 
     list.innerHTML = suggestions.map((s, idx) => {
       const color = (typeof CAT_COLORS !== 'undefined' && CAT_COLORS[s.category]) || '#6366F1';
-      const emoji = (typeof CAT_EMOJIS !== 'undefined' && CAT_EMOJIS[s.category]) || '🏷️';
-      const trendLabel = s.trend === 'increasing' ? '↗ Trending +15%' : s.trend === 'decreasing' ? '↘ Downward' : s.trend === 'starter' ? '⭐ Starter' : '➡ Stable';
+      const emoji = Icons.category(s.category);
+      const trendLabel = s.trend === 'increasing' ? '↗ Trending +15%' : s.trend === 'decreasing' ? '↘ Downward' : s.trend === 'starter' ? 'Starter' : 'Stable';
 
       return `
         <div class="ab-item-row" id="abRow_${idx}" data-idx="${idx}">
@@ -675,7 +675,7 @@ const App = {
     if (totalEl) totalEl.textContent = fmt(total);
     if (applyBtn) {
       applyBtn.disabled = (count === 0);
-      applyBtn.textContent = `⚡ Apply Selected Budgets (${count})`;
+      applyBtn.innerHTML = `${Icons.bolt(14)} Apply Selected Budgets (${count})`;
     }
   },
 
@@ -732,14 +732,14 @@ const App = {
 
     try {
       const res = await API.post('/budgets/apply-suggestions', { budgets: budgetsToApply });
-      UI.toast(`✓ Successfully set ${res.count || budgetsToApply.length} category budgets!`, 'success');
+      UI.toast(`Successfully set ${res.count || budgetsToApply.length} category budgets!`, 'success');
       this.closeAutoBudgetPlanner();
       await this.loadBudgets();
     } catch (e) {
       console.error('Apply budgets error:', e);
       UI.toast('Failed to apply budgets: ' + (e.message || 'Error'), 'error');
     } finally {
-      if (btn) { btn.disabled = false; btn.textContent = '⚡ Apply Selected Budgets'; }
+      if (btn) { btn.disabled = false; btn.innerHTML = `${Icons.bolt(14)} Apply Selected Budgets`; }
     }
   },
 
@@ -755,7 +755,7 @@ const App = {
 
     try {
       await API.post('/budgets', { category: s.category, monthly_limit: limit });
-      UI.toast(`✓ Saved budget for ${s.category}: ${fmt(limit)}`, 'success');
+      UI.toast(`Saved budget for ${s.category}: ${fmt(limit)}`, 'success');
       const prevEl = inp.parentElement?.parentElement?.querySelector('.ab-prev-limit');
       if (prevEl) prevEl.textContent = `Current: ${fmt(limit)}`;
       await this.loadBudgets();
@@ -819,8 +819,8 @@ const App = {
       const btn2 = document.getElementById('auditEmptyGenBtn');
       const origText  = btn  ? btn.textContent  : '';
       const origText2 = btn2 ? btn2.textContent : '';
-      if (btn)  { btn.disabled  = true; btn.textContent  = '⏳ Analyzing...'; }
-      if (btn2) { btn2.disabled = true; btn2.textContent = '⏳ Analyzing...'; }
+      if (btn)  { btn.disabled  = true; btn.textContent  = 'Analyzing...'; }
+      if (btn2) { btn2.disabled = true; btn2.textContent = 'Analyzing...'; }
       try {
         const data = await API.get(`/reports/audit?month=${this._auditMonth}&year=${this._auditYear}`);
         this.renderAudit(data);
@@ -848,7 +848,7 @@ const App = {
         document.body.appendChild(a); a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        UI.toast('✓ CSV downloaded!', 'success');
+        UI.toast('CSV downloaded!', 'success');
       } catch(e) { UI.toast('CSV error: ' + e.message, 'error'); }
     };
     document.getElementById('downloadAuditCsvBtn')?.addEventListener('click', downloadCsv);
@@ -858,7 +858,7 @@ const App = {
       const btn   = document.getElementById('downloadPdfBtn');
       const m     = this._auditMonth;
       const y     = this._auditYear;
-      if (btn) { btn.textContent = '⏳ Generating...'; btn.disabled = true; }
+      if (btn) { btn.textContent = 'Generating...'; btn.disabled = true; }
       try {
         const res = await fetch(`/api/export/pdf?month=${m}&year=${y}`, { credentials: 'same-origin' });
         if (!res.ok) {
@@ -875,12 +875,12 @@ const App = {
         document.body.appendChild(a); a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        UI.toast('✓ PDF downloaded!', 'success');
+        UI.toast('PDF downloaded!', 'success');
       } catch(e) {
         console.error('PDF error:', e);
         UI.toast('PDF error: ' + e.message, 'error');
       } finally {
-        if (btn) { btn.textContent = '📄 Download PDF'; btn.disabled = false; }
+        if (btn) { btn.innerHTML = `${Icons.receipt(14)} Download PDF`; btn.disabled = false; }
       }
     });
   },
@@ -955,7 +955,7 @@ const App = {
       ];
       breakdownEl.innerHTML = rows.map(r =>
         `<div class="audit-score-row-item">
-          <span class="audit-score-pill ${r.ok ? 'ok' : 'bad'}">${r.ok ? '✓' : '!'}</span>
+          <span class="audit-score-pill ${r.ok ? 'ok' : 'bad'}">${r.ok ? Icons.check(12) : '!'}</span>
           <span class="audit-score-key">${r.k}</span>
           <span class="audit-score-val">${r.v}</span>
         </div>`
@@ -1047,7 +1047,7 @@ const App = {
       UI.renderGoals(State.goals);
     } catch(e) {
       console.error('Load goals error:', e);
-      UI.toast('⚠ Could not load goals', 'error');
+      UI.toast('Could not load goals', 'error');
     }
   },
 
@@ -1057,29 +1057,29 @@ const App = {
     const savedEl  = document.getElementById('goalSaved');
     const dateEl   = document.getElementById('goalDate');
     const editIdEl = document.getElementById('goalEditId');
-    if (!nameEl || !targetEl || !savedEl || !dateEl || !editIdEl) { UI.toast('⚠ Something went wrong loading the form', 'error'); return; }
+    if (!nameEl || !targetEl || !savedEl || !dateEl || !editIdEl) { UI.toast('Something went wrong loading the form', 'error'); return; }
 
     const name   = nameEl.value.trim();
     const target = parseFloat(targetEl.value);
     const saved  = parseFloat(savedEl.value) || 0;
     const date   = dateEl.value;
     const editId = editIdEl.value;
-    if (!name || !target) { UI.toast('⚠ Fill in goal name and target', 'error'); return; }
+    if (!name || !target) { UI.toast('Fill in goal name and target', 'error'); return; }
 
     const btn = document.getElementById('saveGoalBtn');
     if (btn) btn.disabled = true;
     try {
       if (editId) {
         await API.put(`/goals/${editId}`, { name, target, saved, date });
-        UI.toast('✓ Goal updated', 'success');
+        UI.toast('Goal updated', 'success');
       } else {
         await API.post('/goals', { name, target, saved, date });
-        UI.toast('✓ Goal added', 'success');
+        UI.toast('Goal added', 'success');
       }
       UI.closeGoalModal();
       await this.loadGoals();
     } catch(e) {
-      UI.toast('⚠ ' + e.message.replace(/^\d+:\s*/,''), 'error');
+      UI.toast('' + e.message.replace(/^\d+:\s*/,''), 'error');
     } finally { if (btn) btn.disabled = false; }
   },
 
@@ -1162,11 +1162,11 @@ const App = {
       // 3. Celebratory feedback
       const newPct = target > 0 ? Math.min(Math.round((newSaved / target) * 100), 100) : 0;
       if (isDeposit && newSaved >= target) {
-        UI.toast(`🎉 Congratulations! You reached your goal for "${goal.name}"!`, 'success');
+        UI.toast(`Congratulations! You reached your goal for "${goal.name}"!`, 'success');
       } else if (isDeposit) {
-        UI.toast(`✓ Added ${fmt(amount)} to "${goal.name}" (${newPct}% reached)`, 'success');
+        UI.toast(`Added ${fmt(amount)} to "${goal.name}" (${newPct}% reached)`, 'success');
       } else {
-        UI.toast(`✓ Withdrew ${fmt(amount)} from "${goal.name}" (${newPct}% remaining)`, 'success');
+        UI.toast(`Withdrew ${fmt(amount)} from "${goal.name}" (${newPct}% remaining)`, 'success');
       }
 
       UI.closeAddSavingsModal();
@@ -1179,7 +1179,7 @@ const App = {
         if (State.page === 'transactions') await this.loadTransactions();
       }
     } catch (e) {
-      UI.toast('⚠ ' + e.message.replace(/^\d+:\s*/, ''), 'error');
+      UI.toast('' + e.message.replace(/^\d+:\s*/, ''), 'error');
     } finally {
       if (btn) {
         btn.disabled = false;
@@ -1192,10 +1192,10 @@ const App = {
     if (!confirm('Delete this goal?')) return;
     try {
       await API.del(`/goals/${id}`);
-      UI.toast('✓ Goal removed', 'success');
+      UI.toast('Goal removed', 'success');
       await this.loadGoals();
     } catch(e) {
-      UI.toast('⚠ ' + e.message.replace(/^\d+:\s*/,''), 'error');
+      UI.toast('' + e.message.replace(/^\d+:\s*/,''), 'error');
     }
   },
 
@@ -1280,7 +1280,7 @@ const App = {
       }
       listEl.innerHTML = State.aiSessions.map(s => {
         const isActive = State.aiSessionId === s.id;
-        const icon = s.model === 'claude' ? '🟣' : s.model === 'fast' ? '⚡' : '🟢';
+        const icon = s.model === 'claude' ? Icons.sparkles(13) : s.model === 'fast' ? Icons.bolt(13) : Icons.target(13);
         const d = s.updated_at ? new Date(s.updated_at).toLocaleDateString('en-IN', {month:'short', day:'numeric'}) : '';
         return `
           <div class="ai-session-item ${isActive ? 'active' : ''}" data-session-id="${s.id}">
@@ -1288,7 +1288,7 @@ const App = {
               <div class="ai-session-title">${icon} ${s.title || 'Conversation'}</div>
               <div class="ai-session-date">${d} · ${s.message_count || 0} msgs</div>
             </div>
-            <button class="ai-session-del" data-action="del-session" data-session-id="${s.id}" title="Delete conversation">✕</button>
+            <button class="ai-session-del" data-action="del-session" data-session-id="${s.id}" title="Delete conversation">${Icons.x(12)}</button>
           </div>`;
       }).join('');
 
@@ -1389,7 +1389,7 @@ const App = {
     if (!c) return;
     const isAssistant = role === 'assistant';
     const activeModel = model || State.aiModel;
-    const avatarText = isAssistant ? (activeModel === 'claude' ? 'CL' : activeModel === 'fast' ? '⚡' : 'GPT') : 'You';
+    const avatarText = isAssistant ? (activeModel === 'claude' ? 'CL' : activeModel === 'fast' ? 'FAST' : 'GPT') : 'You';
     const formattedHtml = isAssistant ? this.formatMarkdown(content) : content.replace(/\n/g, '<br>');
 
     const d = document.createElement('div');
@@ -1400,7 +1400,7 @@ const App = {
         <div class="msg-bubble">${formattedHtml}</div>
         <div class="msg-meta-row">
           <div class="msg-time">${new Date().toLocaleTimeString('en', {hour:'2-digit',minute:'2-digit'})}</div>
-          ${isAssistant ? `<button type="button" class="msg-copy-btn" title="Copy response">📋 Copy</button>` : ''}
+          ${isAssistant ? `<button type="button" class="msg-copy-btn" title="Copy response">Copy</button>` : ''}
         </div>
       </div>`;
 
@@ -1408,8 +1408,8 @@ const App = {
       const copyBtn = d.querySelector('.msg-copy-btn');
       copyBtn?.addEventListener('click', () => {
         navigator.clipboard.writeText(content).then(() => {
-          copyBtn.textContent = '✓ Copied!';
-          setTimeout(() => { copyBtn.textContent = '📋 Copy'; }, 2000);
+          copyBtn.textContent = 'Copied';
+          setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
         }).catch(() => UI.toast('Copy failed', 'error'));
       });
     }
@@ -1422,7 +1422,7 @@ const App = {
     const c = document.getElementById('chatMessages');
     if (!c) return;
     const activeModel = State.aiModel;
-    const avatarText = activeModel === 'claude' ? 'CL' : activeModel === 'fast' ? '⚡' : 'GPT';
+    const avatarText = activeModel === 'claude' ? 'CL' : activeModel === 'fast' ? 'FAST' : 'GPT';
     const d = document.createElement('div');
     d.className = 'chat-msg assistant'; d.id = 'typingIndicator';
     d.innerHTML = `
@@ -1462,22 +1462,14 @@ const App = {
       }
       this.appendMsg('assistant', res.reply, res.model || State.aiModel);
 
-      // ── Handle AI-initiated transaction save ──────────────────────────────
-      // The backend auto-saves a transaction when it detects add-intent and
-      // confirms the add in its reply. Reload the data so the new row
-      // appears immediately on Dashboard and Transactions page.
-      if (res.action?.type === 'transaction_added') {
-        try {
-          await App.loadDashboard();
-          await App.loadTransactions({});
-          if (typeof App.updateNavCount === 'function') App.updateNavCount();
-          if (typeof Tags !== 'undefined' && typeof Tags.populateFilterSelect === 'function') Tags.populateFilterSelect();
-        } catch (_) { /* silent — UI reload is best-effort */ }
-        UI.toast('✅ Transaction saved by NOVA!', 'success');
+      // ── Handle AI-proposed transaction (requires user confirmation) ────────
+      if (res.action?.type === 'transaction_proposed' && res.action.transaction) {
+        UI.openAddModal(res.action.transaction);
+        UI.toast('Review and confirm the proposed transaction', 'info');
       }
     } catch(e) {
       document.getElementById('typingIndicator')?.remove();
-      this.appendMsg('assistant', '⚠ Error: ' + e.message);
+      this.appendMsg('assistant', 'Error: ' + e.message);
     } finally {
       if (btn) btn.disabled = false;
       input?.focus();
@@ -1943,7 +1935,7 @@ const App = {
       if (filters.sort)       qs.set('sort',       filters.sort);
 
       exportBtn.disabled = true;
-      exportBtn.textContent = '⏳ Exporting...';
+      exportBtn.textContent = 'Exporting...';
       try {
         const res = await fetch(`/api/transactions/export-csv?${qs}`, { credentials: 'same-origin' });
         if (!res.ok) throw new Error('Export failed');
@@ -1956,12 +1948,12 @@ const App = {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        UI.toast('✓ Filtered transactions exported to CSV!', 'success');
+        UI.toast('Filtered transactions exported to CSV!', 'success');
       } catch (err) {
         UI.toast('Export error: ' + (err.message || 'Failed'), 'error');
       } finally {
         exportBtn.disabled = false;
-        exportBtn.textContent = '⬇ Export CSV';
+        exportBtn.textContent = 'Export CSV';
       }
     });
 
@@ -2014,9 +2006,9 @@ const App = {
           await API.del('/ai/history');
         }
         this.startNewAiChat();
-        UI.toast('✓ Chat cleared', 'success');
+        UI.toast('Chat cleared', 'success');
       } catch(e) {
-        UI.toast('⚠ Could not clear chat: ' + e.message.replace(/^\d+:\s*/, ''), 'error');
+        UI.toast('Could not clear chat: ' + e.message.replace(/^\d+:\s*/, ''), 'error');
       } finally {
         if (clearBtn) clearBtn.disabled = false;
       }
@@ -2079,7 +2071,7 @@ const App = {
   togglePrivacyMode() {
     const isPrivacy = document.body.classList.toggle('privacy-mode');
     localStorage.setItem('fl_privacy_mode', isPrivacy ? 'true' : 'false');
-    UI.toast(isPrivacy ? '👁️ Privacy mode ON — sensitive amounts blurred' : '👁️ Privacy mode OFF — amounts visible', 'info');
+    UI.toast(isPrivacy ? 'Privacy mode ON — sensitive amounts blurred' : 'Privacy mode OFF — amounts visible', 'info');
   },
 
   bindKeyboard() {
@@ -2119,7 +2111,7 @@ const App = {
     if (!SpeechRec) {
       micBtn.title = 'Voice input requires Chrome, Edge, or Safari';
       micBtn.addEventListener('click', () => {
-        UI.toast('🎙️ Voice input is supported in Chrome, Edge, and Safari.', 'error');
+        UI.toast('Voice input is supported in Chrome, Edge, and Safari.', 'error');
       });
       return;
     }
@@ -2139,8 +2131,8 @@ const App = {
         isListening = true;
         micBtn.classList.add('listening');
         micBtn.title = 'Click to stop listening';
-        input.placeholder = '🎙️ Listening… say your transaction (e.g. "Spent ₹450 on lunch today")';
-        UI.toast('🎙️ Listening — speak your transaction now', 'info');
+        input.placeholder = 'Listening… say your transaction (e.g. "Spent ₹450 on lunch today")';
+        UI.toast('Listening — speak your transaction now', 'info');
       };
 
       rec.onresult = (event) => {
@@ -2161,9 +2153,9 @@ const App = {
         micBtn.title = 'Click to speak';
         input.placeholder = 'Enter transaction details...';
         if (event.error === 'not-allowed' || event.error === 'permission-denied') {
-          UI.toast('⚠️ Microphone access denied — please allow it in your browser settings.', 'error');
+          UI.toast('Microphone access denied — please allow it in your browser settings.', 'error');
         } else if (event.error === 'network') {
-          UI.toast('⚠️ Network error during voice recognition. Check your connection.', 'error');
+          UI.toast('Network error during voice recognition. Check your connection.', 'error');
         } else if (event.error !== 'no-speech' && event.error !== 'aborted') {
           UI.toast(`Voice error: ${event.error}`, 'error');
         }
@@ -2177,7 +2169,7 @@ const App = {
         // If we got a final transcript, auto-submit
         const transcript = input.value.trim();
         if (transcript) {
-          UI.toast(`✅ Heard: "${transcript}"`, 'success');
+          UI.toast(`Heard: "${transcript}"`, 'success');
           const quickBtn = document.getElementById('aiQuickSubmitBtn');
           // Small delay so the toast is visible before the modal opens
           setTimeout(() => quickBtn?.click(), 300);
@@ -2390,7 +2382,7 @@ const App = {
       if (warn) {
         if (pace === 'danger') {
           warn.style.display = '';
-          warn.textContent = `⚠ At this pace you'll spend ${fmt(projectedExpense)} this month — ${fmt(projectedExpense - income)} over your income. Cut discretionary spending now!`;
+          warn.textContent = `At this pace you'll spend ${fmt(projectedExpense)} this month — ${fmt(projectedExpense - income)} over your income. Cut discretionary spending now!`;
         } else if (pace === 'warning') {
           warn.style.display = '';
           warn.style.background = 'rgba(245,158,11,0.08)';
@@ -2410,7 +2402,7 @@ const App = {
           : `Burn Rate Warning: Spending at ${Math.round((projectedExpense/income)*100)}% of income pace.`;
         if (existing !== msg && typeof Notifications !== 'undefined') {
           State.burnAlert = msg;
-          Notifications.add({ id: 'burn-' + pace, text: msg, type: pace, icon: '🔥' });
+          Notifications.add({ id: 'burn-' + pace, text: msg, type: pace, icon: Icons.alert(15) });
         }
       }
     } catch(e) {
@@ -2434,14 +2426,14 @@ const App = {
         return;
       }
 
-      if (quickBtn) { quickBtn.disabled = true; quickBtn.textContent = '✨ Extracting...'; }
+      if (quickBtn) { quickBtn.disabled = true; quickBtn.textContent = 'Extracting...'; }
       try {
         // If the text looks like a bank alert or UPI SMS, use specialized bank parser
         const isSmsLike = /(?:debited|credited|a\/c|acct|ending in|upi|vpa|avl\s+bal|txn\s+id|ref\s+no)/i.test(text);
         const res = isSmsLike ? await API.parseBankSms(text) : await API.parseNaturalLanguage(text);
         if (res && res.result) {
           const r = res.result;
-          UI.toast(isSmsLike ? '📱 AI parsed bank SMS details!' : '✨ AI extracted transaction details!', 'success');
+          UI.toast(isSmsLike ? 'AI parsed bank SMS details' : 'AI extracted transaction details', 'success');
           UI.openAddModal({
             description: r.description || r.merchant || text,
             amount: r.amount || '',
@@ -2456,7 +2448,7 @@ const App = {
       } catch (err) {
         UI.toast(err.message || 'Failed to parse input', 'error');
       } finally {
-        if (quickBtn) { quickBtn.disabled = false; quickBtn.textContent = '✨ Extract'; }
+        if (quickBtn) { quickBtn.disabled = false; quickBtn.innerHTML = `${Icons.sparkles(14)} Extract`; }
       }
     };
 
@@ -2594,7 +2586,7 @@ const App = {
 
             if (useBtn) useBtn.style.display = 'inline-block';
             if (rescanBtn) rescanBtn.style.display = 'inline-block';
-            UI.toast('✨ Receipt scanned successfully!', 'success');
+            UI.toast('Receipt scanned successfully!', 'success');
           }
         } catch (err) {
           if (laserLine) laserLine.style.display = 'none';
@@ -2643,9 +2635,9 @@ const App = {
         const currentYear = new Date().getFullYear();
         const receiptYear = parseInt(dateStr.slice(0, 4), 10);
         if (hasCustomDate && receiptYear < currentYear) {
-          UI.toast(`✓ Form pre-filled from receipt! Note: Date is ${dateStr} (past year). Change to Today if you want it in this month's stats.`, 'info', 5000);
+          UI.toast(`Form pre-filled from receipt! Note: Date is ${dateStr} (past year). Change to Today if you want it in this month's stats.`, 'info', 5000);
         } else {
-          UI.toast('✓ Form pre-filled from receipt!', 'success');
+          UI.toast('Form pre-filled from receipt!', 'success');
         }
       });
     }
@@ -2676,7 +2668,7 @@ const App = {
       if (btnExtractSms) {
         btnExtractSms.style.display = 'inline-block';
         btnExtractSms.disabled = false;
-        btnExtractSms.textContent = '✨ Extract Data';
+        btnExtractSms.innerHTML = `${Icons.sparkles(14)} Extract Data`;
       }
       currentSmsParsedData = null;
     };
@@ -2715,7 +2707,7 @@ const App = {
             const clipText = await navigator.clipboard.readText();
             if (clipText && clipText.trim()) {
               smsInput.value = clipText.trim();
-              UI.toast('📋 Pasted from clipboard!', 'info');
+              UI.toast('Pasted from clipboard', 'info');
               executeSmsParse();
               return;
             }
@@ -2781,7 +2773,7 @@ const App = {
           if (accSpan) {
             if (currentSmsParsedData.account_id && Array.isArray(State.accounts)) {
               const matchedAcc = State.accounts.find(acc => acc.id === currentSmsParsedData.account_id);
-              accSpan.innerHTML = matchedAcc ? `<strong style="color:var(--brand)">✓ ${matchedAcc.name}</strong>` : 'Detected';
+              accSpan.innerHTML = matchedAcc ? `<strong style="color:var(--brand)">${matchedAcc.name}</strong>` : 'Detected';
             } else {
               accSpan.textContent = 'None matched (will use default)';
             }
@@ -2812,7 +2804,7 @@ const App = {
 
           if (btnOpenInForm) btnOpenInForm.style.display = 'inline-block';
           if (btnSaveDirect) btnSaveDirect.style.display = 'inline-block';
-          UI.toast('✨ Bank SMS parsed successfully!', 'success');
+          UI.toast('Bank SMS parsed successfully!', 'success');
         }
       } catch (err) {
         if (smsLoader) smsLoader.style.display = 'none';
@@ -2820,7 +2812,7 @@ const App = {
       } finally {
         if (btnExtractSms) {
           btnExtractSms.disabled = false;
-          btnExtractSms.textContent = '✨ Re-parse';
+          btnExtractSms.innerHTML = `${Icons.sparkles(14)} Re-parse`;
         }
       }
     };
@@ -2842,34 +2834,41 @@ const App = {
           account_id: data.account_id || '',
           tags: Array.isArray(data.tags) ? data.tags : ['bank-sms']
         });
-        UI.toast('📝 Form pre-filled from bank alert!', 'info');
+        UI.toast('Form pre-filled from bank alert', 'info');
       });
     }
 
-    // "Save Directly" -> 1-click database insert without opening modal
+    // "Save Directly" -> user already reviewed the parsed preview; save via /transactions
     if (btnSaveDirect) {
       btnSaveDirect.addEventListener('click', async () => {
         if (!currentSmsParsedData) return;
         btnSaveDirect.disabled = true;
         btnSaveDirect.textContent = 'Saving...';
         try {
-          const text = smsInput?.value?.trim() || '';
-          const res = await API.parseBankSms(text, true);
-          if (res && res.saved) {
-            UI.toast(`⚡ Saved ${typeof fmt === 'function' ? fmt(currentSmsParsedData.amount) : '₹' + currentSmsParsedData.amount} (${currentSmsParsedData.merchant || currentSmsParsedData.category})!`, 'success');
+          const saved = await API.post('/transactions', {
+            description: currentSmsParsedData.description || currentSmsParsedData.merchant || 'Bank Transaction',
+            amount: currentSmsParsedData.amount,
+            type: currentSmsParsedData.type || 'expense',
+            category: currentSmsParsedData.category || 'Other',
+            date: currentSmsParsedData.date || new Date().toISOString().slice(0, 10),
+            account_id: currentSmsParsedData.account_id || null,
+            tags: Array.isArray(currentSmsParsedData.tags) ? currentSmsParsedData.tags : ['bank-sms']
+          });
+          if (saved && saved.id) {
+            UI.toast(`Saved ${typeof fmt === 'function' ? fmt(currentSmsParsedData.amount) : '₹' + currentSmsParsedData.amount} (${currentSmsParsedData.merchant || currentSmsParsedData.category})!`, 'success');
             closeSms();
             // Refresh dashboard, transactions and account balances
             await App.loadDashboard();
             if (typeof App.loadTransactions === 'function') await App.loadTransactions({});
             if (typeof App.loadAccounts === 'function') await App.loadAccounts(false);
           } else {
-            throw new Error('Could not auto-save transaction');
+            throw new Error('Could not save transaction');
           }
         } catch (err) {
           UI.toast(err.message || 'Failed to direct-save transaction', 'error');
         } finally {
           btnSaveDirect.disabled = false;
-          btnSaveDirect.textContent = '⚡ Save Directly';
+          btnSaveDirect.innerHTML = `${Icons.bolt(14)} Save Directly`;
         }
       });
     }
@@ -2923,7 +2922,7 @@ const Notifications = {
 
   setRecurringAlerts(renewals) {
     this.recurringItems = renewals.map(r => ({
-      icon: '📅',
+      icon: Icons.calendar(15),
       level: r.diffDays <= 1 ? 'danger' : 'warning',
       title: `Upcoming Renewal: ${r.description}`,
       sub: `${r.diffDays === 0 ? 'Due today' : r.diffDays === 1 ? 'Due tomorrow' : 'Renews in ' + r.diffDays + ' days'} · ${fmt(r.amount)}`,
@@ -2949,7 +2948,7 @@ const Notifications = {
     if (!list) return;
 
     if (!visible.length) {
-      list.innerHTML = `<div class="notif-empty">You're all caught up 🎉</div>`;
+      list.innerHTML = `<div class="notif-empty">You're all caught up</div>`;
       return;
     }
     list.innerHTML = visible.map(i => `

@@ -47,7 +47,7 @@ const UI = {
       this.renderSplitRows();
     } else {
       toggleBtn.style.display = 'inline-flex';
-      toggleBtn.textContent = '✂️ Split into Multiple Categories';
+      toggleBtn.innerHTML = `${Icons.scissors(14)} Split into Multiple Categories`;
       singleSection.style.display = 'block';
       splitSection.style.display = 'none';
       this.splitRows = [];
@@ -70,7 +70,7 @@ const UI = {
           <input type="number" class="split-amt-input" data-index="${i}" placeholder="0.00" min="0" step="0.01" value="${r.amount !== '' && r.amount !== undefined ? r.amount : ''}" />
         </div>
         <input type="text" class="split-note-input" data-index="${i}" placeholder="Detail/Note (optional)" value="${r.note || ''}" style="flex:1" />
-        <button type="button" class="btn-ghost split-del-btn" data-index="${i}" title="Remove part" ${this.splitRows.length <= 2 ? 'disabled style="opacity:0.35;cursor:not-allowed"' : ''}>✕</button>
+        <button type="button" class="btn-ghost split-del-btn" data-index="${i}" title="Remove part" ${this.splitRows.length <= 2 ? 'disabled style="opacity:0.35;cursor:not-allowed"' : ''}>${Icons.x(14)}</button>
       </div>
     `).join('');
 
@@ -133,7 +133,7 @@ const UI = {
 
     if (remSpan && pill) {
       if (Math.abs(remaining) < 0.01 && total > 0) {
-        remSpan.textContent = '✓ Balanced (₹0.00 left)';
+        remSpan.textContent = 'Balanced (₹0.00 left)';
         pill.style.background = 'var(--income-tint)';
         pill.style.borderColor = 'var(--income-border)';
         pill.style.color = 'var(--income)';
@@ -171,7 +171,7 @@ const UI = {
     select.value = current;
     if (picker) picker.innerHTML = cats.map(c=>`
       <button type="button" class="cat-chip${c===current?' active':''}" data-action="select-cat" data-cat="${c}">
-        ${CAT_EMOJIS[c]||'•'} ${c}
+        ${c}
       </button>`).join('');
   },
 
@@ -269,7 +269,7 @@ const UI = {
     set('asGoalSaved', fmt(saved));
     set('asGoalTarget', fmt(target));
     set('asGoalPercent', `${pct}% reached`);
-    set('asGoalRemaining', remaining > 0 ? `${fmt(remaining)} to reach goal` : '🎉 Goal already reached!');
+    set('asGoalRemaining', remaining > 0 ? `${fmt(remaining)} to reach goal` : 'Goal already reached');
     set('asProjectedNewPercent', '');
 
     const bar = document.getElementById('asProgressBar');
@@ -375,12 +375,12 @@ const UI = {
     if (projEl) {
       if (this.savingsMode === 'deposit') {
         if (newSaved >= target) {
-          projEl.innerHTML = `<span style="color:var(--income)">🎉 Will reach 100% (Goal complete!)</span>`;
+          projEl.innerHTML = `<span style="color:var(--income)">Will reach 100% (Goal complete)</span>`;
         } else {
-          projEl.innerHTML = `➔ Will reach <strong>${newPct}%</strong> (${fmt(newRem)} left)`;
+          projEl.innerHTML = `Will reach <strong>${newPct}%</strong> (${fmt(newRem)} left)`;
         }
       } else {
-        projEl.innerHTML = `➔ Will become <strong>${newPct}%</strong> (${fmt(newSaved)} saved)`;
+        projEl.innerHTML = `Will become <strong>${newPct}%</strong> (${fmt(newSaved)} saved)`;
       }
     }
   },
@@ -437,18 +437,17 @@ const UI = {
       <div class="bs-card"><div class="bs-label">Accounts</div><div class="bs-val">${accounts.length}</div></div>
       <div class="bs-card"><div class="bs-label">Negative Balance</div><div class="bs-val" style="color:${negativeCount>0?'var(--expense)':'var(--income)'}">${negativeCount} account${negativeCount===1?'':'s'}</div></div>`;
     if (!accounts.length) { grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1">No accounts yet. Add one to start tracking balances!</div>'; return; }
-    const typeEmoji = { cash:'💵', bank:'🏦', credit_card:'💳', wallet:'👛', other:'📦' };
     const typeLabel = { cash:'Cash', bank:'Bank', credit_card:'Credit Card', wallet:'Wallet', other:'Other' };
     grid.innerHTML = accounts.map(a => `
       <div class="budget-card" style="${a.archived?'opacity:0.55':''}">
         <div class="budget-header">
           <div class="budget-cat-wrap">
             <div class="budget-cat-dot" style="background:${a.color||'#6366f1'}"></div>
-            <div class="budget-cat">${typeEmoji[a.type]||'📦'} ${a.name}</div>
+            <div class="budget-cat">${Icons.accountType(a.type)} ${a.name}</div>
           </div>
           <div style="display:flex;gap:4px">
-            <button class="txn-btn edit" data-action="edit-account" data-id="${a.id}" title="Edit">✎</button>
-            <button class="budget-delete" data-action="del-account" data-id="${a.id}">✕</button>
+            <button class="txn-btn edit" data-action="edit-account" data-id="${a.id}" title="Edit">${Icons.edit(13)}</button>
+            <button class="budget-delete" data-action="del-account" data-id="${a.id}" title="Delete">${Icons.x(13)}</button>
           </div>
         </div>
         <div class="budget-amounts">
@@ -515,8 +514,8 @@ const UI = {
       const filtersActive = tableMode && ['filterType','filterCategory','filterFrom','filterTo']
         .some(id => document.getElementById(id)?.value);
       el.innerHTML = filtersActive
-        ? `<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">No matches</div><div class="empty-sub">Nothing fits these filters. Try widening the date range or clearing a filter.</div></div>`
-        : `<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">No transactions yet</div><div class="empty-sub">Add your first one to start tracking.</div></div>`;
+        ? `<div class="empty-state"><div class="empty-icon">${Icons.search(24)}</div><div class="empty-title">No matches</div><div class="empty-sub">Nothing fits these filters. Try widening the date range or clearing a filter.</div></div>`
+        : `<div class="empty-state"><div class="empty-icon">${Icons.list(24)}</div><div class="empty-title">No transactions yet</div><div class="empty-sub">Add your first one to start tracking.</div></div>`;
       return;
     }
     el.innerHTML = list.map(t => {
@@ -524,7 +523,7 @@ const UI = {
       const isIncome = t.type === 'income';
       const borderColor = isIncome ? 'var(--income)' : 'var(--expense)';
       const splitBadge = t.split_id
-        ? `<span class="txn-split-chip" title="Part of a split transaction">✂️ Split</span>`
+        ? `<span class="txn-split-chip" title="Part of a split transaction">${Icons.scissors(12)} Split</span>`
         : '';
       const tagsHtml = (t.tags && t.tags.length)
         ? `<div class="txn-tags">${t.tags.map(g => `<span class="txn-tag-chip">#${g}</span>`).join('')}</div>`
@@ -538,12 +537,12 @@ const UI = {
             ${tagsHtml}
           </div>
         </div>
-        <div class="txn-cat-badge">${CAT_EMOJIS[t.category]||''} ${t.category}</div>
+        <div class="txn-cat-badge">${Icons.category(t.category)} ${t.category}</div>
         <div class="txn-date-col">${t.date}</div>
         <div class="txn-amount ${isIncome?'inc':'exp'}">${isIncome?'+':'-'}${fmt(t.amount)}</div>
         <div class="txn-actions">
-          <button class="txn-btn edit" data-action="edit-txn" data-id="${t.id}" aria-label="Edit ${t.description}">✎</button>
-          <button class="txn-btn del"  data-action="del-txn"  data-id="${t.id}" aria-label="Delete ${t.description}">✕</button>
+          <button class="txn-btn edit" data-action="edit-txn" data-id="${t.id}" aria-label="Edit ${t.description}">${Icons.edit(13)}</button>
+          <button class="txn-btn del"  data-action="del-txn"  data-id="${t.id}" aria-label="Delete ${t.description}">${Icons.x(13)}</button>
         </div>
       </div>`;
     }).join('');
@@ -569,9 +568,9 @@ const UI = {
         <div class="budget-header">
           <div class="budget-cat-wrap">
             <div class="budget-cat-dot" style="background:${CAT_COLORS[b.category]||'#94A3B8'}"></div>
-            <div class="budget-cat">${CAT_EMOJIS[b.category]||''} ${b.category}</div>
+            <div class="budget-cat">${Icons.category(b.category)} ${b.category}</div>
           </div>
-          <button class="budget-delete" data-action="del-budget" data-id="${b.id}">✕</button>
+          <button class="budget-delete" data-action="del-budget" data-id="${b.id}" title="Delete">${Icons.x(13)}</button>
         </div>
         <div class="budget-amounts">
           <span>Spent: <span>${fmt(b.spent)}</span></span>
@@ -593,7 +592,7 @@ const UI = {
     el.innerHTML = cats.slice(0,5).map(c => `
       <div class="top-cat-row">
         <div class="tc-dot" style="background:${CAT_COLORS[c.category]||'#A79C8C'}"></div>
-        <div class="tc-name">${CAT_EMOJIS[c.category]||''} ${c.category}</div>
+        <div class="tc-name">${Icons.category(c.category)} ${c.category}</div>
         <div class="tc-bar-bg"><div class="tc-bar-fill" style="width:${Math.round(c.total/max*100)}%;background:${CAT_COLORS[c.category]||'#A79C8C'}"></div></div>
         <div class="tc-amount">${fmt(c.total)}</div>
       </div>`).join('') || '<div class="empty-state">No data yet.</div>';
@@ -606,7 +605,7 @@ const UI = {
     el.innerHTML = cats.slice(0,8).map(c => `
       <div class="cat-row">
         <div class="cat-dot" style="background:${CAT_COLORS[c.category]||'#A79C8C'}"></div>
-        <div class="cat-name">${CAT_EMOJIS[c.category]||''} ${c.category}</div>
+        <div class="cat-name">${Icons.category(c.category)} ${c.category}</div>
         <div class="cat-bar-bg"><div class="cat-bar-fill" style="width:${Math.round(c.total/max*100)}%;background:${CAT_COLORS[c.category]||'#A79C8C'}"></div></div>
         <div class="cat-amount">${fmt(c.total)}</div>
       </div>`).join('') || '<div class="empty-state">No expense data yet.</div>';
@@ -634,21 +633,20 @@ const UI = {
     const el = document.getElementById('goalsGrid');
     if (!el) return;
     if (!goals.length) { el.innerHTML = '<div class="empty-state">No goals yet. Add one to start tracking!</div>'; return; }
-    const emojis = ['🏠','✈️','🎓','💻','🚗','💍','🏋️','🌍','🏆','💰'];
     el.innerHTML = goals.map((g,i) => {
       const pct       = Math.min(Math.round((g.saved / g.target) * 100), 100);
       const remaining = g.target - g.saved;
       const barColor  = pct >= 100 ? 'var(--income)' : pct >= 75 ? 'var(--brand)' : pct >= 40 ? 'var(--warning)' : 'var(--savings)';
       return `<div class="goal-card">
-        <div style="font-size:26px;margin-bottom:10px">${emojis[i % emojis.length]}</div>
+        <div style="color:${barColor};margin-bottom:10px">${Icons.target(22)}</div>
         <div class="goal-header">
           <div>
             <div class="goal-name">${g.name}</div>
             <div class="goal-date">${g.date ? 'Target: '+g.date : 'No deadline'}</div>
           </div>
           <div style="display:flex;gap:4px">
-            <button class="txn-btn edit" data-action="edit-goal" data-id="${g.id}" title="Edit">✎</button>
-            <button class="goal-delete"  data-action="del-goal"  data-id="${g.id}">✕</button>
+            <button class="txn-btn edit" data-action="edit-goal" data-id="${g.id}" title="Edit">${Icons.edit(13)}</button>
+            <button class="goal-delete"  data-action="del-goal"  data-id="${g.id}" title="Delete">${Icons.x(13)}</button>
           </div>
         </div>
         <div class="goal-amounts">
@@ -658,7 +656,7 @@ const UI = {
         <div class="goal-bar-bg"><div class="goal-bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
           <div class="goal-percent" style="color:${barColor}">${pct}% complete</div>
-          <div style="font-size:12px;color:var(--text-tertiary)">${remaining > 0 ? fmt(remaining)+' to go' : '🎉 Goal reached!'}</div>
+          <div style="font-size:12px;color:var(--text-tertiary)">${remaining > 0 ? fmt(remaining)+' to go' : 'Goal reached'}</div>
         </div>
         <button class="tip-btn" style="margin-top:12px" data-action="add-savings" data-id="${g.id}">+ Add Savings</button>
       </div>`;

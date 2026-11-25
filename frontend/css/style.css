@@ -4117,3 +4117,31 @@ body.dark .sort-dropdown-menu {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+
+/* ── Inline SVG Icon System ─────────────────────────────────── */
+.fl-icon {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.15em;
+  flex-shrink: 0;
+}
+.btn-primary .fl-icon,
+.btn-ghost .fl-icon,
+.btn-link .fl-icon,
+.sug-btn .fl-icon,
+.av-item .fl-icon,
+.quick-chip .fl-icon,
+.pill-btn .fl-icon {
+  margin-right: 4px;
+}
+.modal-icon .fl-icon,
+.health-score-icon-wrap .fl-icon,
+.fb-icon .fl-icon,
+.tip-icon .fl-icon,
+.empty-icon .fl-icon {
+  width: 1.25em;
+  height: 1.25em;
+  margin-right: 0;
+}

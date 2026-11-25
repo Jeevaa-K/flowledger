@@ -21,10 +21,10 @@ const Auth = {
 
   bindConnectivity() {
     window.addEventListener('offline', () => {
-      if (typeof UI !== 'undefined') UI.toast("⚠ You're offline — changes won't save until you're back online", 'error', 5000);
+      if (typeof UI !== 'undefined') UI.toast("You're offline — changes won't save until you're back online", 'error', 5000);
     });
     window.addEventListener('online', () => {
-      if (typeof UI !== 'undefined') UI.toast('✓ Back online', 'success');
+      if (typeof UI !== 'undefined') UI.toast('Back online', 'success');
     });
   },
 
@@ -280,7 +280,7 @@ const Auth = {
       localStorage.setItem('fl_user', JSON.stringify(user));
       this.onLoggedIn(user);
       document.getElementById('profileModal')?.classList.remove('open');
-      UI.toast('✓ Profile updated', 'success');
+      UI.toast('Profile updated', 'success');
     } catch(e) { alert(e.message.replace(/^\d+:\s*/,'')); }
   },
 
@@ -299,7 +299,7 @@ const Auth = {
       await API.put('/auth/password', { currentPassword:current, newPassword:newPwd });
       ['currentPwd','newPwd','confirmPwd'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
       document.getElementById('profileModal')?.classList.remove('open');
-      UI.toast('✓ Password changed', 'success');
+      UI.toast('Password changed', 'success');
     } catch(e) { alert(e.message.replace(/^\d+:\s*/,'')); }
   },
 
@@ -352,7 +352,7 @@ const Auth = {
 
     if (badge) {
       if (isMatch) {
-        badge.textContent = '✓ VERIFIED';
+        badge.textContent = 'VERIFIED';
         badge.style.color = 'var(--income)';
       } else {
         badge.textContent = 'REQUIRED';
@@ -391,7 +391,7 @@ const Auth = {
     }
 
     if (btn) btn.disabled = true;
-    if (btnText) btnText.textContent = '⏳ Wiping account & data...';
+    if (btnText) btnText.textContent = 'Wiping account & data...';
 
     try {
       await API.del('/auth/account', { password });

@@ -16,32 +16,32 @@ const Recurring = {
   ],
 
   SERVICE_ICONS: {
-    'netflix':     { icon: '🎬', color: '#E50914' },
-    'spotify':     { icon: '🎵', color: '#1DB954' },
-    'prime':       { icon: '📦', color: '#00A8E1' },
-    'amazon':      { icon: '📦', color: '#FF9900' },
-    'youtube':     { icon: '▶️', color: '#FF0000' },
-    'hotstar':     { icon: '⭐', color: '#0C111B' },
-    'disney':      { icon: '🏰', color: '#113CCF' },
-    'apple':       { icon: '🍏', color: '#A2AAAD' },
-    'icloud':      { icon: '☁️', color: '#3B82F6' },
-    'google':      { icon: '🔍', color: '#4285F4' },
-    'gym':         { icon: '💪', color: '#EC4899' },
-    'fitness':     { icon: '🏋️', color: '#F97316' },
-    'rent':        { icon: '🏠', color: '#6366F1' },
-    'wifi':        { icon: '📡', color: '#06B6D4' },
-    'broadband':   { icon: '🌐', color: '#0EA5E9' },
-    'airtel':      { icon: '📱', color: '#EF4444' },
-    'jio':         { icon: '📶', color: '#2563EB' },
-    'adobe':       { icon: '🎨', color: '#FF0000' },
-    'chatgpt':     { icon: '🤖', color: '#10A37F' },
-    'openai':      { icon: '🧠', color: '#10A37F' },
-    'github':      { icon: '🐙', color: '#24292F' },
-    'swiggy':      { icon: '🍔', color: '#FC8019' },
-    'zomato':      { icon: '🍕', color: '#E23744' },
-    'electricity': { icon: '⚡', color: '#F59E0B' },
-    'water':       { icon: '💧', color: '#3B82F6' },
-    'salary':      { icon: '💼', color: '#10B981' }
+    'netflix':     { icon: Icons.play(16), color: '#E50914' },
+    'spotify':     { icon: Icons.play(16), color: '#1DB954' },
+    'prime':       { icon: Icons.box(16), color: '#00A8E1' },
+    'amazon':      { icon: Icons.box(16), color: '#FF9900' },
+    'youtube':     { icon: Icons.play(16), color: '#FF0000' },
+    'hotstar':     { icon: Icons.play(16), color: '#0C111B' },
+    'disney':      { icon: Icons.play(16), color: '#113CCF' },
+    'apple':       { icon: Icons.phone(16), color: '#A2AAAD' },
+    'icloud':      { icon: Icons.box(16), color: '#3B82F6' },
+    'google':      { icon: Icons.search(16), color: '#4285F4' },
+    'gym':         { icon: Icons.target(16), color: '#EC4899' },
+    'fitness':     { icon: Icons.target(16), color: '#F97316' },
+    'rent':        { icon: Icons.bulb(16), color: '#6366F1' },
+    'wifi':        { icon: Icons.bolt(16), color: '#06B6D4' },
+    'broadband':   { icon: Icons.bolt(16), color: '#0EA5E9' },
+    'airtel':      { icon: Icons.phone(16), color: '#EF4444' },
+    'jio':         { icon: Icons.phone(16), color: '#2563EB' },
+    'adobe':       { icon: Icons.edit(16), color: '#FF0000' },
+    'chatgpt':     { icon: Icons.sparkles(16), color: '#10A37F' },
+    'openai':      { icon: Icons.sparkles(16), color: '#10A37F' },
+    'github':      { icon: Icons.category('freelance', 16), color: '#24292F' },
+    'swiggy':      { icon: Icons.category('food', 16), color: '#FC8019' },
+    'zomato':      { icon: Icons.category('food', 16), color: '#E23744' },
+    'electricity': { icon: Icons.bolt(16), color: '#F59E0B' },
+    'water':       { icon: Icons.bulb(16), color: '#3B82F6' },
+    'salary':      { icon: Icons.category('salary', 16), color: '#10B981' }
   },
 
   getServiceMeta(desc, cat) {
@@ -49,7 +49,7 @@ const Recurring = {
     for (const [key, val] of Object.entries(this.SERVICE_ICONS)) {
       if (text.includes(key)) return val;
     }
-    return { icon: (typeof CAT_EMOJIS !== 'undefined' && CAT_EMOJIS[cat]) || '💳', color: 'var(--brand)' };
+    return { icon: Icons.category(cat, 16), color: 'var(--brand)' };
   },
 
   init() {
@@ -227,9 +227,9 @@ const Recurring = {
     if (nextDueItem) {
       set('subNextService', nextDueItem.description);
       const countdownTag = nextDueItem.diffDays === 0
-        ? '🚨 Due Today'
+        ? 'Due Today'
         : nextDueItem.diffDays === 1
-        ? '⚠️ Tomorrow'
+        ? 'Tomorrow'
         : `In ${nextDueItem.diffDays} days`;
       set('subNextCountdown', countdownTag);
       set('subNextDetail', `${fmt(nextDueItem.amount)} · ${nextDueItem.next_date}`);
@@ -373,10 +373,10 @@ const Recurring = {
     if (textEl) {
       if (stats.totalIncome > 0) {
         const badge = stats.commitmentRatio <= 30
-          ? '🟢 Healthy (<30%)'
+          ? 'Healthy (<30%)'
           : stats.commitmentRatio <= 50
-          ? '🟡 Moderate'
-          : '⚠️ High ratio (>50%)';
+          ? 'Moderate'
+          : 'High ratio (>50%)';
         textEl.textContent = `${stats.commitmentRatio}% of income committed · ${badge}`;
       } else {
         textEl.innerHTML = stats.totalBills > 0 ? `<span class="hub-kpi-val expense">${fmt(stats.totalBills)}</span> monthly commitments` : 'No commitments scheduled';
@@ -473,7 +473,7 @@ const Recurring = {
       const dateObj = new Date(this.calYear, this.calMonth, this.selectedDay);
       const weekdayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
 
-      if (titleEl) titleEl.innerHTML = `📍 <span>${weekdayName}, ${this.selectedDay} ${monthName}</span>`;
+      if (titleEl) titleEl.innerHTML = `${Icons.calendar(14)} <span>${weekdayName}, ${this.selectedDay} ${monthName}</span>`;
       if (subEl) subEl.textContent = `${itemsToDisplay.length} commitment${itemsToDisplay.length !== 1 ? 's' : ''} on this date`;
       if (countEl) countEl.textContent = `${itemsToDisplay.length} on ${this.selectedDay}th`;
     } else {
@@ -483,7 +483,7 @@ const Recurring = {
           itemsToDisplay.push(...occurrencesByDay[d]);
         }
       }
-      if (titleEl) titleEl.innerHTML = `📅 <span>${monthName} ${this.calYear} Commitments</span>`;
+      if (titleEl) titleEl.innerHTML = `${Icons.calendar(14)} <span>${monthName} ${this.calYear} Commitments</span>`;
       if (subEl) subEl.textContent = `Showing all scheduled renewals sorted chronologically`;
       if (countEl) countEl.textContent = `${itemsToDisplay.length} items`;
     }
@@ -499,7 +499,7 @@ const Recurring = {
 
       listEl.innerHTML = `
         <div class="sub-feed-empty">
-          <div class="sub-feed-empty-icon">📅</div>
+          <div class="sub-feed-empty-icon">${Icons.calendar(24)}</div>
           <div>${emptyMsg}</div>
           <button class="sub-feed-btn primary" style="margin-top:6px" onclick="Recurring.openAddForDate('${targetDateStr}')">
             + Add Subscription
@@ -517,11 +517,11 @@ const Recurring = {
       const dateStr = o.dateStr;
 
       const statusBadge = o.isToday
-        ? '<span style="font-size:10.5px;font-weight:700;color:var(--expense);background:rgba(239,68,68,0.12);padding:1px 6px;border-radius:8px">🚨 Today</span>'
+        ? '<span style="font-size:10.5px;font-weight:700;color:var(--expense);background:rgba(239,68,68,0.12);padding:1px 6px;border-radius:8px">Today</span>'
         : o.isDueSoon
-        ? `<span style="font-size:10.5px;font-weight:700;color:#f59e0b;background:rgba(245,158,11,0.12);padding:1px 6px;border-radius:8px">⚠️ In ${o.diffDays}d</span>`
+        ? `<span style="font-size:10.5px;font-weight:700;color:#f59e0b;background:rgba(245,158,11,0.12);padding:1px 6px;border-radius:8px">In ${o.diffDays}d</span>`
         : o.isPast
-        ? '<span style="font-size:10.5px;font-weight:500;color:var(--text-tertiary)">✓ Past</span>'
+        ? '<span style="font-size:10.5px;font-weight:500;color:var(--text-tertiary)">Past</span>'
         : `<span style="font-size:10.5px;font-weight:500;color:var(--text-secondary)">In ${o.diffDays}d</span>`;
 
       return `
@@ -548,10 +548,10 @@ const Recurring = {
             </div>
             <div class="sub-feed-actions">
               <button class="sub-feed-btn primary" title="Instant Log to Transactions" onclick="Recurring.quickLogTxn(${item.id}, '${dateStr}')">
-                ⚡ Log
+                ${Icons.bolt(12)} Log
               </button>
               <button class="sub-feed-btn" title="Review in Form" onclick="Recurring.openInTxnModal(${item.id}, '${dateStr}')">
-                ✏️ Edit
+                ${Icons.edit(12)} Edit
               </button>
             </div>
           </div>
@@ -586,7 +586,7 @@ const Recurring = {
         account_id: defaultAcc
       });
 
-      UI.toast(`✓ Logged ${item.description} (${fmt(item.amount)}) to Transactions!`, 'success');
+      UI.toast(`Logged ${item.description} (${fmt(item.amount)}) to Transactions`, 'success');
       this.closeDayModal();
 
       // Refresh app data in background
@@ -635,7 +635,7 @@ const Recurring = {
       .slice(0, 8);
 
     if (!upcoming.length) {
-      strip.innerHTML = '<div class="sub-empty-hint">No active subscriptions due in upcoming weeks 🎉</div>';
+      strip.innerHTML = '<div class="sub-empty-hint">No active subscriptions due in upcoming weeks</div>';
       return;
     }
 
@@ -703,8 +703,8 @@ const Recurring = {
           </div>
           <div class="rec-amount ${r.type === 'income' ? 'inc' : 'exp'}">${r.type === 'income' ? '+' : '-'}${fmt(r.amount)}</div>
           <div class="rec-actions">
-            <button class="txn-btn" data-action="toggle-recurring" data-id="${r.id}" data-active="${r.active}" title="${r.active ? 'Pause auto-tracking' : 'Resume auto-tracking'}">${r.active ? '⏸' : '▶'}</button>
-            <button class="txn-btn del" data-action="del-recurring" data-id="${r.id}" title="Remove subscription">✕</button>
+            <button class="txn-btn" data-action="toggle-recurring" data-id="${r.id}" data-active="${r.active}" title="${r.active ? 'Pause auto-tracking' : 'Resume auto-tracking'}">${r.active ? Icons.pause(13) : Icons.play(13)}</button>
+            <button class="txn-btn del" data-action="del-recurring" data-id="${r.id}" title="Remove subscription">${Icons.x(13)}</button>
           </div>
         </div>
       `;
@@ -734,7 +734,7 @@ const Recurring = {
 
   async detectSubscriptions(manualTrigger = false) {
     const btn = document.getElementById('detectSubsBtn');
-    if (btn) { btn.disabled = true; btn.textContent = '✨ Scanning...'; }
+    if (btn) { btn.disabled = true; btn.innerHTML = `${Icons.sparkles(14)} Scanning...`; }
     try {
       const candidates = await API.get('/recurring/detect');
       this.detected = candidates || [];
@@ -743,7 +743,7 @@ const Recurring = {
       const banner = document.getElementById('subDetectBanner');
 
       if (!this.detected.length) {
-        if (manualTrigger) UI.toast('✓ All subscriptions in your transaction history are already tracked!', 'success');
+        if (manualTrigger) UI.toast('All subscriptions in your transaction history are already tracked', 'success');
         if (card) card.style.display = 'none';
         if (banner) banner.style.display = 'none';
         return;
@@ -754,11 +754,11 @@ const Recurring = {
         card.style.display = 'block';
         card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
-      if (manualTrigger) UI.toast(`✨ Found ${this.detected.length} potential subscriptions!`, 'success');
+      if (manualTrigger) UI.toast(`Found ${this.detected.length} potential subscriptions`, 'success');
     } catch (e) {
       UI.toast('Could not scan subscriptions: ' + e.message, 'error');
     } finally {
-      if (btn) { btn.disabled = false; btn.textContent = '✨ Auto-Detect'; }
+      if (btn) { btn.disabled = false; btn.innerHTML = `${Icons.sparkles(14)} Auto-Detect`; }
     }
   },
 
@@ -805,7 +805,7 @@ const Recurring = {
         next_date: item.next_date
       });
 
-      UI.toast(`✓ Added ${item.description} to tracked subscriptions`, 'success');
+      UI.toast(`Added ${item.description} to tracked subscriptions`, 'success');
       this.detected.splice(idx, 1);
       this.renderDetectedGrid();
 
@@ -833,7 +833,7 @@ const Recurring = {
     const freqEl = document.getElementById('recFrequency');
     const dateEl = document.getElementById('recNextDate');
     if (!descEl || !amtEl || !typeEl || !catEl || !freqEl || !dateEl) {
-      UI.toast('⚠️ Something went wrong loading the form', 'error'); return;
+      UI.toast('Something went wrong loading the form', 'error'); return;
     }
 
     const description = descEl.value.trim();
@@ -843,14 +843,14 @@ const Recurring = {
     const frequency   = freqEl.value;
     const next_date   = dateEl.value;
 
-    if (!description || !amount || !next_date) { UI.toast('⚠️ Fill in all fields', 'error'); return; }
-    if (amount <= 0) { UI.toast('⚠️ Amount must be greater than 0', 'error'); return; }
+    if (!description || !amount || !next_date) { UI.toast('Fill in all fields', 'error'); return; }
+    if (amount <= 0) { UI.toast('Amount must be greater than 0', 'error'); return; }
 
     const btn = document.getElementById('saveRecurringBtn');
     if (btn) { btn.disabled = true; btn.dataset.origText = btn.textContent; btn.textContent = 'Saving...'; }
     try {
       await API.post('/recurring', { description, amount, type, category, frequency, next_date });
-      UI.toast('✓ Subscription added to tracking', 'success');
+      UI.toast('Subscription added to tracking', 'success');
       document.getElementById('recurringModal')?.classList.remove('open');
       this.load();
     } catch(e) {
@@ -865,7 +865,7 @@ const Recurring = {
       const item = (await API.get('/recurring')).find(r => r.id === id);
       if (!item) return;
       await API.put(`/recurring/${id}`, { ...item, active: currentActive ? 0 : 1 });
-      UI.toast(currentActive ? '⏸ Subscription paused' : '▶ Subscription resumed', 'success');
+      UI.toast(currentActive ? 'Subscription paused' : 'Subscription resumed', 'success');
       this.load();
     } catch(e) { UI.toast('Error toggling subscription', 'error'); }
   },
@@ -874,7 +874,7 @@ const Recurring = {
     if (!confirm('Remove this subscription from tracking?')) return;
     try {
       await API.del(`/recurring/${id}`);
-      UI.toast('✓ Removed from subscriptions', 'success');
+      UI.toast('Removed from subscriptions', 'success');
       this.load();
     } catch(e) { UI.toast('Error removing subscription', 'error'); }
   }

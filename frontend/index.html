@@ -135,7 +135,7 @@
       <div class="user-name" id="userName">Loading...</div>
       <div class="user-email" id="userEmail"></div>
     </div>
-    <button class="user-menu-btn" id="openProfileModal" title="Profile" aria-label="Open profile settings">⚙</button>
+    <button class="user-menu-btn" id="openProfileModal" title="Profile" aria-label="Open profile settings"><svg class="fl-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></button>
   </div>
   <div class="sidebar-footer">
     <div class="balance-widget">
@@ -165,7 +165,7 @@
     <div class="topbar-right">
       <div class="topbar-date" id="topbarDate"></div>
       <div class="forecast-badge" id="forecastBadge" style="display:none">
-        🔮 Next month: <span id="forecastAmt">₹0</span>
+        <svg class="fl-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> Next month: <span id="forecastAmt">₹0</span>
       </div>
 
       <button class="privacy-toggle-btn" id="privacyModeBtn" title="Privacy Mode (Shift+P) — Hide sensitive amounts" aria-label="Toggle privacy mode">
@@ -189,7 +189,7 @@
             <button class="notif-clear" id="notifClearBtn">Clear all</button>
           </div>
           <div class="notif-list" id="notifList">
-            <div class="notif-empty">You're all caught up 🎉</div>
+            <div class="notif-empty">You're all caught up</div>
           </div>
         </div>
       </div>
@@ -209,7 +209,7 @@
           <div class="av-divider"></div>
           <button class="av-item" id="avProfile">My Profile</button>
           <div class="av-divider"></div>
-          <button class="av-item av-logout" id="avLogout">🚪 Logout</button>
+          <button class="av-item av-logout" id="avLogout"><svg class="fl-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Logout</button>
         </div>
       </div>
     </div>
@@ -221,7 +221,7 @@
     <section class="page active" id="page-dashboard">
       <div class="page-header">
         <div>
-          <h1 class="page-title">Good <span id="greeting">Day</span>, <span id="greetName"></span> 👋</h1>
+          <h1 class="page-title">Good <span id="greeting">Day</span>, <span id="greetName"></span></h1>
           <p class="page-sub" id="currentMonthLabel">Loading...</p>
         </div>
         <div class="header-actions">
@@ -230,7 +230,7 @@
             <span class="month-label" id="monthLabel">June</span>
             <button class="month-btn" id="nextMonth" aria-label="Next month">›</button>
           </div>
-          <button class="btn-ghost" id="btnScanReceipt" type="button">📷 Scan Receipt</button>
+          <button class="btn-ghost" id="btnScanReceipt" type="button"><svg class="fl-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg> Scan Receipt</button>
           <button class="btn-primary" id="quickAdd">+ Quick Add</button>
         </div>
       </div>
@@ -238,10 +238,10 @@
       <!-- AI Magic Quick Add Card -->
       <div class="ai-quick-card" id="aiQuickBar">
         <div class="ai-quick-header">
-          <div class="ai-quick-title"><span class="ai-sparkle">✨</span> AI Quick Add</div>
+          <div class="ai-quick-title"><span class="ai-sparkle"><svg class="fl-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.912 5.813a2 2 0 001.275 1.275L21 12l-5.813 1.912a2 2 0 00-1.275 1.275L12 21l-1.912-5.813a2 2 0 00-1.275-1.275L3 12l5.813-1.912a2 2 0 001.275-1.275L12 3z"/></svg></span> AI Quick Add</div>
           <div style="display:flex;align-items:center;gap:8px">
             <button class="btn-ghost btn-sm" id="btnOpenSmsModal" type="button" title="Paste Bank SMS or UPI payment notification">
-              <span>📱 Paste Bank SMS</span>
+              <span><svg class="fl-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg> Paste Bank SMS</span>
             </button>
           </div>
         </div>
@@ -259,7 +259,7 @@
             </svg>
             <span class="mic-ripple"></span>
           </button>
-          <button class="btn-primary" id="aiQuickSubmitBtn" type="button">✨ Extract</button>
+          <button class="btn-primary" id="aiQuickSubmitBtn" type="button"><svg class="fl-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.912 5.813a2 2 0 001.275 1.275L21 12l-5.813 1.912a2 2 0 00-1.275 1.275L12 21l-1.912-5.813a2 2 0 00-1.275-1.275L3 12l5.813-1.912a2 2 0 001.275-1.275L12 3z"/></svg> Extract</button>
         </div>
       </div>
 
@@ -296,7 +296,7 @@
       <div class="card health-score-card" id="healthScoreCard">
         <div class="health-score-header">
           <div class="health-score-title-group">
-            <div class="health-score-icon-wrap">🛡️</div>
+            <div class="health-score-icon-wrap"><svg class="fl-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
             <div>
               <div class="card-title">Financial Health Score</div>
               <div class="card-subtitle">AI-computed 360° personal finance assessment</div>
@@ -363,7 +363,7 @@
           </div>
         </div>
         <div class="health-score-footer">
-          <span class="health-tip-bulb">💡</span>
+          <span class="health-tip-bulb"><svg class="fl-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0018 8 6 6 0 006 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 018.91 14"/></svg></span>
           <div class="health-tip-content">
             <strong class="health-tip-label">AI Health Insight:</strong>
             <span id="healthScoreTip">Analyzing your spending flows...</span>
@@ -421,7 +421,7 @@
 
       <!-- Forecast Banner -->
       <div class="forecast-banner" id="forecastBanner" style="display:none">
-        <div class="fb-icon">🔮</div>
+        <div class="fb-icon"><svg class="fl-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
         <div class="fb-text">
           <div class="fb-title">Spending Forecast</div>
           <div class="fb-sub">Based on your last 3 months, you'll likely spend <strong id="forecastBannerAmt">₹0</strong> next month</div>
@@ -465,7 +465,7 @@
             <div class="top-cats" id="topCats"></div>
           </div>
           <div class="card tip-card">
-            <div class="tip-header"><div class="tip-icon">✨</div><div class="tip-title">AI Insight</div></div>
+            <div class="tip-header"><div class="tip-icon"><svg class="fl-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.912 5.813a2 2 0 001.275 1.275L21 12l-5.813 1.912a2 2 0 00-1.275 1.275L12 21l-1.912-5.813a2 2 0 00-1.275-1.275L3 12l5.813-1.912a2 2 0 001.275-1.275L12 3z"/></svg></div><div class="tip-title">AI Insight</div></div>
             <div class="tip-text" id="aiTip">Click below to get a financial insight from NOVA...</div>
             <button class="tip-btn" id="getTipBtn">Get Insight</button>
           </div>
@@ -479,7 +479,7 @@
       <div class="page-header">
         <div><h1 class="page-title">Transactions</h1><p class="page-sub">Manage, search &amp; filter all your income and expenses</p></div>
         <div class="header-actions">
-          <button class="btn-ghost" id="btnScanReceiptTxn" type="button">📷 Scan Receipt</button>
+          <button class="btn-ghost" id="btnScanReceiptTxn" type="button"><svg class="fl-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg> Scan Receipt</button>
           <button class="btn-ghost" id="exportTxnCsvBtn" type="button" title="Download filtered transactions as CSV">&#11015; Export CSV</button>
           <button class="btn-primary" id="openAddModal">+ Add New</button>
         </div>
@@ -596,7 +596,7 @@
               </select>
             </div>
             <button class="btn-ghost" id="toggleAdvFiltersBtn" type="button">
-              <span>⚙️ Filters</span>
+              <span><svg class="fl-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg> Filters</span>
               <span class="adv-badge" id="advFilterBadge" style="display:none">0</span>
             </button>
           </div>
@@ -820,15 +820,15 @@
           <!-- Model Selector Pill -->
           <div class="ai-model-selector" id="aiModelSelector">
             <button type="button" class="ai-model-btn active" data-model="chatgpt" title="OpenAI GPT-4o style: Wealth strategy, opportunities & cash flow compounding">
-              <span class="model-icon">🟢</span>
+              <span class="model-icon" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#10B981"></span>
               <span class="model-name">ChatGPT (GPT-4o)</span>
             </button>
             <button type="button" class="ai-model-btn" data-model="claude" title="Anthropic Claude style: Analytical audits, budget scrutiny & structured advice">
-              <span class="model-icon">🟣</span>
+              <span class="model-icon" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#8B5CF6"></span>
               <span class="model-name">Claude 3.5 Sonnet</span>
             </button>
             <button type="button" class="ai-model-btn" data-model="fast" title="Ultra-Fast: Instant numerical calculations & quick queries">
-              <span class="model-icon">⚡</span>
+              <span class="model-icon"><svg class="fl-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
               <span class="model-name">Groq Fast</span>
             </button>
           </div>
@@ -893,12 +893,12 @@
             <div class="as-row"><span>Net Savings</span><span class="purple" id="aiStatSav">₹0</span></div>
           </div>
           <div class="sug-title">One-Click Prompts</div>
-          <button class="sug-btn" data-prompt="Analyze my spending this month and identify where I am leaking money.">🔍 Audit my overspending</button>
-          <button class="sug-btn" data-prompt="Give me 3 practical ways I can save an extra ₹5,000 this month based on my habits.">💡 3 high-impact savings tips</button>
-          <button class="sug-btn" data-prompt="What is my current savings rate percentage, and is it financially healthy?">📊 Calculate my savings rate</button>
-          <button class="sug-btn" data-prompt="Review all my account balances and tell me which one needs attention.">🏦 Account balance check</button>
-          <button class="sug-btn" data-prompt="Based on my past spending, forecast my total expenses for next month.">🔮 Predict next month's burn</button>
-          <button class="sug-btn" data-prompt="Do I have any pending debts or unsettled balances from my group expenses?">👥 Review shared group splits</button>
+          <button class="sug-btn" data-prompt="Analyze my spending this month and identify where I am leaking money."><svg class="fl-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Audit my overspending</button>
+          <button class="sug-btn" data-prompt="Give me 3 practical ways I can save an extra ₹5,000 this month based on my habits."><svg class="fl-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0018 8 6 6 0 006 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 018.91 14"/></svg> 3 high-impact savings tips</button>
+          <button class="sug-btn" data-prompt="What is my current savings rate percentage, and is it financially healthy?"><svg class="fl-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Calculate my savings rate</button>
+          <button class="sug-btn" data-prompt="Review all my account balances and tell me which one needs attention."><svg class="fl-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" y1="22" x2="21" y2="22"/><line x1="6" y1="18" x2="6" y2="11"/><line x1="10" y1="18" x2="10" y2="11"/><line x1="14" y1="18" x2="14" y2="11"/><line x1="18" y1="18" x2="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg> Account balance check</button>
+          <button class="sug-btn" data-prompt="Based on my past spending, forecast my total expenses for next month."><svg class="fl-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> Predict next month's burn</button>
+          <button class="sug-btn" data-prompt="Do I have any pending debts or unsettled balances from my group expenses?"><svg class="fl-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg> Review shared group splits</button>
         </div>
       </div>
     </section>
@@ -925,7 +925,7 @@
             <p class="page-sub" id="gdMembersList">Loading members...</p>
           </div>
           <div style="display:flex;gap:8px">
-            <button class="btn-ghost" id="openSettleModalBtn">🤝 Settle Up</button>
+            <button class="btn-ghost" id="openSettleModalBtn"><svg class="fl-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg> Settle Up</button>
             <button class="btn-primary" id="openGroupExpenseModalBtn">+ Add Expense</button>
           </div>
         </div>
@@ -959,7 +959,7 @@
           <p class="page-sub">Track auto-debits, recurring subscriptions & upcoming renewal dates</p>
         </div>
         <div class="header-actions">
-          <button class="btn-ghost" id="detectSubsBtn" type="button">✨ Auto-Detect</button>
+          <button class="btn-ghost" id="detectSubsBtn" type="button"><svg class="fl-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.912 5.813a2 2 0 001.275 1.275L21 12l-5.813 1.912a2 2 0 00-1.275 1.275L12 21l-1.912-5.813a2 2 0 00-1.275-1.275L3 12l5.813-1.912a2 2 0 001.275-1.275L12 3z"/></svg> Auto-Detect</button>
           <button class="btn-primary" id="openRecurringModal">+ Add Subscription</button>
         </div>
       </div>
@@ -1100,7 +1100,7 @@
         <!-- Auto-Detect Banner -->
         <div class="sub-detect-banner" id="subDetectBanner" style="display:none">
           <div class="sub-detect-left">
-            <span class="sub-detect-icon">✨</span>
+            <span class="sub-detect-icon"><svg class="fl-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.912 5.813a2 2 0 001.275 1.275L21 12l-5.813 1.912a2 2 0 00-1.275 1.275L12 21l-1.912-5.813a2 2 0 00-1.275-1.275L3 12l5.813-1.912a2 2 0 001.275-1.275L12 3z"/></svg></span>
             <div>
               <div class="sub-detect-title" id="subDetectTitle">AI found potential recurring subscriptions</div>
               <div class="sub-detect-sub" id="subDetectSub">Review detected recurring expenses to track auto-debits and renewal dates.</div>
@@ -1108,14 +1108,14 @@
           </div>
           <div class="sub-detect-actions">
             <button class="pill-btn active" id="viewDetectedSubsBtn" type="button">Review (0)</button>
-            <button class="pill-btn" id="dismissDetectedSubsBtn" type="button">✕</button>
+            <button class="pill-btn" id="dismissDetectedSubsBtn" type="button"><svg class="fl-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
           </div>
         </div>
 
         <!-- Detected Subscriptions Drawer/Grid -->
         <div class="card sub-detected-card" id="subDetectedCard" style="display:none">
           <div class="card-header">
-            <div class="card-title">✨ Detected Subscriptions from Spending History</div>
+            <div class="card-title"><svg class="fl-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.912 5.813a2 2 0 001.275 1.275L21 12l-5.813 1.912a2 2 0 00-1.275 1.275L12 21l-1.912-5.813a2 2 0 00-1.275-1.275L3 12l5.813-1.912a2 2 0 001.275-1.275L12 3z"/></svg> Detected Subscriptions from Spending History</div>
             <button class="pill-btn" id="closeDetectedCardBtn" type="button">Close</button>
           </div>
           <div class="sub-detected-grid" id="subDetectedGrid"></div>
@@ -1219,7 +1219,7 @@
             <button class="btn-primary" id="importBtn" disabled>Import All</button>
           </div>
           <div id="dateFormatWarning" style="display:none;margin-bottom:12px;padding:10px 12px;background:#FBEFD9;border-radius:8px;font-size:12px;color:#7A5A20">
-            ⚠ Some dates in this file are ambiguous (day and month both ≤ 12, e.g. 03/04/2025). Pick the format your file uses so dates aren't misread:
+            <svg class="fl-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Some dates in this file are ambiguous (day and month both ≤ 12, e.g. 03/04/2025). Pick the format your file uses so dates aren't misread:
             <div style="margin-top:8px">
               <label style="margin-right:14px"><input type="radio" name="dateFormat" value="auto" checked /> Auto (day-first, e.g. 03/04 = 3 Apr)</label>
               <label style="margin-right:14px"><input type="radio" name="dateFormat" value="dmy" /> Day/Month/Year</label>
@@ -1334,7 +1334,7 @@
 <div class="modal-overlay" id="addModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-icon">💳</div>
+      <div class="modal-icon"><svg class="fl-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div>
       <h2 class="modal-title" id="modalTitle">Add Transaction</h2>
       <button class="modal-close" id="closeAddModal">×</button>
     </div>
@@ -1358,7 +1358,7 @@
 
       <div class="form-group span2" style="margin-top:-6px;margin-bottom:-2px">
         <button type="button" class="btn-ghost btn-sm" id="btnToggleSplit" style="display:inline-flex;align-items:center;gap:6px">
-          <span>✂️ Split into Multiple Categories</span>
+          <span><svg class="fl-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg> Split into Multiple Categories</span>
         </button>
       </div>
 
@@ -1373,7 +1373,7 @@
       <div class="form-group span2" id="splitCategorySection" style="display:none">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
           <label style="margin-bottom:0">Category Splits</label>
-          <button type="button" class="btn-link" id="btnCancelSplit" style="font-size:12px;color:var(--expense)">✕ Cancel Split</button>
+          <button type="button" class="btn-link" id="btnCancelSplit" style="font-size:12px;color:var(--expense)"><svg class="fl-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Cancel Split</button>
         </div>
         <div id="splitRowsContainer" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
           <!-- Dynamic split rows inserted here -->
@@ -1494,7 +1494,7 @@
 <div class="modal-overlay" id="addSavingsModal" role="dialog" aria-modal="true" aria-labelledby="addSavingsTitle">
   <div class="modal" style="max-width: 480px">
     <div class="modal-header">
-      <div class="modal-icon" style="background:var(--income-tint, rgba(16,185,129,0.12));color:var(--income,#10b981);border:1px solid var(--income-border, rgba(16,185,129,0.3))">💰</div>
+      <div class="modal-icon" style="background:var(--income-tint, rgba(16,185,129,0.12));color:var(--income,#10b981);border:1px solid var(--income-border, rgba(16,185,129,0.3))"><svg class="fl-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg></div>
       <div>
         <h2 class="modal-title" id="addSavingsTitle">Add Savings to Goal</h2>
         <p style="font-size:12px;color:var(--text-tertiary);margin-top:2px" id="addSavingsSub">Deposit money into your target savings fund</p>
@@ -1640,7 +1640,7 @@
 <div class="modal-overlay" id="subDayModal" role="dialog" aria-modal="true" aria-labelledby="subDayModalTitle">
   <div class="modal" style="max-width: 490px">
     <div class="modal-header">
-      <div class="modal-icon">📅</div>
+      <div class="modal-icon"><svg class="fl-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
       <div>
         <h2 class="modal-title" id="subDayModalTitle">Renewals for Date</h2>
         <p style="font-size:12px;color:var(--text-tertiary);margin-top:2px" id="subDayModalSub">Scheduled recurring events</p>
@@ -1695,7 +1695,7 @@
         <label for="loginPassword">Password</label>
         <div style="position:relative">
           <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password" />
-          <button class="eye-btn" type="button" data-action="toggle-pwd" data-target="loginPassword" aria-label="Show password">👁</button>
+          <button class="eye-btn" type="button" data-action="toggle-pwd" data-target="loginPassword" aria-label="Show password"><svg class="fl-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
         </div>
       </div>
       <div class="auth-remember">
@@ -1722,7 +1722,7 @@
         <label for="regPassword">Password <span style="color:#A79C8C;font-size:11px">(min 6 chars)</span></label>
         <div style="position:relative">
           <input type="password" id="regPassword" placeholder="••••••••" autocomplete="new-password" />
-          <button class="eye-btn" type="button" data-action="toggle-pwd" data-target="regPassword" aria-label="Show password">👁</button>
+          <button class="eye-btn" type="button" data-action="toggle-pwd" data-target="regPassword" aria-label="Show password"><svg class="fl-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
         </div>
       </div>
       <div class="auth-form-group">
@@ -1739,7 +1739,7 @@
 <div class="modal-overlay" id="profileModal" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-icon">👤</div>
+      <div class="modal-icon"><svg class="fl-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
       <h2 class="modal-title" id="profileModalTitle">My Profile</h2>
       <button class="modal-close" id="closeProfileModal">×</button>
     </div>
@@ -1809,7 +1809,7 @@
 <div class="modal-overlay" id="deleteAccountModal" role="dialog" aria-modal="true" aria-labelledby="delModalTitle">
   <div class="modal" style="max-width:480px">
     <div class="modal-header">
-      <div class="modal-icon" style="background:var(--expense-tint);color:var(--expense);border-color:var(--expense-border)">🚨</div>
+      <div class="modal-icon" style="background:var(--expense-tint);color:var(--expense);border-color:var(--expense-border)"><svg class="fl-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
       <div>
         <h2 class="modal-title" id="delModalTitle" style="color:var(--expense)">Delete Account Verification</h2>
         <p style="font-size:12px;color:var(--text-tertiary);margin-top:2px">Security confirmation required</p>
@@ -1861,7 +1861,7 @@
 <div class="modal-overlay" id="receiptModal" role="dialog" aria-modal="true" aria-labelledby="receiptModalTitle">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-icon">📷</div>
+      <div class="modal-icon"><svg class="fl-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
       <h2 class="modal-title" id="receiptModalTitle">AI Receipt Scanner</h2>
       <button class="modal-close" id="closeReceiptModal" type="button">×</button>
     </div>
@@ -1873,7 +1873,7 @@
     <div class="receipt-dropzone" id="receiptDropzone">
       <input type="file" id="receiptFileInput" accept="image/*" style="display:none" />
       <div class="dropzone-content" id="dropzoneContent">
-        <div class="dropzone-icon">📜</div>
+        <div class="dropzone-icon"><svg class="fl-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1z"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="12" y2="15"/></svg></div>
         <div class="dropzone-text"><strong>Click to upload</strong> or drag & drop receipt</div>
         <div class="dropzone-sub">Supports PNG, JPG, WebP (Max 5MB)</div>
       </div>
@@ -1888,7 +1888,7 @@
         <span class="spinner"></span> <span>AI reading receipt details...</span>
       </div>
       <div class="receipt-result-card" id="receiptResultCard" style="display:none">
-        <div class="res-title">✨ Extracted Receipt Data</div>
+        <div class="res-title"><svg class="fl-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.912 5.813a2 2 0 001.275 1.275L21 12l-5.813 1.912a2 2 0 00-1.275 1.275L12 21l-1.912-5.813a2 2 0 00-1.275-1.275L3 12l5.813-1.912a2 2 0 001.275-1.275L12 3z"/></svg> Extracted Receipt Data</div>
         <div class="res-grid">
           <div class="res-item"><span class="res-lbl">Merchant</span> <strong id="resMerchant">-</strong></div>
           <div class="res-item"><span class="res-lbl">Total Amount</span> <strong id="resAmount" class="red">-</strong></div>
@@ -1911,7 +1911,7 @@
 <div class="modal-overlay" id="smsParserModal" role="dialog" aria-modal="true" aria-labelledby="smsParserModalTitle">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-icon">📱</div>
+      <div class="modal-icon"><svg class="fl-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></div>
       <h2 class="modal-title" id="smsParserModalTitle">Bank SMS &amp; UPI Instant Parser</h2>
       <button class="modal-close" id="closeSmsModal" type="button">×</button>
     </div>
@@ -1924,17 +1924,17 @@
     <div style="margin-bottom:12px">
       <div style="font-size:11px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Quick Test Samples (Click to test):</div>
       <div class="sms-sample-chips" id="smsSampleChips" style="display:flex;flex-wrap:wrap;gap:6px">
-        <button type="button" class="quick-chip sms-chip" data-sample="HDFC Bank: Rs 450.00 debited from A/c **1234 on 06-Nov-26 to SWIGGY. Ref: 4312456789. Avl Bal: Rs 14,200.00">🍔 HDFC ₹450 Swiggy</button>
-        <button type="button" class="quick-chip sms-chip" data-sample="Your A/C XXXXXX9876 debited by Rs.1200.00 on 05Nov26 by UPI/345678/Zomato/SBI/pay.">🍕 SBI ₹1,200 Zomato UPI</button>
-        <button type="button" class="quick-chip sms-chip" data-sample="Acct XX567 credited with Rs 50,000.00 on 01-Nov-26 by Salary. Avail Bal INR 85,000.">💰 ICICI ₹50,000 Salary</button>
-        <button type="button" class="quick-chip sms-chip" data-sample="Alert: Your Axis Bank Credit Card ending in 4432 was used for INR 2,499.00 at AMAZON INDIA on 04-Nov-26.">🛍️ Axis ₹2,499 Amazon</button>
+        <button type="button" class="quick-chip sms-chip" data-sample="HDFC Bank: Rs 450.00 debited from A/c **1234 on 06-Nov-26 to SWIGGY. Ref: 4312456789. Avl Bal: Rs 14,200.00">HDFC ₹450 Swiggy</button>
+        <button type="button" class="quick-chip sms-chip" data-sample="Your A/C XXXXXX9876 debited by Rs.1200.00 on 05Nov26 by UPI/345678/Zomato/SBI/pay.">SBI ₹1,200 Zomato UPI</button>
+        <button type="button" class="quick-chip sms-chip" data-sample="Acct XX567 credited with Rs 50,000.00 on 01-Nov-26 by Salary. Avail Bal INR 85,000.">ICICI ₹50,000 Salary</button>
+        <button type="button" class="quick-chip sms-chip" data-sample="Alert: Your Axis Bank Credit Card ending in 4432 was used for INR 2,499.00 at AMAZON INDIA on 04-Nov-26.">Axis ₹2,499 Amazon</button>
       </div>
     </div>
 
     <div class="form-group" style="margin-bottom:14px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
         <label for="smsInputText" style="font-size:11.5px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em">Paste SMS / UPI Message</label>
-        <button type="button" class="btn-link" id="btnPasteFromClipboard" style="font-size:12px">📋 Paste from Clipboard</button>
+        <button type="button" class="btn-link" id="btnPasteFromClipboard" style="font-size:12px"><svg class="fl-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg> Paste from Clipboard</button>
       </div>
       <textarea id="smsInputText" rows="4" placeholder="Paste bank SMS here... (e.g. 'Rs 450.00 debited from a/c **1234 on 06-Nov to Swiggy')" style="width:100%;box-sizing:border-box;font-family:inherit;line-height:1.45;resize:vertical"></textarea>
     </div>
@@ -1946,7 +1946,7 @@
       </div>
       <div class="receipt-result-card" id="smsResultCard" style="display:none">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-          <div class="res-title" style="margin-bottom:0">✨ Extracted Transaction Data</div>
+          <div class="res-title" style="margin-bottom:0"><svg class="fl-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.912 5.813a2 2 0 001.275 1.275L21 12l-5.813 1.912a2 2 0 00-1.275 1.275L12 21l-1.912-5.813a2 2 0 00-1.275-1.275L3 12l5.813-1.912a2 2 0 001.275-1.275L12 3z"/></svg> Extracted Transaction Data</div>
           <span id="smsTypeBadge" class="res-badge" style="background:var(--expense-tint);color:var(--expense)">Expense</span>
         </div>
         <div class="res-grid">
@@ -1965,16 +1965,16 @@
 
     <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
       <button class="btn-ghost" id="cancelSmsBtn" type="button" style="flex:1">Cancel</button>
-      <button class="btn-primary" id="btnExtractSms" type="button" style="flex:1">✨ Extract Data</button>
+      <button class="btn-primary" id="btnExtractSms" type="button" style="flex:1"><svg class="fl-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.912 5.813a2 2 0 001.275 1.275L21 12l-5.813 1.912a2 2 0 00-1.275 1.275L12 21l-1.912-5.813a2 2 0 00-1.275-1.275L3 12l5.813-1.912a2 2 0 001.275-1.275L12 3z"/></svg> Extract Data</button>
       <button class="btn-ghost" id="btnOpenSmsInForm" type="button" style="display:none;flex:1">Review in Form →</button>
-      <button class="btn-primary" id="btnSaveSmsDirect" type="button" style="display:none;flex:1">⚡ Save Directly</button>
+      <button class="btn-primary" id="btnSaveSmsDirect" type="button" style="display:none;flex:1"><svg class="fl-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Save Directly</button>
     </div>
   </div>
 </div>
 <div class="modal-overlay" id="groupModal" role="dialog" aria-modal="true" aria-labelledby="groupModalTitle">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-icon">👥</div>
+      <div class="modal-icon"><svg class="fl-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
       <h2 class="modal-title" id="groupModalTitle">Create Shared Group</h2>
       <button class="modal-close" id="closeGroupModal" type="button">×</button>
     </div>
@@ -2001,7 +2001,7 @@
 <div class="modal-overlay" id="groupExpenseModal" role="dialog" aria-modal="true" aria-labelledby="groupExpModalTitle">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-icon">💸</div>
+      <div class="modal-icon"><svg class="fl-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg></div>
       <h2 class="modal-title" id="groupExpModalTitle">Add Group Expense</h2>
       <button class="modal-close" id="closeGroupExpenseModal" type="button">×</button>
     </div>
@@ -2042,7 +2042,7 @@
 <div class="modal-overlay" id="settleModal" role="dialog" aria-modal="true" aria-labelledby="settleModalTitle">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-icon">🤝</div>
+      <div class="modal-icon"><svg class="fl-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg></div>
       <h2 class="modal-title" id="settleModalTitle">Record Settlement</h2>
       <button class="modal-close" id="closeSettleModal" type="button">×</button>
     </div>
@@ -2068,15 +2068,15 @@
 <div class="modal-overlay" id="settleQrModal" role="dialog" aria-modal="true" aria-labelledby="settleQrModalTitle">
   <div class="modal settle-qr-modal">
     <div class="modal-header">
-      <div class="modal-icon">📱</div>
+      <div class="modal-icon"><svg class="fl-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></div>
       <h2 class="modal-title" id="settleQrModalTitle">Scan & Pay to Settle</h2>
-      <button class="modal-close" id="closeSettleQrModal" type="button">✕</button>
+      <button class="modal-close" id="closeSettleQrModal" type="button"><svg class="fl-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
 
     <div class="qr-pay-recipient-card">
       <div class="qr-pay-from-to">
         <span class="qr-member-pill" id="qrFromMember">Payer</span>
-        <span class="qr-arrow">➔ pays ➔</span>
+        <span class="qr-arrow">pays</span>
         <span class="qr-member-pill qr-to" id="qrToMember">Recipient</span>
       </div>
       <div class="qr-pay-amount" id="qrAmountDisplay">₹0</div>
@@ -2107,10 +2107,10 @@
       </div>
       <div class="qr-action-buttons">
         <a class="btn-ghost full" id="qrDeepLinkBtn" href="#" target="_blank" style="text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px">
-          <span>📲</span> Open in UPI App
+          <svg class="fl-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg> Open in UPI App
         </a>
         <button class="btn-primary full" id="qrMarkSettledBtn" type="button" style="display:flex;align-items:center;justify-content:center;gap:6px">
-          <span>✓</span> Mark as Settled
+          <svg class="fl-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg> Mark as Settled
         </button>
       </div>
     </div>

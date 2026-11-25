@@ -10,7 +10,6 @@ const CAT_COLORS = {
   Investment:    '#8B5CF6',
   Other:         '#94A3B8'
 };
-const CAT_EMOJIS = {Food:'🍔',Transport:'🚗',Shopping:'🛍️',Entertainment:'🎬',Health:'💊',Bills:'💡',Salary:'💼',Freelance:'💻',Investment:'📈',Other:'📦'};
 
 const TOOLTIP = {
   backgroundColor:'#0F172A',
