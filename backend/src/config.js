@@ -36,9 +36,16 @@ if (isProd && !process.env.APP_URL) {
   process.exit(1);
 }
 
+if (process.env.ENABLE_DEMO === 'true' && !process.env.DEMO_PASSWORD) {
+  console.error('FATAL: DEMO_PASSWORD is required when ENABLE_DEMO=true. Refusing to start with insecure default.');
+  process.exit(1);
+}
+
 const csv = (v) => (v || '').split(',').map((s) => s.trim()).filter(Boolean);
 const PORT = process.env.PORT || 3001;
 const APP_URL = (process.env.APP_URL || `http://localhost:${PORT}`).replace(/\/+$/, '');
+
+const DEMO_EMAIL = (process.env.DEMO_EMAIL || 'demo@flowledger.app').toLowerCase().trim();
 
 module.exports = {
   isProd,
@@ -46,6 +53,7 @@ module.exports = {
   PORT,
   APP_URL,
   JWT_SECRET,
+  DEMO_EMAIL,
   SESSION_DAYS: 7,
   COOKIE_NAME: 'fl_session',
   // Cross-origin browsers are only trusted if listed here. Same-origin

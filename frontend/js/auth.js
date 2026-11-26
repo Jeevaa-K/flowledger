@@ -355,6 +355,7 @@ const Auth = {
     try {
       // Use stored user data instead of API call to avoid JSON parse issues
       const stored = JSON.parse(localStorage.getItem('fl_user') || '{}');
+      const isDemo = Boolean(stored.is_demo || stored.email?.toLowerCase() === 'demo@flowledger.app');
       const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
       set('profileName',     stored.name  || '');
       set('profileEmail',    stored.email || '');
@@ -362,12 +363,24 @@ const Auth = {
       // AI consent toggle
       const consentEl = document.getElementById('profileAiConsent');
       if (consentEl) consentEl.checked = Boolean(stored.ai_consent);
+
+      // In demo mode: disable password change and account delete options
+      const pwdTab = document.querySelector('.profile-tab[data-ptab="password"]');
+      const dangerTab = document.querySelector('.profile-tab[data-ptab="danger"]');
+      const saveProfileBtn = document.getElementById('saveProfileBtn');
+      if (pwdTab) pwdTab.style.display = isDemo ? 'none' : '';
+      if (dangerTab) dangerTab.style.display = isDemo ? 'none' : '';
+      if (saveProfileBtn) {
+        saveProfileBtn.disabled = isDemo;
+        saveProfileBtn.title = isDemo ? 'Demo account is read-only' : '';
+      }
+
       document.querySelectorAll('.profile-tab').forEach(t => {
         t.classList.remove('active');
         t.setAttribute('aria-selected', 'false');
       });
       document.querySelectorAll('.profile-panel').forEach(p => p.style.display = 'none');
-      const firstTab = document.querySelector('.profile-tab');
+      const firstTab = document.querySelector('.profile-tab:not([style*="display: none"])') || document.querySelector('.profile-tab');
       firstTab?.classList.add('active');
       firstTab?.setAttribute('aria-selected', 'true');
       const infoPanel = document.getElementById('ptab-info');
@@ -377,6 +390,11 @@ const Auth = {
   },
 
   async saveProfile() {
+    const stored = JSON.parse(localStorage.getItem('fl_user') || '{}');
+    if (stored.is_demo || stored.email?.toLowerCase() === 'demo@flowledger.app') {
+      UI.toast('Demo account is read-only', 'error');
+      return;
+    }
     const nameEl = document.getElementById('profileName');
     const currEl = document.getElementById('profileCurrency');
     const consentEl = document.getElementById('profileAiConsent');
@@ -397,6 +415,11 @@ const Auth = {
   },
 
   async changePassword() {
+    const stored = JSON.parse(localStorage.getItem('fl_user') || '{}');
+    if (stored.is_demo || stored.email?.toLowerCase() === 'demo@flowledger.app') {
+      UI.toast('Password change is disabled for demo account', 'error');
+      return;
+    }
     const curEl = document.getElementById('currentPwd');
     const newEl = document.getElementById('newPwd');
     const confEl = document.getElementById('confirmPwd');
@@ -416,6 +439,11 @@ const Auth = {
   },
 
   openDeleteAccountModal() {
+    const stored = JSON.parse(localStorage.getItem('fl_user') || '{}');
+    if (stored.is_demo || stored.email?.toLowerCase() === 'demo@flowledger.app') {
+      UI.toast('Account deletion is disabled for demo account', 'error');
+      return;
+    }
     // Hide profile modal first so the confirmation modal has clear focus
     document.getElementById('profileModal')?.classList.remove('open');
     const modal = document.getElementById('deleteAccountModal');

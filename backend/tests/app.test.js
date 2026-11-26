@@ -347,3 +347,111 @@ describe('registration validation', () => {
     expect(res.status).toBe(409);
   });
 });
+
+describe('demo account security & read-only restrictions', () => {
+  const origEnableDemo = process.env.ENABLE_DEMO;
+  const origDemoPassword = process.env.DEMO_PASSWORD;
+  const origDemoEmail = process.env.DEMO_EMAIL;
+
+  afterEach(() => {
+    process.env.ENABLE_DEMO = origEnableDemo;
+    process.env.DEMO_PASSWORD = origDemoPassword;
+    process.env.DEMO_EMAIL = origDemoEmail;
+  });
+
+  test('POST /api/auth/demo is rejected when ENABLE_DEMO is not true', async () => {
+    delete process.env.ENABLE_DEMO;
+    const res = await request(app).post('/api/auth/demo');
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/disabled/i);
+  });
+
+  test('POST /api/auth/demo fails if DEMO_PASSWORD is not set', async () => {
+    process.env.ENABLE_DEMO = 'true';
+    delete process.env.DEMO_PASSWORD;
+    const res = await request(app).post('/api/auth/demo');
+    expect(res.status).toBe(500);
+    expect(res.body.error).toMatch(/DEMO_PASSWORD/);
+  });
+
+  test('POST /api/auth/demo succeeds with DEMO_PASSWORD and sets session', async () => {
+    process.env.ENABLE_DEMO = 'true';
+    process.env.DEMO_PASSWORD = 'CustomDemoSecret123!';
+    db.get.mockResolvedValueOnce({
+      id: 99,
+      name: 'Demo User',
+      email: 'demo@flowledger.app',
+      currency: '₹',
+      theme: 'light',
+      ai_consent: false,
+      token_version: 1
+    });
+
+    const res = await request(app).post('/api/auth/demo');
+    expect(res.status).toBe(200);
+    expect(res.body.user.is_demo).toBe(true);
+    expect(res.headers['set-cookie']).toBeDefined();
+  });
+
+  test('demo user cannot change password (PUT /api/auth/password blocked)', async () => {
+    const demoUser = { id: 99, name: 'Demo User', email: 'demo@flowledger.app', token_version: 1 };
+    db.get.mockResolvedValueOnce(demoUser); // auth middleware
+
+    const res = await request(app)
+      .put('/api/auth/password')
+      .set('Cookie', sessionCookie(demoUser))
+      .send({ currentPassword: 'OldPassword1', newPassword: 'NewPassword1' });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/demo account/i);
+  });
+
+  test('demo user cannot delete account (DELETE /api/auth/account blocked)', async () => {
+    const demoUser = { id: 99, name: 'Demo User', email: 'demo@flowledger.app', token_version: 1 };
+    db.get.mockResolvedValueOnce(demoUser); // auth middleware
+
+    const res = await request(app)
+      .delete('/api/auth/account')
+      .set('Cookie', sessionCookie(demoUser))
+      .send({ password: 'anyPassword' });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/demo account/i);
+  });
+
+  test('demo user is read-only for data mutations (POST/PUT/DELETE /api/transactions)', async () => {
+    const demoUser = { id: 99, name: 'Demo User', email: 'demo@flowledger.app', token_version: 1 };
+
+    // POST /api/transactions
+    db.get.mockResolvedValueOnce(demoUser);
+    const postRes = await request(app)
+      .post('/api/transactions')
+      .set('Cookie', sessionCookie(demoUser))
+      .send({ description: 'Coffee', amount: 50, type: 'expense', category: 'Food', date: '2026-01-01' });
+
+    expect(postRes.status).toBe(403);
+    expect(postRes.body.error).toMatch(/read-only/i);
+
+    // DELETE /api/transactions/1
+    db.get.mockResolvedValueOnce(demoUser);
+    const delRes = await request(app)
+      .delete('/api/transactions/1')
+      .set('Cookie', sessionCookie(demoUser));
+
+    expect(delRes.status).toBe(403);
+    expect(delRes.body.error).toMatch(/read-only/i);
+  });
+
+  test('demo user can read transactions (GET /api/transactions allowed)', async () => {
+    const demoUser = { id: 99, name: 'Demo User', email: 'demo@flowledger.app', token_version: 1 };
+    db.get.mockResolvedValueOnce(demoUser); // auth middleware
+    db.all.mockResolvedValueOnce([]); // get transactions
+
+    const res = await request(app)
+      .get('/api/transactions')
+      .set('Cookie', sessionCookie(demoUser));
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+  });
+});

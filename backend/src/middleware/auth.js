@@ -1,6 +1,11 @@
 const jwt = require('jsonwebtoken');
-const { JWT_SECRET, SESSION_DAYS, COOKIE_NAME, cookieSecure } = require('../config');
+const { JWT_SECRET, SESSION_DAYS, COOKIE_NAME, cookieSecure, DEMO_EMAIL } = require('../config');
 const { db } = require('../db');
+
+function isDemoUser(user) {
+  if (!user || !user.email) return false;
+  return user.email.toLowerCase().trim() === DEMO_EMAIL;
+}
 
 const MAX_AGE_MS = SESSION_DAYS * 24 * 60 * 60 * 1000;
 
@@ -64,10 +69,36 @@ const auth = async (req, res, next) => {
       return res.status(401).json({ error: 'Session has been invalidated. Please login again.' });
     }
     req.user = user;
+    req.isDemo = isDemoUser(user);
+
+    // If this is a demo account attempting a state-changing operation on any protected route
+    // (except safe demo endpoints like /api/auth/logout), enforce read-only restriction.
+    const isStateMutation = req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS';
+    if (req.isDemo && isStateMutation && req.path !== '/auth/logout') {
+      return res.status(403).json({
+        error: 'Demo account is read-only. Data modifications are disabled.'
+      });
+    }
+
     next();
   } catch {
     res.status(401).json({ error: 'Invalid or expired session' });
   }
 };
 
-module.exports = { auth, issueSession, clearSession };
+const READ_ONLY_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+/**
+ * Middleware that prevents demo accounts from modifying data.
+ * Safe read methods (GET, HEAD, OPTIONS) are allowed.
+ */
+const demoReadOnly = (req, res, next) => {
+  if (req.isDemo && READ_ONLY_METHODS.has(req.method)) {
+    return res.status(403).json({
+      error: 'Demo account is read-only. Data modifications are disabled.'
+    });
+  }
+  next();
+};
+
+module.exports = { auth, issueSession, clearSession, demoReadOnly, isDemoUser };

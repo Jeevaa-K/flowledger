@@ -1,11 +1,11 @@
 const express = require('express');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-const { APP_URL } = require('../config');
+const { APP_URL, DEMO_EMAIL } = require('../config');
 const { authLimiter } = require('../middleware/security');
 const { EMAIL_RE, safeError, isValidPassword } = require('../utils');
 const { pool, db, withTransaction } = require('../db');
-const { auth, issueSession, clearSession } = require('../middleware/auth');
+const { auth, issueSession, clearSession, isDemoUser } = require('../middleware/auth');
 const { sendPasswordResetEmail } = require('../services/email');
 const router = express.Router();
 
@@ -62,8 +62,11 @@ router.post('/auth/demo', authLimiter, async (req, res) => {
   if (process.env.ENABLE_DEMO !== 'true') {
     return res.status(403).json({ error: 'Demo account is disabled in this environment' });
   }
-  const demoEmail = (process.env.DEMO_EMAIL || 'demo@flowledger.app').toLowerCase();
-  const demoPassword = process.env.DEMO_PASSWORD || 'FlowLedgerDemo2026!';
+  const demoEmail = DEMO_EMAIL;
+  const demoPassword = process.env.DEMO_PASSWORD;
+  if (!demoPassword) {
+    return res.status(500).json({ error: 'DEMO_PASSWORD environment variable is not configured' });
+  }
   try {
     let user = await db.get('SELECT * FROM users WHERE email=$1', [demoEmail]);
     if (!user) {
@@ -75,7 +78,7 @@ router.post('/auth/demo', authLimiter, async (req, res) => {
       await db.run(`INSERT INTO accounts (user_id, name, type) VALUES ($1, 'Main Account', 'cash')`, [user.id]);
     }
     issueSession(res, user, req);
-    res.json({ user: { id: user.id, name: user.name, email: user.email, currency: user.currency, theme: user.theme, ai_consent: Boolean(user.ai_consent) } });
+    res.json({ user: { id: user.id, name: user.name, email: user.email, currency: user.currency, theme: user.theme, ai_consent: Boolean(user.ai_consent), is_demo: true } });
   } catch (e) { safeError(res, e, 'Demo login'); }
 });
 
@@ -89,7 +92,7 @@ router.post('/auth/logout', (req, res) => {
 router.get('/auth/me', auth, async (req, res) => {
   try {
     const user = await db.get('SELECT id, name, email, currency, theme, timezone, ai_consent, created_at FROM users WHERE id=$1', [req.user.id]);
-    res.json(user);
+    res.json({ ...user, is_demo: isDemoUser(user) });
   } catch (e) { safeError(res, e, 'Get profile'); }
 });
 
@@ -148,6 +151,9 @@ router.put('/auth/profile', auth, async (req, res) => {
 });
 
 router.put('/auth/password', auth, async (req, res) => {
+  if (req.isDemo || isDemoUser(req.user)) {
+    return res.status(403).json({ error: 'Password change is disabled for the demo account' });
+  }
   const { currentPassword, newPassword } = req.body;
   if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Both passwords required' });
   if (!isValidPassword(newPassword)) {
@@ -175,6 +181,11 @@ router.post('/auth/forgot', authLimiter, async (req, res) => {
   const { email } = req.body;
   if (!email || !EMAIL_RE.test(email)) {
     return res.status(400).json({ error: 'Valid email required' });
+  }
+
+  // Demo user cannot be reset via forgot-password flow
+  if (email.toLowerCase().trim() === DEMO_EMAIL) {
+    return res.json({ message: 'If this email is registered, password reset instructions have been sent.' });
   }
 
   try {
@@ -234,6 +245,9 @@ router.post('/auth/reset', authLimiter, async (req, res) => {
 
 // Delete account with mandatory password confirmation and database transaction
 router.delete('/auth/account', auth, async (req, res) => {
+  if (req.isDemo || isDemoUser(req.user)) {
+    return res.status(403).json({ error: 'Account deletion is disabled for the demo account' });
+  }
   const { password } = req.body || {};
   if (!password) {
     return res.status(400).json({ error: 'Password is required to delete your account' });
