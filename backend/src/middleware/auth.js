@@ -52,7 +52,7 @@ const auth = async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     const user = await db.get(
-      'SELECT id, name, email, currency, theme, timezone, token_version FROM users WHERE id=$1',
+      'SELECT id, name, email, currency, theme, timezone, ai_consent, token_version FROM users WHERE id=$1',
       [decoded.id]
     );
     if (!user) return res.status(401).json({ error: 'User no longer exists' });

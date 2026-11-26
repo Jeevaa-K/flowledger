@@ -4,7 +4,7 @@ const { auth } = require('../middleware/auth');
 const { aiLimiter } = require('../middleware/security');
 const { db, pool } = require('../db');
 const { csvField, safeError, pdfSafeText, toDateString, createMonthlyCache } = require('../utils');
-const { groq, createGroqCompletion } = require('../services/ai');
+const { groq, createGroqCompletion, hasAiConsent, AI_CONSENT_ERROR } = require('../services/ai');
 const { addPeriod } = require('../jobs/recurring');
 const router = express.Router();
 const auditCache = createMonthlyCache();
@@ -397,7 +397,7 @@ router.get('/reports/audit', auth, aiLimiter, async (req, res) => {
     const catSummary = cats.map(c => `${c.category}: Rs.${Math.round(c.total)} (${expense > 0 ? Math.round((c.total / expense) * 100) : 0}%)`).join(', ') || 'No expenses';
     const merchantSummary = topTxns.map(t => `${t.description} (Rs.${Math.round(t.amount)})`).join(', ') || 'None';
 
-    if (!aiAnalysis && groq) {
+    if (!aiAnalysis && groq && hasAiConsent(user)) {
       try {
         const completion = await createGroqCompletion({
           messages: [

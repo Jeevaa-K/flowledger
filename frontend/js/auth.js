@@ -359,6 +359,9 @@ const Auth = {
       set('profileName',     stored.name  || '');
       set('profileEmail',    stored.email || '');
       set('profileCurrency', stored.currency || '₹');
+      // AI consent toggle
+      const consentEl = document.getElementById('profileAiConsent');
+      if (consentEl) consentEl.checked = Boolean(stored.ai_consent);
       document.querySelectorAll('.profile-tab').forEach(t => {
         t.classList.remove('active');
         t.setAttribute('aria-selected', 'false');
@@ -376,14 +379,16 @@ const Auth = {
   async saveProfile() {
     const nameEl = document.getElementById('profileName');
     const currEl = document.getElementById('profileCurrency');
+    const consentEl = document.getElementById('profileAiConsent');
     if (!nameEl || !currEl) { alert('Something went wrong loading the form'); return; }
-    const name     = nameEl.value.trim();
-    const currency = currEl.value;
+    const name       = nameEl.value.trim();
+    const currency   = currEl.value;
+    const ai_consent = consentEl ? consentEl.checked : false;
     if (!name) { alert('Name cannot be empty'); return; }
     try {
-      await API.put('/auth/profile', { name, currency });
+      await API.put('/auth/profile', { name, currency, ai_consent });
       const user = JSON.parse(localStorage.getItem('fl_user') || '{}');
-      user.name = name; user.currency = currency;
+      user.name = name; user.currency = currency; user.ai_consent = ai_consent;
       localStorage.setItem('fl_user', JSON.stringify(user));
       this.onLoggedIn(user);
       document.getElementById('profileModal')?.classList.remove('open');

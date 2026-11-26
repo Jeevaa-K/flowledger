@@ -937,6 +937,14 @@
 
         <!-- Main Chat Area -->
         <div class="chat-container">
+          <!-- AI Consent Banner (shown when consent is off) -->
+          <div class="ai-consent-banner" id="aiConsentBanner" style="display:none">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" style="flex-shrink:0;margin-top:1px"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <div>
+              <strong>AI features are off.</strong> To use the AI advisor, SMS parser, receipt scanner, and audit insights, enable <strong>AI Data Sharing</strong> in
+              <a id="aiConsentOpenProfile">Profile Settings</a>. Your financial data will be sent to Groq (third-party AI). Account numbers are auto-redacted.
+            </div>
+          </div>
           <div class="chat-model-banner" id="chatModelBanner">
             <div class="banner-left">
               <span class="banner-dot"></span>
@@ -1980,6 +1988,20 @@
             <option value="¥">¥ Japanese Yen (JPY)</option>
             <option value="Fr">Fr Swiss Franc (CHF)</option>
           </select>
+        </div>
+        <div class="form-group span2" style="border:1px solid var(--border-color);border-radius:10px;padding:14px 16px;background:var(--surface-tint,rgba(99,102,241,.05))">
+          <div style="display:flex;align-items:flex-start;gap:12px">
+            <label class="toggle-switch" style="flex-shrink:0;margin-top:2px" title="AI Data Sharing consent">
+              <input type="checkbox" id="profileAiConsent" />
+              <span class="toggle-slider"></span>
+            </label>
+            <div>
+              <div style="font-weight:600;font-size:13.5px;color:var(--text-primary);margin-bottom:4px">AI Data Sharing</div>
+              <div style="font-size:12px;color:var(--text-secondary);line-height:1.5">
+                Allow AI features (chat, SMS parser, receipt scanner, audit). Your <strong>financial data — amounts, categories, and transaction descriptions — are sent to Groq</strong> (a third-party AI provider) to generate responses. Account numbers are automatically redacted before sending. Your name is never included. Disable at any time.
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       <button class="btn-primary full" id="saveProfileBtn">Save Changes</button>

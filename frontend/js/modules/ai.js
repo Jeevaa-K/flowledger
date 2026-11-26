@@ -42,6 +42,23 @@ export const AIModule = {
   async loadAI() {
     if (typeof this.updateAIStats === 'function') this.updateAIStats(State.summary);
     this.selectAiModel(State.aiModel);
+
+    // Show or hide the consent banner based on the user's stored preference
+    const user = JSON.parse(localStorage.getItem('fl_user') || '{}');
+    const consentBanner = document.getElementById('aiConsentBanner');
+    if (consentBanner) {
+      consentBanner.style.display = user.ai_consent ? 'none' : 'flex';
+    }
+    // Wire "Profile Settings" link inside banner
+    const openProfileLink = document.getElementById('aiConsentOpenProfile');
+    if (openProfileLink && !openProfileLink._wired) {
+      openProfileLink._wired = true;
+      openProfileLink.addEventListener('click', () => {
+        if (typeof Auth !== 'undefined' && typeof Auth.openProfile === 'function') Auth.openProfile();
+        else document.getElementById('openProfileModal')?.click();
+      });
+    }
+
     await this.loadAiSessions();
 
     const container = document.getElementById('chatMessages');
@@ -229,6 +246,14 @@ export const AIModule = {
 
   async sendChat(msg) {
     if (!msg || !msg.trim()) return;
+
+    // Check local consent flag before making a network round-trip
+    const user = JSON.parse(localStorage.getItem('fl_user') || '{}');
+    if (!user.ai_consent) {
+      UI.toast('Enable AI Data Sharing in Profile Settings to use the AI advisor.', 'error', 5000);
+      return;
+    }
+
     const input = document.getElementById('chatInput');
     const btn = document.getElementById('chatSend');
     if (input) input.value = '';

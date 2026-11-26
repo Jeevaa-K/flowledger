@@ -103,9 +103,39 @@ async function createGroqCompletion(params) {
   throw lastErr;
 }
 
-// ── Langfuse ──────────────────────────────────────────────────
+// ── Privacy & Consent Helpers ─────────────────────────────────
+const AI_CONSENT_ERROR = {
+  error: 'Third-party AI features require your consent. Enable AI Data Sharing in Profile Settings.',
+  code: 'AI_CONSENT_REQUIRED'
+};
+
+function hasAiConsent(user) {
+  return Boolean(user && user.ai_consent === true);
+}
+
+/**
+ * Redacts account numbers, card numbers, IFSC codes, emails, and long numeric
+ * identifiers before sending text to external AI providers.
+ */
+function redactSensitiveText(text) {
+  if (!text || typeof text !== 'string') return '';
+  return text
+    // Credit/debit card numbers (13-19 digits with optional spaces/hyphens)
+    .replace(/\b(?:\d[ -]*?){13,19}\b/g, '[REDACTED_CARD]')
+    // Account / card references like "A/c XX1234", "Account No. 1234567890", "Card ending 4567"
+    .replace(/\b((?:a\/c|acct|account|card)\s*(?:no\.?|number|ending(?:\s+in)?|#)?\s*[:\-]?\s*)([xX*\d-]{3,20})/gi, '$1[REDACTED_ACCOUNT]')
+    // IFSC codes (4 letters + 0 + 6 alphanumeric)
+    .replace(/\b[A-Z]{4}0[A-Z0-9]{6}\b/g, '[REDACTED_IFSC]')
+    // Email addresses (preserves UPI VPAs without a TLD like merchant@ybl)
+    .replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[REDACTED_EMAIL]')
+    // Standalone long numeric IDs (8-20 digits: unmasked accounts, phone numbers, UTRs)
+    .replace(/\b\d{8,20}\b/g, '[REDACTED_NUMBER]');
+}
+
+// ── Langfuse (off by default; requires explicit LANGFUSE_ENABLED=true) ────
 let langfuse = null;
 if (
+  process.env.LANGFUSE_ENABLED === 'true' &&
   process.env.LANGFUSE_PUBLIC_KEY &&
   process.env.LANGFUSE_PUBLIC_KEY.startsWith('pk-lf-') &&
   !process.env.LANGFUSE_PUBLIC_KEY.includes('your-') &&
@@ -114,7 +144,7 @@ if (
   !process.env.LANGFUSE_SECRET_KEY.includes('your-') &&
   process.env.NODE_ENV !== 'test'
 ) {
-  const { Langfuse } = require('langfuse'); // loaded only when tracing is configured
+  const { Langfuse } = require('langfuse'); // loaded only when tracing is explicitly enabled
   langfuse = new Langfuse({
     publicKey: process.env.LANGFUSE_PUBLIC_KEY,
     secretKey: process.env.LANGFUSE_SECRET_KEY,
@@ -123,4 +153,13 @@ if (
   console.log('Langfuse tracing enabled');
 }
 
-module.exports = { groq, langfuse, GROQ_MODELS, createGroqCompletion, cleanLLMOutput };
+module.exports = {
+  groq,
+  langfuse,
+  GROQ_MODELS,
+  createGroqCompletion,
+  cleanLLMOutput,
+  hasAiConsent,
+  AI_CONSENT_ERROR,
+  redactSensitiveText
+};

@@ -38,6 +38,7 @@ async function initDB() {
     password TEXT NOT NULL,
     currency TEXT DEFAULT '₹',
     theme TEXT DEFAULT 'light',
+    ai_consent BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMP DEFAULT NOW()
   )`);
   await db.run(`CREATE TABLE IF NOT EXISTS transactions (
@@ -166,6 +167,7 @@ async function initDB() {
   )`);
   await db.run(`ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER DEFAULT 1`);
   await db.run(`ALTER TABLE users ADD COLUMN IF NOT EXISTS timezone TEXT DEFAULT 'Asia/Kolkata'`);
+  await db.run(`ALTER TABLE users ADD COLUMN IF NOT EXISTS ai_consent BOOLEAN NOT NULL DEFAULT false`);
   await db.run(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_lower_email ON users (LOWER(email))`);
   await db.run(`CREATE TABLE IF NOT EXISTS password_resets (
     id SERIAL PRIMARY KEY,

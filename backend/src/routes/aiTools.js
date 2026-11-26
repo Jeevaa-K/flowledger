@@ -1,7 +1,7 @@
 const express = require('express');
 const { auth } = require('../middleware/auth');
 const { aiLimiter } = require('../middleware/security');
-const { groq, createGroqCompletion, cleanLLMOutput } = require('../services/ai');
+const { groq, createGroqCompletion, cleanLLMOutput, hasAiConsent, AI_CONSENT_ERROR, redactSensitiveText } = require('../services/ai');
 const { db } = require('../db');
 const { getUserToday, isValidIsoDate, normalizeCategory } = require('../utils');
 const { DEFAULT_CATEGORIES, STANDARD_CATEGORIES } = require('../constants/categories');
@@ -13,6 +13,7 @@ router.post('/ai/parse-text', auth, aiLimiter, async (req, res) => {
   if (!text || typeof text !== 'string') return res.status(400).json({ error: 'Text prompt required' });
   if (text.length > 500) return res.status(400).json({ error: 'Text is too long (max 500 characters)' });
   if (!groq) return res.status(503).json({ error: 'AI not configured' });
+  if (!hasAiConsent(req.user)) return res.status(403).json(AI_CONSENT_ERROR);
 
   try {
     const categories = await db.all(
@@ -110,6 +111,7 @@ router.post('/ai/parse-sms', auth, aiLimiter, async (req, res) => {
   if (text.length > 1000) {
     return res.status(400).json({ error: 'SMS text is too long (max 1000 characters)' });
   }
+  if (!hasAiConsent(req.user)) return res.status(403).json(AI_CONSENT_ERROR);
 
   try {
     const categories = await db.all(
@@ -165,7 +167,7 @@ Example output:
         const completion = await createGroqCompletion({
           messages: [
             { role: 'system', content: systemPrompt },
-            { role: 'user', content: `<sms_text>${text}</sms_text>` }
+            { role: 'user', content: `<sms_text>${redactSensitiveText(text)}</sms_text>` }
           ],
           response_format: { type: 'json_object' },
           max_tokens: 380,
@@ -306,6 +308,7 @@ router.post('/ai/scan-receipt', auth, aiLimiter, receiptJsonParser, async (req, 
     return res.status(413).json({ error: 'Receipt image is too large (max 4 MB).' });
   }
   if (!groq) return res.status(503).json({ error: 'AI not configured' });
+  if (!hasAiConsent(req.user)) return res.status(403).json(AI_CONSENT_ERROR);
 
   try {
     const today = new Date().toISOString().slice(0, 10);

@@ -3,7 +3,7 @@ const { auth } = require('../middleware/auth');
 const { aiLimiter } = require('../middleware/security');
 const { db } = require('../db');
 const { safeError, createMonthlyCache } = require('../utils');
-const { groq, createGroqCompletion } = require('../services/ai');
+const { groq, createGroqCompletion, hasAiConsent, AI_CONSENT_ERROR } = require('../services/ai');
 const router = express.Router();
 const budgetSummaryCache = createMonthlyCache();
 
@@ -173,7 +173,7 @@ router.get('/budgets/suggest', auth, aiLimiter, async (req, res) => {
     const cacheKey = `${userId}:${latestMonth}:${totalSuggested}:${totalCurrent}:${suggestions.length}`;
 
     let aiSummary = budgetSummaryCache.get(cacheKey, currentMonth) || '';
-    if (!aiSummary && groq && suggestions.length > 0 && catRows.length > 0) {
+    if (!aiSummary && groq && hasAiConsent(req.user) && suggestions.length > 0 && catRows.length > 0) {
       try {
         const prompt = `You are an expert personal finance coach on FlowLedger.
 Here are category budget suggestions based on actual user expense velocity:

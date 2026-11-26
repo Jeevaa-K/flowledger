@@ -28,7 +28,7 @@ router.post('/auth/register', authLimiter, async (req, res) => {
     const hash = await bcrypt.hash(password, 10);
     // Direct INSERT with UNIQUE constraint on lower(email) prevents race-condition duplicates
     const user = await db.get(
-      'INSERT INTO users (name, email, password, token_version) VALUES ($1, $2, $3, 1) RETURNING id, name, email, currency, theme, token_version',
+      'INSERT INTO users (name, email, password, token_version) VALUES ($1, $2, $3, 1) RETURNING id, name, email, currency, theme, ai_consent, token_version',
       [name.trim(), email.toLowerCase().trim(), hash]
     );
 
@@ -53,7 +53,7 @@ router.post('/auth/login', authLimiter, async (req, res) => {
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ error: 'Invalid email or password' });
     issueSession(res, user, req);
-    res.json({ user: { id: user.id, name: user.name, email: user.email, currency: user.currency, theme: user.theme } });
+    res.json({ user: { id: user.id, name: user.name, email: user.email, currency: user.currency, theme: user.theme, ai_consent: Boolean(user.ai_consent) } });
   } catch (e) { safeError(res, e, 'Login'); }
 });
 
@@ -75,7 +75,7 @@ router.post('/auth/demo', authLimiter, async (req, res) => {
       await db.run(`INSERT INTO accounts (user_id, name, type) VALUES ($1, 'Main Account', 'cash')`, [user.id]);
     }
     issueSession(res, user, req);
-    res.json({ user: { id: user.id, name: user.name, email: user.email, currency: user.currency, theme: user.theme } });
+    res.json({ user: { id: user.id, name: user.name, email: user.email, currency: user.currency, theme: user.theme, ai_consent: Boolean(user.ai_consent) } });
   } catch (e) { safeError(res, e, 'Demo login'); }
 });
 
@@ -88,15 +88,18 @@ router.post('/auth/logout', (req, res) => {
 
 router.get('/auth/me', auth, async (req, res) => {
   try {
-    const user = await db.get('SELECT id, name, email, currency, theme, timezone, created_at FROM users WHERE id=$1', [req.user.id]);
+    const user = await db.get('SELECT id, name, email, currency, theme, timezone, ai_consent, created_at FROM users WHERE id=$1', [req.user.id]);
     res.json(user);
   } catch (e) { safeError(res, e, 'Get profile'); }
 });
 
 router.put('/auth/profile', auth, async (req, res) => {
-  const { name, currency, theme, timezone } = req.body;
+  const { name, currency, theme, timezone, ai_consent } = req.body;
   if (name !== undefined && (!name || name.trim().length > 100)) {
     return res.status(400).json({ error: 'Name must be between 1 and 100 characters' });
+  }
+  if (ai_consent !== undefined && typeof ai_consent !== 'boolean') {
+    return res.status(400).json({ error: 'ai_consent must be a boolean' });
   }
   try {
     const existing = await db.get('SELECT currency FROM users WHERE id=$1', [req.user.id]);
@@ -135,9 +138,10 @@ router.put('/auth/profile', auth, async (req, res) => {
          name = COALESCE($1, name),
          currency = COALESCE($2, currency),
          theme = COALESCE($3, theme),
-         timezone = COALESCE($4, timezone)
-       WHERE id=$5`,
-      [name ? name.trim() : null, currency || null, theme || null, timezone || null, req.user.id]
+         timezone = COALESCE($4, timezone),
+         ai_consent = COALESCE($5, ai_consent)
+       WHERE id=$6`,
+      [name ? name.trim() : null, currency || null, theme || null, timezone || null, ai_consent !== undefined ? ai_consent : null, req.user.id]
     );
     res.json({ success: true });
   } catch (e) { safeError(res, e, 'Update profile'); }
