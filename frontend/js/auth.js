@@ -100,8 +100,12 @@ const Auth = {
     });
     on('avLogout', 'click', () => {
       document.getElementById('avatarDropdown').classList.remove('show');
-      this.logout();
+      this.promptLogout();
     });
+    on('logoutBtn',           'click', () => this.promptLogout());
+    on('cancelLogoutBtn',     'click', () => this.closeLogoutModal());
+    on('confirmLogoutBtn',    'click', () => this.logout());
+    on('logoutModal',         'click', e => { if (e.target.id === 'logoutModal') this.closeLogoutModal(); });
     on('closeProfileModal',   'click', () => document.getElementById('profileModal').classList.remove('open'));
     on('saveProfileBtn',      'click', () => this.saveProfile());
     on('changePasswordBtn',   'click', () => this.changePassword());
@@ -109,7 +113,6 @@ const Auth = {
     on('closeDeleteAccountModal', 'click', () => this.closeDeleteAccountModal());
     on('cancelDeleteAccountBtn',  'click', () => this.closeDeleteAccountModal());
     on('finalDeleteAccountBtn',   'click', () => this.submitDeleteAccount());
-    on('logoutBtn',           'click', () => this.logout());
 
     // Real-time verification listeners for Account Deletion
     const phraseInput = document.getElementById('confirmDeletePhrase');
@@ -335,8 +338,22 @@ const Auth = {
     }
   },
 
+  promptLogout() {
+    document.getElementById('avatarDropdown')?.classList.remove('show');
+    document.getElementById('profileModal')?.classList.remove('open');
+    document.getElementById('logoutModal')?.classList.add('open');
+  },
+
+  closeLogoutModal() {
+    document.getElementById('logoutModal')?.classList.remove('open');
+  },
+
   async logout() {
-    if (!confirm('Log out of FlowLedger?')) return;
+    const btn = document.getElementById('confirmLogoutBtn');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Logging out...';
+    }
     try { await API.post('/auth/logout'); } catch {}
     await API.clearToken();
     localStorage.removeItem('fl_user');

@@ -1455,6 +1455,27 @@
   </nav>
 </div>
 
+<!-- LOGOUT CONFIRMATION MODAL -->
+<div class="modal-overlay" id="logoutModal" role="dialog" aria-modal="true" aria-labelledby="logoutModalTitle">
+  <div class="modal" style="max-width:420px;text-align:center">
+    <div style="width:52px;height:52px;border-radius:50%;background:var(--expense-tint);border:1.5px solid var(--expense-border);color:var(--expense);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16 17 21 12 16 7"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+    </div>
+    <h2 class="modal-title" id="logoutModalTitle" style="font-size:18px;margin-bottom:8px">Log out of FlowLedger?</h2>
+    <p style="font-size:13.5px;color:var(--text-secondary);line-height:1.5;margin-bottom:24px">
+      Are you sure you want to end your current session? You'll need to log back in to access your financial data.
+    </p>
+    <div style="display:flex;gap:10px;justify-content:center">
+      <button class="btn-ghost" id="cancelLogoutBtn" type="button" style="flex:1;padding:10px 16px;border-radius:var(--r-md);font-weight:600">Cancel</button>
+      <button class="btn-danger" id="confirmLogoutBtn" type="button" style="flex:1;padding:10px 16px;border-radius:var(--r-md);font-weight:600">Log Out</button>
+    </div>
+  </div>
+</div>
+
 <!-- ADD TRANSACTION MODAL -->
 <div class="modal-overlay" id="addModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
   <div class="modal">
